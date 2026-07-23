@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+public/version.json
+public/sw.js
+public/workbox-*.js
+dev-dist
+*.tsbuildinfo
+.DS_Store

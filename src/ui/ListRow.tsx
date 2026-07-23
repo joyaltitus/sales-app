@@ -1,0 +1,78 @@
+import type { ReactNode } from 'react'
+import { Chip } from './Chip'
+
+type Props = {
+  name: string
+  preview?: string
+  channel?: 'WA' | 'IG'
+  assignee?: string
+  unread?: boolean
+  selected?: boolean
+  timestamp?: string
+  onClick?: () => void
+  trailing?: ReactNode
+}
+
+// Inbox row anatomy (§C): name · one-line preview · channel badge · assignment
+// chip · unread as weight-shift not color flood. States: default/hover/active/
+// selected/unread. Dense row inside a generously padded frame.
+export function ListRow({
+  name,
+  preview,
+  channel,
+  assignee,
+  unread,
+  selected,
+  timestamp,
+  onClick,
+  trailing,
+}: Props) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors',
+        selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:bg-surface-sunk',
+      ].join(' ')}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={[
+              'truncate text-sm text-fg',
+              unread ? 'font-semibold' : 'font-normal',
+            ].join(' ')}
+          >
+            {name}
+          </span>
+          {channel && (
+            <span className="label-caps shrink-0" aria-label={channel === 'WA' ? 'WhatsApp' : 'Instagram'}>
+              {channel}
+            </span>
+          )}
+          {timestamp && (
+            <span className="ml-auto shrink-0 text-2xs text-fg-subtle tnum">{timestamp}</span>
+          )}
+        </div>
+        {preview && (
+          <div className="mt-0.5 flex items-center gap-2">
+            <span
+              className={[
+                'truncate text-xs',
+                unread ? 'text-fg-muted' : 'text-fg-subtle',
+              ].join(' ')}
+            >
+              {preview}
+            </span>
+            {assignee && (
+              <Chip tone="neutral" className="ml-auto shrink-0">
+                {assignee}
+              </Chip>
+            )}
+          </div>
+        )}
+      </div>
+      {trailing}
+    </button>
+  )
+}

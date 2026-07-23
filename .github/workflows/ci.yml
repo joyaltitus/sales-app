@@ -1,0 +1,25 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Law 8 tripwire — no service-role material in the client bundle.
+      - run: npm run check:no-service-role
+      # Design-token contract — frozen tokens.css must match its recorded hash.
+      - run: npm run check:tokens
+      # Build enforces the first-load JS budget (<200KB gz) + PWA assets.
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://ci.invalid
+          VITE_SUPABASE_ANON_KEY: ci-anon-placeholder
