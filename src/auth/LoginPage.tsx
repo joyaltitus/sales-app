@@ -21,7 +21,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-canvas px-4">
+    <main className="flex min-h-full items-center justify-center bg-canvas px-4">
       <form
         onSubmit={submit}
         className="w-full max-w-sm rounded-md border border-border bg-surface p-6"
@@ -29,8 +29,9 @@ export function LoginPage() {
         <h1 className="mb-1 text-lg font-semibold text-fg">Sign in</h1>
         <p className="mb-5 text-xs text-fg-muted">Use your team login.</p>
 
-        <label className="label-caps mb-1 block">Email</label>
+        <label htmlFor="login-email" className="label-caps mb-1 block">Email</label>
         <Input
+          id="login-email"
           type="email"
           autoComplete="email"
           value={email}
@@ -39,8 +40,9 @@ export function LoginPage() {
           className="mb-3"
         />
 
-        <label className="label-caps mb-1 block">Password</label>
+        <label htmlFor="login-password" className="label-caps mb-1 block">Password</label>
         <Input
+          id="login-password"
           type="password"
           autoComplete="current-password"
           value={password}
@@ -59,6 +61,6 @@ export function LoginPage() {
           Sign in
         </Button>
       </form>
-    </div>
+    </main>
   )
 }
