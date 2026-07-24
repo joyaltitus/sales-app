@@ -1,16 +1,16 @@
 import { useClient } from './ClientProvider'
-import { HandoffScreen } from './HandoffScreen'
+import { AdminShell } from './AdminShell'
 import { RepShell } from './RepShell'
 import { ManagerShell } from './ManagerShell'
 import { EmptyState } from '../ui/EmptyState'
 import { Skeleton } from '../ui/Skeleton'
 
-// Role → view auto-route (MASTER-PLAN §A). Coded for all 4 roles now; the live
-// manager login + assigned_to RLS scope land with ROLE-01 (deferred acceptance).
+// Role → view auto-route (MASTER-PLAN §A; admin routing superseded by the
+// ONB-CON-01F consolidation ruling — operator console lives here now).
 //   agent        → rep shell (phone-first, bottom tabs)
 //   manager      → manager shell (desktop-first, left rail)
-//   client_admin → Workbench handoff
-//   super_admin  → Workbench handoff
+//   client_admin → admin shell (onboarding console + legacy Workbench link)
+//   super_admin  → admin shell
 export function RoleRouter() {
   const { activeClient, loading } = useClient()
 
@@ -42,7 +42,7 @@ export function RoleRouter() {
       return <ManagerShell />
     case 'client_admin':
     case 'super_admin':
-      return <HandoffScreen role={activeClient.role} />
+      return <AdminShell />
     default:
       return (
         <div className="flex min-h-full items-center justify-center p-6">
