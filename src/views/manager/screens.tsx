@@ -20,13 +20,16 @@ export function Team() {
   )
 }
 
-// Same Inbox, same reads, same RLS. `manager` is NOT in hub-service's
-// TENANT_ROLES (src/api/auth.ts:13), so a manager's send would return 403 —
-// the composer renders read-only rather than as a dead button. Widening that
-// role list is an authorization change and belongs to its own src/api/ session
-// with an auth review (Joyal's ruling, SA-01b).
+// Same Inbox, same reads, same RLS, and — since SA-01c — the same composer.
+// `manager` joined hub-service's TENANT_ROLES (src/api/auth.ts), so a manager
+// supervising a floor can answer a customer exactly as a rep can. SA-01b had
+// shipped this read-only because that grant did not exist yet.
+//
+// REQUIRES hub-service >= the SA-01c deploy. Against an older hub-service this
+// composer renders but every send returns 403 'forbidden', which the Composer
+// surfaces as "You don't have permission to reply on this conversation."
 export function ManagerInbox() {
-  return <InboxScreen canSend={false} />
+  return <InboxScreen canSend />
 }
 
 export function Assign() {
