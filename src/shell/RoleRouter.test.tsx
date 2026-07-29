@@ -9,6 +9,7 @@ import type { ClientOption, Role } from './ClientProvider'
 // failure rather than a silent pass.
 vi.mock('./RepShell', () => ({ RepShell: () => <div>STUB RepShell</div> }))
 vi.mock('./ManagerShell', () => ({ ManagerShell: () => <div>STUB ManagerShell</div> }))
+vi.mock('./AdminShell', () => ({ AdminShell: () => <div>STUB AdminShell</div> }))
 vi.mock('./HandoffScreen', () => ({
   // The role prop is rendered, not just accepted: test 2 asserts super_admin
   // reaches the handoff *as super_admin*, which is what keeps the Workbench
@@ -49,6 +50,14 @@ describe('RoleRouter — the role wall', () => {
   it('routes manager to ManagerShell', () => {
     renderWith({ activeClient: membership('manager') })
     expect(screen.getByText('STUB ManagerShell')).toBeInTheDocument()
+  })
+
+  // TEST 1 (the new behaviour): client_admin stops hitting the Workbench punt.
+  // This is what finally lets Joyal's own login into the app.
+  it('routes client_admin to AdminShell, not to HandoffScreen', () => {
+    renderWith({ activeClient: membership('client_admin') })
+    expect(screen.getByText('STUB AdminShell')).toBeInTheDocument()
+    expect(screen.queryByText(/STUB HandoffScreen/)).not.toBeInTheDocument()
   })
 
   // TEST 2 (regression guard): Joyal's ruling is THREE shells, not four.
