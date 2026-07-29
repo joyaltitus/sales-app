@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
 import { EmptyState } from '../../ui/EmptyState'
@@ -23,7 +24,14 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // `?c=<conversation_id>` is how a landing hands a thread over (SA-03). Read
+  // ONCE, as the initial value: after that the open thread is local state, so
+  // clicking around the queue does not rewrite history on every row. With no
+  // param this is exactly the previous behaviour — null.
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => searchParams.get('c'),
+  )
 
   const { items, loading, error, reload: reloadQueue } = useQueue(clientId)
   const { previews, reload: reloadPreviews } = usePreviews(clientId)
