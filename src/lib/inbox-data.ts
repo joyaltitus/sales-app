@@ -209,11 +209,7 @@ export function useThread(clientId: string | null, conversationId: string | null
  * events AND on window focus AND on a slow interval, so a silently-dead channel
  * degrades to polling instead of to a frozen screen.
  */
-export function useLiveRefresh(
-  clientId: string | null,
-  conversationId: string | null,
-  onChange: () => void,
-) {
+export function useLiveRefresh(clientId: string | null, onChange: () => void) {
   const cb = useRef(onChange)
   cb.current = onChange
   const [channelLive, setChannelLive] = useState(false)
@@ -228,8 +224,13 @@ export function useLiveRefresh(
       timer = setTimeout(() => cb.current(), 400)
     }
 
+    // Channel identity is the TENANT, not the open thread. Both listeners filter
+    // on client_id alone, so folding the conversation id into the name would tear
+    // the socket down and rebuild it on every row click for no change in what is
+    // delivered. The refetch callback is held in a ref, so it always sees the
+    // currently-open thread without resubscribing.
     const channel = supabase
-      .channel(`inbox-${clientId}${conversationId ? `-${conversationId}` : ''}`)
+      .channel(`inbox-${clientId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations', filter: `client_id=eq.${clientId}` },
@@ -254,7 +255,7 @@ export function useLiveRefresh(
       clearInterval(poll)
       void supabase.removeChannel(channel)
     }
-  }, [clientId, conversationId])
+  }, [clientId])
 
   return { channelLive }
 }

@@ -40,7 +40,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     void reloadThread()
   }, [reloadQueue, reloadPreviews, reloadThread])
 
-  const { channelLive } = useLiveRefresh(clientId, selectedId, refreshAll)
+  const { channelLive } = useLiveRefresh(clientId, refreshAll)
 
   const selected = items.find((i) => i.id === selectedId) ?? null
   const selectedName =
