@@ -13,13 +13,10 @@ function Screen({ title, children }: { title: string; children?: React.ReactNode
   )
 }
 
-export function Team() {
-  return (
-    <Screen title="Team">
-      <EmptyState title="No team members yet" body="Reps you manage appear here." />
-    </Screen>
-  )
-}
+// SA-03: `Team` is GONE, replaced by the real Floor landing (Joyal's ruling).
+// It was a "No team members yet" EmptyState with no data behind it, and the
+// rail is better at five real-or-planned doors than six with a third dead one.
+export { Floor } from './Floor'
 
 // Same Inbox, same reads, same RLS, and — since SA-01c — the same composer.
 // `manager` joined hub-service's TENANT_ROLES (src/api/auth.ts), so a manager

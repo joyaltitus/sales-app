@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
 import { EmptyState } from '../../ui/EmptyState'
@@ -23,7 +24,26 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // `?c=<conversation_id>` is how a landing hands a thread over (SA-03). The
+  // open thread stays LOCAL state — clicking around the queue must not rewrite
+  // history on every row — so the param seeds it rather than driving it. With
+  // no param this is exactly the previous behaviour: null.
+  const [searchParams] = useSearchParams()
+  const deepLinkId = searchParams.get('c')
+  const [selectedId, setSelectedId] = useState<string | null>(() => deepLinkId)
+
+  // Seeding on mount alone is not enough. React Router keeps this component
+  // mounted when only the query string changes, so a second hand-off to a
+  // DIFFERENT thread (back to a landing, tap another row) would arrive with the
+  // first thread still open. Track which param value has been consumed and
+  // honour each new one exactly once, which leaves manual queue clicks alone.
+  const consumed = useRef<string | null>(deepLinkId)
+  useEffect(() => {
+    if (deepLinkId && deepLinkId !== consumed.current) {
+      consumed.current = deepLinkId
+      setSelectedId(deepLinkId)
+    }
+  }, [deepLinkId])
 
   const { items, loading, error, reload: reloadQueue } = useQueue(clientId)
   const { previews, reload: reloadPreviews } = usePreviews(clientId)

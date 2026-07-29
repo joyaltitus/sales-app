@@ -18,6 +18,10 @@ jobs:
       - run: npm run check:no-service-role
       # Design-token contract — frozen tokens.css must match its recorded hash.
       - run: npm run check:tokens
+      # Role wall (SA-03). These are regression guards as much as tests: they
+      # fail if a later session gives super_admin a shell, or lets an
+      # unrecognised role fall through into one.
+      - run: npm test
       # Build enforces the first-load JS budget (<200KB gz) + PWA assets.
       - run: npm run build
         env:

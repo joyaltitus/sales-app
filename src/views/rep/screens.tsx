@@ -14,16 +14,9 @@ function Screen({ title, children }: { title: string; children?: React.ReactNode
   )
 }
 
-export function Today() {
-  return (
-    <Screen title="Today">
-      <EmptyState
-        title="Nothing due yet"
-        body="Calls, follow-ups and reminders will land here."
-      />
-    </Screen>
-  )
-}
+// The rep's landing is real as of SA-03 — it was a "Nothing due yet"
+// placeholder through SA-00..SA-02.
+export { Today } from './Today'
 
 // The rep is `agent`, which IS in hub-service's TENANT_ROLES — reps can send.
 export function RepInbox() {

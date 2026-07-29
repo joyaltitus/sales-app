@@ -2,15 +2,28 @@ import { useClient } from './ClientProvider'
 import { HandoffScreen } from './HandoffScreen'
 import { RepShell } from './RepShell'
 import { ManagerShell } from './ManagerShell'
+import { AdminShell } from './AdminShell'
 import { EmptyState } from '../ui/EmptyState'
 import { Skeleton } from '../ui/Skeleton'
 
-// Role → view auto-route (MASTER-PLAN §A). Coded for all 4 roles now; the live
-// manager login + assigned_to RLS scope land with ROLE-01 (deferred acceptance).
+// Role → view auto-route (MASTER-PLAN §A).
 //   agent        → rep shell (phone-first, bottom tabs)
 //   manager      → manager shell (desktop-first, left rail)
-//   client_admin → Workbench handoff
+//   client_admin → admin shell (desktop-first, left rail)   ← SA-03
 //   super_admin  → Workbench handoff
+//
+// ⚠ THREE SHELLS, NOT FOUR (Joyal's ruling 2026-07-29). `super_admin` KEEPS the
+// Workbench punt below; only `client_admin` gained a shell. The split of what
+// used to be one fallthrough case is the whole of SA-03's role change, and
+// every branch in the switch is covered by RoleRouter.test.tsx — including the
+// super_admin one, as a regression guard rather than a new feature.
+//
+// ⚠ ROLE-WALL NOTE (§2): this switch decides what is PAINTED and nothing else.
+// `activeClient.role` comes from user_client_memberships under RLS; forcing it
+// client-side changes the rendered shell and grants no data and no API
+// capability. RLS governs every read, and hub-service re-derives authority from
+// the JWT on every request. AdminShell.wall.test.tsx asserts that empirically
+// rather than trusting this comment.
 export function RoleRouter() {
   const { activeClient, loading } = useClient()
 
@@ -41,6 +54,7 @@ export function RoleRouter() {
     case 'manager':
       return <ManagerShell />
     case 'client_admin':
+      return <AdminShell />
     case 'super_admin':
       return <HandoffScreen role={activeClient.role} />
     default:
