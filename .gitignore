@@ -11,3 +11,6 @@ public/workbox-*.js
 dev-dist
 *.tsbuildinfo
 .DS_Store
+
+# Claude Code session scratch (worktrees, tmp) — never part of the app.
+.claude/
