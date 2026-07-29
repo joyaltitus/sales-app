@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { EmptyState } from '../../ui/EmptyState'
 import { Button } from '../../ui/Button'
 import { InboxScreen } from '../inbox/InboxScreen'
+import { LeadsScreen } from '../leads/LeadsScreen'
 
 // Rep view stubs (SA-00 scaffold). Real screens land in the ONB/FLW/inbox epics.
 function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -30,14 +31,7 @@ export function RepInbox() {
 }
 
 export function Leads() {
-  return (
-    <Screen title="Leads">
-      <EmptyState
-        title="No leads yet"
-        body="Share your WhatsApp link to start capturing leads."
-      />
-    </Screen>
-  )
+  return <LeadsScreen />
 }
 
 // "More" holds the labeled doors (Joyal's doors model). A door whose flag is
