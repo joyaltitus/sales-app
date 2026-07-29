@@ -1,11 +1,12 @@
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import { TopBar } from './TopBar'
-import { Team, ManagerInbox, Assign, Analytics } from '../views/manager/screens'
+import { Team, ManagerInbox, ManagerLeads, Assign, Analytics } from '../views/manager/screens'
 
 // Manager view: desktop-first (works on phone). Left rail nav, fixed shell.
 const RAIL = [
   { to: '/', label: 'Team', end: true },
   { to: '/inbox', label: 'Inbox' },
+  { to: '/leads', label: 'Leads' },
   { to: '/assign', label: 'Assign' },
   { to: '/analytics', label: 'Analytics' },
 ]
@@ -41,6 +42,7 @@ export function ManagerShell() {
           <Routes>
             <Route index element={<Team />} />
             <Route path="inbox" element={<ManagerInbox />} />
+            <Route path="leads" element={<ManagerLeads />} />
             <Route path="assign" element={<Assign />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="*" element={<Navigate to="/" replace />} />

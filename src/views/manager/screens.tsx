@@ -1,5 +1,6 @@
 import { EmptyState } from '../../ui/EmptyState'
 import { InboxScreen } from '../inbox/InboxScreen'
+import { LeadsScreen } from '../leads/LeadsScreen'
 
 // Manager view stubs (SA-00 scaffold). Team/Assign/Analytics fill in with
 // ROLE-01 (assigned_to write-scope) + the insights epic.
@@ -30,6 +31,13 @@ export function Team() {
 // surfaces as "You don't have permission to reply on this conversation."
 export function ManagerInbox() {
   return <InboxScreen canSend />
+}
+
+// Same Leads board, same reads, same RLS. Manager rows are all editable
+// (`leads_write` covers client_admin/manager unconditionally) — rep rows are
+// scoped per-conversation-assignment (see LeadsScreen's ROLE-WALL note).
+export function ManagerLeads() {
+  return <LeadsScreen />
 }
 
 export function Assign() {
