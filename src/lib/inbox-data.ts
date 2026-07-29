@@ -23,16 +23,18 @@ export type QueueItem = {
   bot_paused: boolean
   unread_count: number
   last_customer_message_at: string | null
-  // SA-03 additions. The Inbox itself does not render any of these — the three
-  // landings derive from them (unanswered, longest-wait, unpicked escalation,
-  // paused). They are added to THIS select rather than fetched by a second
-  // conversation query so the app keeps ONE conversation read shape; a landing
-  // with its own divergent conversation query is the same failure mode
-  // S4-AMENDMENT #1 warned about for row components.
+  // SA-03 additions. The Inbox itself renders neither — the landings derive
+  // from them (unanswered = customer newer than bot; unpicked escalation =
+  // paused and unresolved). They are added to THIS select rather than fetched
+  // by a second conversation query so the app keeps ONE conversation read
+  // shape; a landing with its own divergent conversation query is the same
+  // failure mode S4-AMENDMENT #1 warned about for row components.
+  //
+  // Exactly two columns, not four: `assigned_to` and `pause_reason` were also
+  // added here and then removed, because nothing read them. A select that
+  // fetches columns "in case a screen wants them" is how a read shape rots.
   last_bot_message_at: string | null
   escalation_resolved: boolean
-  assigned_to: string | null
-  pause_reason: string | null
   contact: { profile_name: string | null; channel: string; external_id: string } | null
 }
 
@@ -70,7 +72,7 @@ export function useQueue(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('conversations')
       .select(
-        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, pause_reason, contacts ( profile_name, channel, external_id )',
+        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, contacts ( profile_name, channel, external_id )',
       )
       .eq('client_id', clientId)
       .order('last_customer_message_at', { ascending: false, nullsFirst: false })
