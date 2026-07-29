@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../ui/EmptyState'
 import { Button } from '../../ui/Button'
+import { InboxScreen } from '../inbox/InboxScreen'
 
 // Rep view stubs (SA-00 scaffold). Real screens land in the ONB/FLW/inbox epics.
 function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -23,12 +24,9 @@ export function Today() {
   )
 }
 
+// The rep is `agent`, which IS in hub-service's TENANT_ROLES — reps can send.
 export function RepInbox() {
-  return (
-    <Screen title="Inbox">
-      <EmptyState title="No conversations" body="WhatsApp and Instagram chats show here." />
-    </Screen>
-  )
+  return <InboxScreen canSend />
 }
 
 export function Leads() {

@@ -1,4 +1,5 @@
 import { EmptyState } from '../../ui/EmptyState'
+import { InboxScreen } from '../inbox/InboxScreen'
 
 // Manager view stubs (SA-00 scaffold). Team/Assign/Analytics fill in with
 // ROLE-01 (assigned_to write-scope) + the insights epic.
@@ -19,12 +20,13 @@ export function Team() {
   )
 }
 
+// Same Inbox, same reads, same RLS. `manager` is NOT in hub-service's
+// TENANT_ROLES (src/api/auth.ts:13), so a manager's send would return 403 —
+// the composer renders read-only rather than as a dead button. Widening that
+// role list is an authorization change and belongs to its own src/api/ session
+// with an auth review (Joyal's ruling, SA-01b).
 export function ManagerInbox() {
-  return (
-    <Screen title="Inbox">
-      <EmptyState title="No conversations" body="All team conversations show here." />
-    </Screen>
-  )
+  return <InboxScreen canSend={false} />
 }
 
 export function Assign() {
