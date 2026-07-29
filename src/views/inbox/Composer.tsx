@@ -11,16 +11,15 @@ import { loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
 // Copy follows §1.9: an action keeps its name end to end, errors say what
 // happened and what to do, and nothing apologises.
 
-/** hub-service's TENANT_ROLES is ['agent','client_admin','super_admin'] — the
- *  `manager` role is NOT in it (hub-service src/api/auth.ts:13), so a manager's
- *  send would come back 403. Rather than put a dead button in front of a user,
- *  the manager composer is explicitly read-only and says why. Widening
- *  TENANT_ROLES is an authorization change and belongs to its own src/api/
- *  session with its own auth review (Joyal's ruling, SA-01b). */
+/** Retained for any future role that may read a thread without answering it.
+ *  As of SA-01c every role hub-service accepts through the gateway — agent,
+ *  manager, client_admin, super_admin — can send, so nothing passes canSend
+ *  false today. Kept because "can read but not reply" is a real state this UI
+ *  should degrade into rather than render a button that always 403s. */
 function ReadOnlyNotice() {
   return (
     <div className="border-t border-border bg-surface px-4 py-3 text-xs text-fg-muted">
-      Replying isn't enabled for managers yet. Open the thread on a rep's account to answer.
+      Replying isn't enabled for your role. Open the thread on a rep's account to answer.
     </div>
   )
 }
