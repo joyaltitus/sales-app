@@ -1,12 +1,55 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Search, Inbox as InboxIcon, MessageCircle } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
+import type { QueueItem } from '../../lib/inbox-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { QueueRow } from './QueueRow'
 import { Thread } from './Thread'
 import { Composer } from './Composer'
+
+// SA-04 Inbox parity (real, not mock — §S6 item 2): channel tabs, status
+// chips, search. ALL of it is client-side filtering over the already-fetched
+// bounded queue (200 rows) — the reads, RLS and realtime underneath are
+// untouched. Filter semantics match Workbench's Inbox.tsx exactly:
+//   open        → status === 'open'
+//   needs_human → bot_paused && !escalation_resolved
+//   unread      → unread_count > 0
+//   closed      → status !== 'open'
+// Channel matches on contacts.channel ?? 'whatsapp' (same fallback).
+type StatusFilter = 'open' | 'needs_human' | 'unread' | 'closed' | 'all'
+type ChannelFilter = '' | 'whatsapp' | 'instagram'
+
+const STATUS_CHIPS: { key: StatusFilter; label: string }[] = [
+  { key: 'open', label: 'Open' },
+  { key: 'needs_human', label: 'Needs human' },
+  { key: 'unread', label: 'Unread' },
+  { key: 'closed', label: 'Closed' },
+  { key: 'all', label: 'All' },
+]
+
+const CHANNEL_TABS: { key: ChannelFilter; label: string }[] = [
+  { key: '', label: 'All' },
+  { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'instagram', label: 'Instagram' },
+]
+
+function matchesStatus(item: QueueItem, f: StatusFilter): boolean {
+  switch (f) {
+    case 'open':
+      return item.status === 'open'
+    case 'needs_human':
+      return item.bot_paused && !item.escalation_resolved
+    case 'unread':
+      return item.unread_count > 0
+    case 'closed':
+      return item.status !== 'open'
+    case 'all':
+      return true
+  }
+}
 
 // ONE Inbox implementation, mounted by both RepShell and ManagerShell. The
 // difference between the two is not a layout fork — it is a single `canSend`
@@ -28,9 +71,24 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   // open thread stays LOCAL state — clicking around the queue must not rewrite
   // history on every row — so the param seeds it rather than driving it. With
   // no param this is exactly the previous behaviour: null.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkId = searchParams.get('c')
   const [selectedId, setSelectedId] = useState<string | null>(() => deepLinkId)
+
+  // Channel tab is URL-backed (§S6 item 2, same param Workbench uses) so a
+  // filtered view survives refresh and can be linked. Status + search stay
+  // local — they are working state, not an address.
+  const rawChannel = searchParams.get('channel')
+  const channel: ChannelFilter =
+    rawChannel === 'whatsapp' || rawChannel === 'instagram' ? rawChannel : ''
+  const setChannel = (next: ChannelFilter) => {
+    const params = new URLSearchParams(searchParams)
+    if (next) params.set('channel', next)
+    else params.delete('channel')
+    setSearchParams(params, { replace: true })
+  }
+  const [status, setStatus] = useState<StatusFilter>('open')
+  const [query, setQuery] = useState('')
 
   // Seeding on mount alone is not enough. React Router keeps this component
   // mounted when only the query string changes, so a second hand-off to a
@@ -62,6 +120,34 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
 
   const { channelLive } = useLiveRefresh(clientId, refreshAll)
 
+  // Client-side filter over the already-fetched bounded list. The needs-human
+  // count is over the channel-filtered set so the badge agrees with the list
+  // the chip would show.
+  const channelItems = useMemo(
+    () =>
+      channel
+        ? items.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
+        : items,
+    [items, channel],
+  )
+  const needsHumanCount = useMemo(
+    () => channelItems.filter((i) => matchesStatus(i, 'needs_human')).length,
+    [channelItems],
+  )
+  const visibleItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return channelItems.filter((i) => {
+      if (!matchesStatus(i, status)) return false
+      if (!q) return true
+      const name = i.contact?.profile_name?.toLowerCase() ?? ''
+      const ext = i.contact?.external_id?.toLowerCase() ?? ''
+      return name.includes(q) || ext.includes(q)
+    })
+  }, [channelItems, status, query])
+
+  // Selection is looked up in the UNFILTERED list on purpose: a landing can
+  // deep-link a closed conversation while the queue shows Open — the thread
+  // must still render even though its row is filtered out.
   const selected = items.find((i) => i.id === selectedId) ?? null
   const selectedName =
     selected?.contact?.profile_name ?? selected?.contact?.external_id ?? 'Conversation'
@@ -87,19 +173,98 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     )
   }
 
+  const filterBar = (
+    <div className="shrink-0 space-y-2 border-b border-border bg-surface px-3 pt-2.5 pb-2">
+      {/* Channel: URL-backed segmented control. */}
+      <div className="flex items-center gap-2">
+        <div
+          role="tablist"
+          aria-label="Channel"
+          className="flex rounded-md border border-border bg-surface-sunk p-0.5"
+        >
+          {CHANNEL_TABS.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={channel === t.key}
+              onClick={() => setChannel(t.key)}
+              className={[
+                'rounded-sm px-2.5 py-1 text-xs font-medium transition-colors',
+                channel === t.key
+                  ? 'bg-surface text-fg shadow-none'
+                  : 'text-fg-muted hover:text-fg',
+              ].join(' ')}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <Search
+            aria-hidden
+            size={14}
+            strokeWidth={1.75}
+            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name or number"
+            aria-label="Search conversations"
+            className="h-8 w-full rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
+          />
+        </div>
+      </div>
+      {/* Status chips — horizontal scroll on phone, wraps nowhere. */}
+      <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Status filter">
+        {STATUS_CHIPS.map((c) => (
+          <button
+            key={c.key}
+            aria-pressed={status === c.key}
+            onClick={() => setStatus(c.key)}
+            className={[
+              'shrink-0 rounded-pill border px-2.5 py-1 text-2xs font-semibold transition-colors',
+              status === c.key
+                ? 'border-transparent bg-accent-subtle text-accent'
+                : 'border-border text-fg-muted hover:border-border-strong hover:text-fg',
+            ].join(' ')}
+          >
+            {c.label}
+            {c.key === 'needs_human' && needsHumanCount > 0 && (
+              <span className="tnum ml-1 text-danger" style={{ fontFamily: 'var(--font-mono)' }}>
+                {needsHumanCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
   const queue = (
     <div className="flex min-h-0 flex-col">
+      {filterBar}
       {items.length === 0 ? (
         <div className="p-6">
           {/* §1.9: empty is an invitation, not a mood. */}
           <EmptyState
+            icon={InboxIcon}
             title="Nothing waiting."
             body="New WhatsApp and Instagram messages land here as they arrive."
           />
         </div>
+      ) : visibleItems.length === 0 ? (
+        <div className="p-6">
+          <EmptyState
+            icon={Search}
+            title="No matches."
+            body="Nothing fits these filters. Clear the search or switch to All."
+          />
+        </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <QueueRow
               key={item.id}
               item={item}
@@ -162,7 +327,11 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       <div className={['min-h-0 flex-1', selectedId ? 'flex' : 'hidden lg:flex'].join(' ')}>
         {thread ?? (
           <div className="hidden flex-1 items-center justify-center lg:flex">
-            <EmptyState title="Pick a conversation" body="The queue is ordered by who has waited longest." />
+            <EmptyState
+            icon={MessageCircle}
+            title="Pick a conversation"
+            body="The queue is ordered by who has waited longest."
+          />
           </div>
         )}
       </div>

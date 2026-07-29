@@ -1,5 +1,4 @@
 import { InboxScreen } from '../inbox/InboxScreen'
-import { LeadsScreen } from '../leads/LeadsScreen'
 import { Health } from './Health'
 
 // Admin mounts of the two existing screens — same file shape as
@@ -19,9 +18,6 @@ export function AdminInbox() {
   return <InboxScreen canSend />
 }
 
-// Same Leads board, same reads, same RLS. `leads_write` covers client_admin
-// unconditionally (migration 035), so an admin's rows are all editable — which
-// is a POLICY fact, not something this file decides.
-export function AdminLeads() {
-  return <LeadsScreen />
-}
+// SA-04: `AdminLeads` is GONE — the board lives on as the CRM Pipeline tab
+// (views/crm/CrmScreen.tsx), same reads, same RLS, same `leads_write` policy
+// facts (migration 035).
