@@ -13,6 +13,21 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // src/lib/supabase.ts calls createClient() at module scope, and
+    // createClient throws "supabaseUrl is required" on an empty value. Any test
+    // that transitively imports it therefore needs these present — including a
+    // pure-function test that only wanted a type.
+    //
+    // These are placeholders, not credentials: every test mocks the client
+    // itself, so nothing here is ever dialled. They live in the config rather
+    // than in CI's env block so that `npm test` behaves identically on a fresh
+    // clone, in CI, and on a machine that happens to have a local .env. This
+    // branch's first CI run went red exactly there — green locally off a local
+    // .env, red on a runner with none.
+    env: {
+      VITE_SUPABASE_URL: 'https://test.invalid',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+    },
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
