@@ -13,6 +13,12 @@
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-feature-tnum: 'tnum' 1, 'cv01' 1, 'cv03' 1;
 
+  /* Platform mono — zero bytes, no webfont (SA-01a). Times, phone numbers,
+   * external_ids and trace data are machine data and should look like it; on
+   * an Indian mobile network a webfont for a timestamp is a bad trade, and
+   * flight boards and terminals use the platform's own mono anyway. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
   /* Type scale — 12/13/14/16/20/24 (§C), rem at 16px root */
   --text-2xs: 0.75rem;   /* 12 — ALL-CAPS metadata labels */
   --text-xs: 0.8125rem;  /* 13 */
@@ -21,10 +27,22 @@
   --text-lg: 1.25rem;    /* 20 */
   --text-xl: 1.5rem;     /* 24 */
 
+  /* Type — weight & tracking (SA-01a): huge-and-tight numerals against
+   * tiny-and-wide caps IS the identity, not a novelty typeface. First weight
+   * tokens in this file. */
+  --tracking-tight: -0.03em;  /* wait-time numerals */
+  --tracking-caps: 0.08em;    /* ALL-CAPS metadata labels, pairs with --text-2xs */
+  --weight-num: 650;          /* wait-time numerals */
+  --weight-caps: 550;         /* micro-caps labels */
+
   /* --- Shape: 8px grid, radii 6-8, pills only for status --- */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-pill: 999px;
+
+  /* Queue-row widths (SA-01a) */
+  --spine-w: 4px;     /* phone queue-row urgency spine */
+  --gutter-w: 56px;   /* desktop queue mono time gutter */
 
   /* --- Motion (§C): 120-160ms ease-out, content-only --- */
   --motion-fast: 120ms;
