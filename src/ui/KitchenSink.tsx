@@ -112,6 +112,75 @@ function Inner() {
           <ListRow name="Empty preview row" channel="WA" timestamp="—" />
         </div>
       </Section>
+
+      <Section title="Tokens — SA-01a: mono, tracking, weight, widths">
+        <div className="flex w-full flex-col gap-4">
+          <div className="flex items-baseline gap-6">
+            <span className="text-sm text-fg" style={{ fontFamily: 'var(--font-sans)' }}>
+              Sans: Priya Nair · +91 98765 43210
+            </span>
+            <span className="text-sm text-fg" style={{ fontFamily: 'var(--font-mono)' }}>
+              Mono: Priya Nair · +91 98765 43210
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-6">
+            <span
+              className="tnum text-fg"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--weight-num)',
+                letterSpacing: 'var(--tracking-tight)',
+              }}
+            >
+              04:32
+            </span>
+            <span
+              className="tnum text-fg"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 'var(--weight-num)',
+                letterSpacing: 'var(--tracking-tight)',
+              }}
+            >
+              04:32
+            </span>
+            <span className="text-xs text-fg-subtle">
+              --text-lg / --text-xl × --weight-num × --tracking-tight
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-6">
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 'var(--text-2xs)',
+                fontWeight: 'var(--weight-caps)',
+                letterSpacing: 'var(--tracking-caps)',
+                textTransform: 'uppercase',
+              }}
+            >
+              Waiting since
+            </span>
+            <span className="text-xs text-fg-subtle">
+              --text-2xs × --weight-caps × --tracking-caps
+            </span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex h-10 items-center gap-2">
+              <div className="h-10 bg-accent" style={{ width: 'var(--spine-w)' }} />
+              <span className="text-xs text-fg-subtle">--spine-w (4px, phone urgency spine)</span>
+            </div>
+            <div className="flex h-10 items-center gap-2">
+              <div className="h-10 border border-border-strong bg-surface-sunk" style={{ width: 'var(--gutter-w)' }} />
+              <span className="text-xs text-fg-subtle">--gutter-w (56px, desktop mono time gutter)</span>
+            </div>
+          </div>
+        </div>
+      </Section>
     </div>
   )
 }
