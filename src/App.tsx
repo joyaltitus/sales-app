@@ -16,6 +16,11 @@ const KitchenSink = lazy(() =>
 const SampleBoard = lazy(() =>
   import('./ui/SampleBoard').then((m) => ({ default: m.SampleBoard })),
 )
+// SA-04: mock-data-only review surface (Dashboard + CRM sample tabs). Same
+// public-design-route convention; it can render nothing tenant-scoped.
+const DesignPreview = lazy(() =>
+  import('./views/design/DesignPreview').then((m) => ({ default: m.DesignPreview })),
+)
 
 // Public design routes bypass the auth gate so they render for review + PWA
 // screenshots without a session. Everything else is auth-gated + role-routed.
@@ -26,6 +31,7 @@ export function App() {
       <Routes>
         <Route path="/kitchen-sink" element={<KitchenSink />} />
         <Route path="/samples" element={<SampleBoard />} />
+        <Route path="/preview" element={<DesignPreview />} />
         <Route path="/*" element={<AuthedApp />} />
       </Routes>
     </Suspense>

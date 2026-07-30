@@ -1,0 +1,117 @@
+import { useMemo } from 'react'
+import type { LeadItem, LeadStage } from '../../lib/leads-data'
+
+// The pipeline value strip — the board's own numbers over the REAL leads the
+// screen already fetched. Same type signature as the queue's wait stamps:
+// huge-and-tight mono numerals over tiny-and-wide micro-caps labels (§1.6).
+// Clicking a stage filters the board to it; clicking again clears. This is a
+// stat strip on a working surface, not a landing stat-card grid — the §1.10
+// lift (2026-07-30 ruling) applies to manager/admin CRM only, and this
+// component is only mounted there.
+
+const capsStyle = {
+  fontWeight: 'var(--weight-caps)',
+  letterSpacing: 'var(--tracking-caps)',
+} as const
+
+const numStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontWeight: 'var(--weight-num)',
+  letterSpacing: 'var(--tracking-tight)',
+} as const
+
+/** ₹ compact: 412000 → "4.1L", 14500 → "14.5k" — board-density formatting. */
+export function inrCompact(v: number): string {
+  if (v >= 10_000_000) return `${(v / 10_000_000).toFixed(1).replace(/\.0$/, '')}Cr`
+  if (v >= 100_000) return `${(v / 100_000).toFixed(1).replace(/\.0$/, '')}L`
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1).replace(/\.0$/, '')}k`
+  return String(v)
+}
+
+export function PipelineStrip({
+  stages,
+  items,
+  activeStageId,
+  onStageClick,
+}: {
+  stages: LeadStage[]
+  items: LeadItem[]
+  activeStageId: string | null
+  onStageClick: (stageId: string) => void
+}) {
+  const byStage = useMemo(() => {
+    const m = new Map<string, { count: number; value: number }>()
+    for (const s of stages) m.set(s.id, { count: 0, value: 0 })
+    let won = 0
+    let lost = 0
+    for (const lead of items) {
+      if (lead.status === 'won') won++
+      if (lead.status === 'lost') lost++
+      const cell = m.get(lead.stage_id)
+      if (!cell) continue
+      cell.count++
+      if (lead.status !== 'lost') cell.value += Number(lead.est_value ?? 0)
+    }
+    const decided = won + lost
+    return { m, winRate: decided > 0 ? Math.round((won / decided) * 100) : null, won, lost }
+  }, [stages, items])
+
+  return (
+    <div className="flex gap-1 overflow-x-auto" role="group" aria-label="Pipeline by stage">
+      {stages.map((s) => {
+        const cell = byStage.m.get(s.id) ?? { count: 0, value: 0 }
+        const active = activeStageId === s.id
+        return (
+          <button
+            key={s.id}
+            onClick={() => onStageClick(s.id)}
+            aria-pressed={active}
+            className={[
+              'flex min-w-[4.5rem] shrink-0 flex-col items-start rounded-md border px-2.5 py-1.5 text-left transition-colors',
+              active
+                ? 'border-transparent bg-accent-subtle'
+                : 'border-border bg-surface hover:border-border-strong',
+            ].join(' ')}
+          >
+            <span
+              className={['text-2xs uppercase', active ? 'text-accent' : 'text-fg-subtle'].join(' ')}
+              style={capsStyle}
+            >
+              {s.label}
+            </span>
+            <span className="mt-0.5 flex items-baseline gap-1.5">
+              <span
+                className={['tnum text-lg leading-none', active ? 'text-accent' : 'text-fg'].join(' ')}
+                style={numStyle}
+              >
+                {cell.count}
+              </span>
+              {cell.value > 0 && (
+                <span className="tnum text-2xs text-fg-subtle" style={{ fontFamily: 'var(--font-mono)' }}>
+                  ₹{inrCompact(cell.value)}
+                </span>
+              )}
+            </span>
+          </button>
+        )
+      })}
+
+      {/* Win rate — derived from decided leads only; dash until one decides. */}
+      <div className="flex min-w-[4.5rem] shrink-0 flex-col items-start rounded-md border border-border bg-surface-sunk px-2.5 py-1.5">
+        <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+          Win rate
+        </span>
+        <span className="mt-0.5 flex items-baseline gap-1.5">
+          <span className="tnum text-lg leading-none text-fg" style={numStyle}>
+            {byStage.winRate == null ? '—' : `${byStage.winRate}%`}
+          </span>
+          {byStage.winRate != null && (
+            <span className="tnum text-2xs text-fg-subtle" style={{ fontFamily: 'var(--font-mono)' }}>
+              {byStage.won}W {byStage.lost}L
+            </span>
+          )}
+        </span>
+      </div>
+    </div>
+  )
+}

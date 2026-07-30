@@ -1,5 +1,6 @@
 import type { LeadItem, LeadStage, FollowUpItem } from '../../lib/leads-data'
 import { waitStamp, urgency } from '../../lib/wait'
+import { AssignSelect, ObjectionSelect } from '../crm/MockControls'
 
 // A lead row is the SAME departure-board aesthetic as QueueRow (amendment
 // item 1) with one inversion: Inbox leads with the message, Leads leads with
@@ -59,6 +60,7 @@ export function LeadRow({
   followUp,
   canEditStage,
   onStageChange,
+  crm = false,
 }: {
   lead: LeadItem
   stage: LeadStage | null
@@ -66,6 +68,9 @@ export function LeadRow({
   followUp: FollowUpItem | undefined
   canEditStage: boolean
   onStageChange: (stageId: string) => void
+  /** SA-04: CRM pipeline mounts add the SAMPLE assignment/objection controls
+   *  (Wave-1 backlog, unwired). The rep board never sets this. */
+  crm?: boolean
 }) {
   const level = urgency(lead.updated_at)
   const stamp = waitStamp(lead.updated_at)
@@ -178,6 +183,16 @@ export function LeadRow({
               style={capsStyle}
             >
               {FOLLOW_UP_LABEL[bucket]}
+            </span>
+          )}
+
+          {/* SA-04 SAMPLE controls (CRM mounts only): assignment + objection
+              capture from the Wave-1 backlog. Dashed border = not wired; they
+              hold state for the session and write nowhere. */}
+          {crm && (
+            <span className="ml-auto flex shrink-0 items-center gap-2">
+              <AssignSelect leadName={name} />
+              <ObjectionSelect leadName={name} current={lead.objection} />
             </span>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
+import { Home, Inbox, Kanban, Ellipsis } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useFlags, flagOn } from '../lib/flags'
 import { TopBar } from './TopBar'
@@ -7,10 +8,10 @@ import { Today, RepInbox, Leads, More, ProductAiDoor } from '../views/rep/screen
 // Rep view: phone-first. Fixed bottom tab bar, 4 tabs max (§C). Content-only
 // transitions; the shell never moves.
 const TABS = [
-  { to: '/', label: 'Today', end: true },
-  { to: '/inbox', label: 'Inbox' },
-  { to: '/leads', label: 'Leads' },
-  { to: '/more', label: 'More' },
+  { to: '/', label: 'Today', icon: Home, end: true },
+  { to: '/inbox', label: 'Inbox', icon: Inbox },
+  { to: '/leads', label: 'Leads', icon: Kanban },
+  { to: '/more', label: 'More', icon: Ellipsis },
 ]
 
 export function RepShell() {
@@ -49,10 +50,7 @@ export function RepShell() {
               ].join(' ')
             }
           >
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 rounded-pill bg-current opacity-0 [.active_&]:opacity-100"
-            />
+            <t.icon aria-hidden size={20} strokeWidth={1.75} />
             {t.label}
           </NavLink>
         ))}

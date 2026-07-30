@@ -1,17 +1,4 @@
-import { EmptyState } from '../../ui/EmptyState'
 import { InboxScreen } from '../inbox/InboxScreen'
-import { LeadsScreen } from '../leads/LeadsScreen'
-
-// Manager view stubs (SA-00 scaffold). Team/Assign/Analytics fill in with
-// ROLE-01 (assigned_to write-scope) + the insights epic.
-function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
-  return (
-    <section className="p-6">
-      <h1 className="mb-4 text-xl font-semibold text-fg">{title}</h1>
-      {children}
-    </section>
-  )
-}
 
 // SA-03: `Team` is GONE, replaced by the real Floor landing (Joyal's ruling).
 // It was a "No team members yet" EmptyState with no data behind it, and the
@@ -30,28 +17,7 @@ export function ManagerInbox() {
   return <InboxScreen canSend />
 }
 
-// Same Leads board, same reads, same RLS. Manager rows are all editable
-// (`leads_write` covers client_admin/manager unconditionally) — rep rows are
-// scoped per-conversation-assignment (see LeadsScreen's ROLE-WALL note).
-export function ManagerLeads() {
-  return <LeadsScreen />
-}
-
-export function Assign() {
-  return (
-    <Screen title="Assign">
-      <EmptyState
-        title="Nothing to assign"
-        body="Unassigned conversations will queue here (lands with ROLE-01)."
-      />
-    </Screen>
-  )
-}
-
-export function Analytics() {
-  return (
-    <Screen title="Analytics">
-      <EmptyState title="No data yet" body="Per-rep numbers appear once conversations flow." />
-    </Screen>
-  )
-}
+// SA-04: `ManagerLeads`, `Assign` and `Analytics` are GONE from this file.
+// The Leads board lives on as the CRM Pipeline tab (views/crm/CrmScreen.tsx),
+// Analytics is superseded by the Dashboard, and the assignment UI (mock,
+// unwired — ROLE-01 still owns the write path) sits on the CRM pipeline.

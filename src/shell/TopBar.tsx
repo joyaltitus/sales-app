@@ -1,3 +1,4 @@
+import { Sun, Moon, LogOut } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useAuth } from '../auth/AuthProvider'
 import { useTheme } from './theme'
@@ -31,15 +32,20 @@ export function TopBar() {
         )}
         <button
           onClick={toggle}
-          className="rounded-sm px-2 py-1 text-2xs font-medium text-fg-muted hover:bg-surface-sunk"
+          className="rounded-sm p-1.5 text-fg-muted hover:bg-surface-sunk"
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
-          {theme === 'dark' ? 'Light' : 'Dark'}
+          {theme === 'dark' ? (
+            <Sun aria-hidden size={16} strokeWidth={1.75} />
+          ) : (
+            <Moon aria-hidden size={16} strokeWidth={1.75} />
+          )}
         </button>
         <button
           onClick={signOut}
-          className="rounded-sm px-2 py-1 text-2xs font-medium text-fg-subtle hover:bg-surface-sunk"
+          className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-2xs font-medium text-fg-subtle hover:bg-surface-sunk"
         >
+          <LogOut aria-hidden size={14} strokeWidth={1.75} />
           Sign out
         </button>
       </div>
