@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { LeadItem, LeadStage, FollowUpItem } from '../../lib/leads-data'
 import { leadTemperature } from '../../lib/temperature'
 import type { Temperature } from '../../lib/temperature'
@@ -52,6 +52,7 @@ export function BoardView({
   followUpByLead,
   selectedId,
   onSelect,
+  onMoveStage,
   now,
 }: {
   stages: LeadStage[]
@@ -59,14 +60,35 @@ export function BoardView({
   followUpByLead: Map<string, FollowUpItem>
   selectedId: string | null
   onSelect: (lead: LeadItem) => void
+  /** SA-06 drag-and-drop: native HTML5 DnD, no library. The write is the same
+   *  RLS-gated moveLeadStage the selects use — drag is only a faster gesture. */
+  onMoveStage: (leadId: string, stageId: string) => void
   now: number
 }) {
+  const [dragging, setDragging] = useState(false)
+  const [overStage, setOverStage] = useState<string | null>(null)
+
   const byStage = useMemo(() => {
     const m = new Map<string, LeadItem[]>()
     for (const s of stages) m.set(s.id, [])
     for (const l of items) m.get(l.stage_id)?.push(l)
     return m
   }, [stages, items])
+
+  const dropProps = (stageId: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault()
+      setOverStage(stageId)
+    },
+    onDragLeave: () => setOverStage((cur) => (cur === stageId ? null : cur)),
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault()
+      const leadId = e.dataTransfer.getData('text/lead-id')
+      setOverStage(null)
+      setDragging(false)
+      if (leadId) onMoveStage(leadId, stageId)
+    },
+  })
 
   return (
     <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-3">
@@ -75,10 +97,36 @@ export function BoardView({
         const value = leads
           .filter((l) => l.status !== 'lost')
           .reduce((a, l) => a + Number(l.est_value ?? 0), 0)
+
+        // Empty columns collapse to a slim rail (Joyal: they were eating the
+        // screen) — except while a drag is live, when every column is a target.
+        if (leads.length === 0 && !dragging) {
+          return (
+            <section
+              key={stage.id}
+              {...dropProps(stage.id)}
+              className="flex w-10 shrink-0 flex-col items-center rounded-md border border-border bg-surface-sunk py-3"
+              aria-label={`${stage.label}, empty`}
+              title={`${stage.label} — empty`}
+            >
+              <span
+                className="text-2xs text-fg-subtle uppercase"
+                style={{ ...capsStyle, writingMode: 'vertical-rl' }}
+              >
+                {stage.label}
+              </span>
+            </section>
+          )
+        }
+
         return (
           <section
             key={stage.id}
-            className="flex w-64 shrink-0 flex-col rounded-md border border-border bg-surface-sunk"
+            {...dropProps(stage.id)}
+            className={[
+              'flex w-64 shrink-0 flex-col rounded-md border bg-surface-sunk transition-colors',
+              overStage === stage.id ? 'border-accent' : 'border-border',
+            ].join(' ')}
             aria-label={`${stage.label}, ${leads.length} leads`}
           >
             <header className="flex items-baseline gap-2 px-3 pt-2.5 pb-2">
@@ -114,9 +162,19 @@ export function BoardView({
                     <button
                       key={lead.id}
                       onClick={() => onSelect(lead)}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/lead-id', lead.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                        setDragging(true)
+                      }}
+                      onDragEnd={() => {
+                        setDragging(false)
+                        setOverStage(null)
+                      }}
                       aria-current={selectedId === lead.id ? 'true' : undefined}
                       className={[
-                        'block w-full rounded-md border p-2.5 text-left transition-colors',
+                        'block w-full cursor-grab rounded-md border p-2.5 text-left transition-colors active:cursor-grabbing',
                         selectedId === lead.id
                           ? 'border-accent bg-surface'
                           : 'border-border bg-surface hover:border-border-strong',

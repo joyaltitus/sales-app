@@ -27,6 +27,8 @@ export type MockTodo = {
   due_at: string
   status: 'pending' | 'done'
   source: 'follow_up' | 'escalation' | 'manual'
+  /** SA-06: employee's note on the todo (how it went / what's blocking). */
+  note: string | null
 }
 
 /** Assignable reps for the conversation-assignment mock (`conversations.assigned_to`). */
@@ -60,11 +62,11 @@ export const MOCK_REPS: MockRep[] = [
 ]
 
 const TODOS: MockTodo[] = [
-  { id: 'td-01', title: 'Call Ravi Menon back with weekend rate', assignee: 'Priya', due_at: iso(-2 * H), status: 'pending', source: 'follow_up' },
-  { id: 'td-02', title: 'Send corporate quote to Joseph K', assignee: 'Arjun', due_at: iso(3 * H), status: 'pending', source: 'manual' },
-  { id: 'td-03', title: 'Pick up escalated thread — Meera Pillai', assignee: 'Sana', due_at: iso(1 * H), status: 'pending', source: 'escalation' },
-  { id: 'td-04', title: 'Confirm advance payment — Tanvi Bhatt', assignee: 'Priya', due_at: iso(-26 * H), status: 'pending', source: 'follow_up' },
-  { id: 'td-05', title: 'Update room photos in catalog', assignee: 'Arjun', due_at: iso(-3 * D), status: 'done', source: 'manual' },
+  { id: 'td-01', title: 'Call Ravi Menon back with weekend rate', assignee: 'Priya', due_at: iso(-2 * H), status: 'pending', source: 'follow_up', note: null },
+  { id: 'td-02', title: 'Send corporate quote to Joseph K', assignee: 'Arjun', due_at: iso(3 * H), status: 'pending', source: 'manual', note: null },
+  { id: 'td-03', title: 'Pick up escalated thread — Meera Pillai', assignee: 'Sana', due_at: iso(1 * H), status: 'pending', source: 'escalation', note: null },
+  { id: 'td-04', title: 'Confirm advance payment — Tanvi Bhatt', assignee: 'Priya', due_at: iso(-26 * H), status: 'pending', source: 'follow_up', note: null },
+  { id: 'td-05', title: 'Update room photos in catalog', assignee: 'Arjun', due_at: iso(-3 * D), status: 'done', source: 'manual', note: 'Uploaded 14 photos' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -120,7 +122,9 @@ export const REP_PLAN = {
 // ---------------------------------------------------------------------------
 // Hooks — same call shape as the real layer, so wiring is a body swap.
 
-/** Local-state-only todos: toggling "Done" works in the session, writes nowhere. */
+/** Local-state-only todos: tick + note work in the session, write nowhere.
+ *  Manager and employee see the SAME list (the real table scopes by assignee
+ *  later; the mock doesn't pretend to). */
 export function useMockTodos() {
   const [items, setItems] = useState(TODOS)
   const toggle = (id: string) =>
@@ -129,7 +133,9 @@ export function useMockTodos() {
         t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t,
       ),
     )
-  return { items, loading: false as const, toggle }
+  const setNote = (id: string, note: string) =>
+    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, note: note || null } : t)))
+  return { items, loading: false as const, toggle, setNote }
 }
 
 export const mockNow = () => NOW

@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check, NotebookPen } from 'lucide-react'
 import { useMockTodos } from '../../lib/mock-data'
 import { SampleBanner } from './CrmScreen'
 
@@ -30,7 +30,9 @@ function dueStamp(iso: string, now: number): string {
 }
 
 export function TodosTab() {
-  const { items, toggle } = useMockTodos()
+  const { items, toggle, setNote } = useMockTodos()
+  const [noteFor, setNoteFor] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
   // Mock fixtures pin their own clock so overdue rows stay overdue in
   // screenshots; real wiring replaces this with Date.now().
   const now = useMemo(() => Date.now(), [])
@@ -41,7 +43,8 @@ export function TodosTab() {
   const row = (t: (typeof items)[number]) => {
     const overdue = t.status === 'pending' && new Date(t.due_at).getTime() < now
     return (
-      <div key={t.id} className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
+      <div key={t.id} className="border-b border-border bg-surface px-4 py-3">
+      <div className="flex items-center gap-3">
         <button
           onClick={() => toggle(t.id)}
           aria-pressed={t.status === 'done'}
@@ -82,6 +85,52 @@ export function TodosTab() {
             {dueStamp(t.due_at, now)}
           </span>
         )}
+        <button
+          onClick={() => {
+            setNoteFor((cur) => (cur === t.id ? null : t.id))
+            setNoteDraft(t.note ?? '')
+          }}
+          aria-label={`Note on "${t.title}"`}
+          title="Add note"
+          className={[
+            'shrink-0 rounded-sm p-1.5 hover:bg-surface-sunk',
+            t.note ? 'text-fg-muted' : 'text-fg-subtle',
+          ].join(' ')}
+        >
+          <NotebookPen aria-hidden size={14} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      {t.note && noteFor !== t.id && (
+        <p className="mt-1.5 pl-8 text-xs text-fg-muted">{t.note}</p>
+      )}
+      {noteFor === t.id && (
+        <div className="mt-2 flex items-center gap-2 pl-8">
+          <input
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setNote(t.id, noteDraft.trim())
+                setNoteFor(null)
+              }
+            }}
+            placeholder="How did it go / what's blocking"
+            aria-label="Todo note"
+            autoFocus
+            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 text-xs text-fg placeholder:text-fg-subtle hover:border-border-strong"
+          />
+          <button
+            onClick={() => {
+              setNote(t.id, noteDraft.trim())
+              setNoteFor(null)
+            }}
+            className="rounded-md border border-border px-2.5 py-1.5 text-2xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"
+          >
+            Save
+          </button>
+        </div>
+      )}
       </div>
     )
   }

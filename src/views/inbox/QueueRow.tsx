@@ -3,18 +3,11 @@ import { waitStamp, urgency } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 
-// A queue row is a departure board row (§1.4): ordered by urgency, time in a
-// fixed gutter, monospaced, dense, scannable at arm's length.
-//
-// Two things here are deliberate inversions of the CRM default, both from §1.5:
-//   1. the WAIT TIME is the largest type on the row, larger than the name
-//   2. the row leads with the LAST INBOUND MESSAGE TEXT, not the name
-// The name is recall; the wait is the decision. Once the rep has chosen, the
-// thread screen flips the hierarchy back and the name leads.
-//
-// Desktop gets the full 56px mono gutter (--gutter-w). On a 360px phone that is
-// 15% of the screen — a real cost, not worth paying — so the gutter collapses to
-// a 4px urgency spine (--spine-w) plus an inline mono stamp. Same rhythm, 4px.
+// A queue row, SA-06 shape — Joyal's direct spec (2026-07-30, supersedes the
+// §1.5 wait-time-largest inversion): the CUSTOMER (name or number) is the
+// heading, the last message sits under it small, and the wait time is small
+// on the right. Urgency still reads at arm's length through the phone spine
+// colour and the stamp's tone — it just no longer shouts over the name.
 
 const SPINE: Record<ReturnType<typeof urgency>, string> = {
   calm: 'bg-border',
@@ -28,16 +21,25 @@ const STAMP: Record<ReturnType<typeof urgency>, string> = {
   late: 'text-danger',
 }
 
+const capsStyle = {
+  fontWeight: 'var(--weight-caps)',
+  letterSpacing: 'var(--tracking-caps)',
+} as const
+
 export function QueueRow({
   item,
   preview,
   selected,
   onSelect,
+  assigneeLabel,
 }: {
   item: QueueItem
   preview: string
   selected: boolean
   onSelect: () => void
+  /** SA-06: who this chat is labeled under — "You", a teammate's name, or
+   *  null for unlabeled. Resolved by the parent (it owns the roster). */
+  assigneeLabel?: string | null
 }) {
   const level = urgency(item.last_customer_message_at)
   const stamp = waitStamp(item.last_customer_message_at)
@@ -52,69 +54,72 @@ export function QueueRow({
         selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:bg-surface-sunk',
       ].join(' ')}
     >
-      {/* Phone: the 4px urgency spine. Hidden once the full gutter appears. */}
+      {/* The 4px urgency spine — colour still carries "how long", quietly. */}
       <span
         aria-hidden
-        className={['shrink-0 sm:hidden', SPINE[level]].join(' ')}
+        className={['shrink-0', SPINE[level]].join(' ')}
         style={{ width: 'var(--spine-w)' }}
       />
 
-      {/* Desktop: the mono time gutter. The wait is the largest type on the row. */}
-      <div
-        aria-hidden
-        className="hidden shrink-0 flex-col items-end justify-center pr-3 pl-2 sm:flex"
-        style={{ width: 'var(--gutter-w)' }}
-      >
-        <span
-          className={['tnum text-xl leading-none', STAMP[level]].join(' ')}
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 'var(--weight-num)',
-            letterSpacing: 'var(--tracking-tight)',
-          }}
-        >
-          {stamp}
-        </span>
-      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pr-3 pl-3">
+        <Avatar name={name} profile={item.contact?.profile} size="md" />
 
-      <div className="min-w-0 flex-1 py-3 pr-4 pl-3">
-        {/* The message leads. This is the line the rep actually reads. */}
-        <div className="flex items-baseline gap-2">
-          <span
-            className={[
-              'min-w-0 flex-1 truncate text-sm',
-              item.unread_count > 0 ? 'font-semibold text-fg' : 'font-normal text-fg-muted',
-            ].join(' ')}
-          >
-            {preview}
-          </span>
-          {/* Phone-only inline stamp — the gutter's job at 4px. */}
-          <span
-            className={['tnum shrink-0 text-lg leading-none sm:hidden', STAMP[level]].join(' ')}
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 'var(--weight-num)',
-              letterSpacing: 'var(--tracking-tight)',
-            }}
-          >
-            {stamp}
-          </span>
-        </div>
-
-        {/* The name is recall, so it sits second and small — now anchored by
-            the avatar (SA-05, Joyal's ask; §1.10 #4 superseded for contacts). */}
-        <div className="mt-1 flex items-center gap-2">
-          <Avatar name={name} profile={item.contact?.profile} size="sm" />
-          <span className="truncate text-xs text-fg-subtle">{name}</span>
-          <ChannelIcon channel={item.contact?.channel ?? null} size={13} />
-          {item.bot_paused && (
+        <div className="min-w-0 flex-1">
+          {/* Heading: the customer. */}
+          <div className="flex items-baseline gap-2">
             <span
-              className="ml-auto shrink-0 text-2xs text-warn uppercase"
-              style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
+              className={[
+                'min-w-0 flex-1 truncate text-sm text-fg',
+                item.unread_count > 0 ? 'font-semibold' : 'font-medium',
+              ].join(' ')}
             >
-              Bot paused
+              {name}
             </span>
-          )}
+            <ChannelIcon channel={item.contact?.channel ?? null} size={13} />
+            {/* Time: small, mono, right. */}
+            <span
+              className={['tnum shrink-0 text-xs leading-none', STAMP[level]].join(' ')}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {stamp}
+            </span>
+          </div>
+
+          {/* Previous message: small, one line. */}
+          <div className="mt-0.5 flex items-center gap-2">
+            <span
+              className={[
+                'min-w-0 flex-1 truncate text-xs',
+                item.unread_count > 0 ? 'text-fg-muted' : 'text-fg-subtle',
+              ].join(' ')}
+            >
+              {preview}
+            </span>
+            {assigneeLabel && (
+              <span
+                className={[
+                  'shrink-0 text-2xs uppercase',
+                  assigneeLabel === 'You' ? 'text-accent' : 'text-fg-subtle',
+                ].join(' ')}
+                style={capsStyle}
+              >
+                {assigneeLabel}
+              </span>
+            )}
+            {item.bot_paused && (
+              <span className="shrink-0 text-2xs text-warn uppercase" style={capsStyle}>
+                {item.escalation_resolved ? 'Bot paused' : 'Needs human'}
+              </span>
+            )}
+            {item.unread_count > 0 && (
+              <span
+                className="tnum shrink-0 rounded-pill bg-accent-subtle px-1.5 text-2xs font-semibold text-accent"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {item.unread_count}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

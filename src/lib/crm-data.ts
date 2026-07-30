@@ -108,6 +108,43 @@ export function useBookings(clientId: string | null) {
   return { items, loading, reload: load }
 }
 
+export type Teammate = { user_id: string; role: string }
+
+/** SA-06 roster probe — teammates of the active client, for the label
+ *  (assignment) control. `user_client_memberships` may be RLS-scoped to the
+ *  caller's own rows; an empty/denied result degrades the UI to Me/Unassign
+ *  only, it is not an error. Display names need a profiles table (backlog) —
+ *  until then teammates render as role + short id. */
+export function useTeammates(clientId: string | null) {
+  const [items, setItems] = useState<Teammate[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!clientId) {
+      setItems([])
+      return
+    }
+    void (async () => {
+      const { data } = await supabase
+        .from('user_client_memberships')
+        .select('user_id, role')
+        .eq('client_id', clientId)
+        .limit(50)
+      if (!cancelled) setItems((data ?? []) as Teammate[])
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [clientId])
+
+  return { items }
+}
+
+/** Short human-usable label for a teammate until real names exist. */
+export function teammateLabel(t: Teammate): string {
+  return `${t.role === 'agent' ? 'Rep' : t.role} · ${t.user_id.slice(0, 4)}`
+}
+
 export type ConvLead = {
   id: string
   contact_id: string
