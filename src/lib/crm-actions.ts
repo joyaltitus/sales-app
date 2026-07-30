@@ -108,6 +108,37 @@ export async function addFollowUp(
   return fromUpdate(data, error)
 }
 
+/** Complete / snooze / cancel a follow-up. Conditional on the status the row
+ *  RENDERED (Workbench's guard) so two people acting at once can't double-
+ *  complete; RLS may deny for some roles — same 0-row contract as the rest. */
+export async function updateFollowUp(
+  clientId: string,
+  followUpId: string,
+  expectedStatus: string,
+  action: 'done' | 'snooze1d' | 'snooze3d' | 'cancel',
+): Promise<WriteResult> {
+  const now = Date.now()
+  const patch: Record<string, unknown> =
+    action === 'done'
+      ? { status: 'done', completed_at: new Date(now).toISOString() }
+      : action === 'cancel'
+        ? { status: 'cancelled' }
+        : {
+            status: 'snoozed',
+            snoozed_until: new Date(
+              now + (action === 'snooze1d' ? 24 : 72) * 3_600_000,
+            ).toISOString(),
+          }
+  const { data, error } = await supabase
+    .from('follow_ups')
+    .update(patch)
+    .eq('client_id', clientId)
+    .eq('id', followUpId)
+    .eq('status', expectedStatus)
+    .select('id')
+  return fromUpdate(data, error)
+}
+
 export async function addNote(
   clientId: string,
   row: {

@@ -277,6 +277,10 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
             followUpByLead={followUpByLead}
             selectedId={selected?.id ?? null}
             onSelect={(lead) => setSelected((cur) => (cur?.id === lead.id ? null : lead))}
+            onMoveStage={(leadId, stageId) => {
+              const lead = items.find((l) => l.id === leadId)
+              if (lead) void handleStageChange(lead, stageId)
+            }}
             now={now}
           />
         </div>

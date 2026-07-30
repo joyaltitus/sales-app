@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useQueue, usePreviews } from '../../lib/inbox-data'
 import { useFollowUps, useLeads } from '../../lib/leads-data'
 import { waitingLongest, dueToday, isOverdue } from '../../lib/landing-data'
-import { REP_PLAN, useMockTodos } from '../../lib/mock-data'
+import { REP_PLAN, DASH, useMockTodos } from '../../lib/mock-data'
+import { Sheet } from '../../ui/Sheet'
 import { inrCompact } from '../crm/PipelineStrip'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
@@ -56,6 +57,7 @@ export function Today() {
   }, [leads, userId])
 
   const myTodos = useMemo(() => todos.filter((t) => t.status === 'pending').slice(0, 3), [todos])
+  const [boardOpen, setBoardOpen] = useState(false)
 
   if (loading) {
     return (
@@ -75,42 +77,63 @@ export function Today() {
     )
   }
 
+  const targetPct = Math.min(
+    100,
+    Math.round((month.sold / REP_PLAN.monthlyTargetValue) * 100),
+  )
+
   return (
     <div className="pb-6">
-      {oldest ? (
-        <>
-          <SectionHeader title="Waiting longest" />
-          <ThreadHero
-            item={oldest}
-            preview={previews.get(oldest.id) ?? oldest.contact?.profile_name ?? '—'}
-          />
-        </>
-      ) : (
-        <div className="p-6">
-          {/* Nobody waiting is the GOOD outcome, so it reads as one. */}
-          <EmptyState
-            title="Everyone's been answered."
-            body="New WhatsApp and Instagram messages land here as they arrive."
-          />
+      {/* SA-06 (Joyal): the employee's OWN numbers open the day — the screen
+          should feel like progress, then hand them the next action below. */}
+      <div className="flex items-baseline gap-2 px-4 pt-5 pb-2">
+        <h2
+          className="label-caps text-fg-muted"
+          style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
+        >
+          My month
+        </h2>
+        <button
+          onClick={() => setBoardOpen(true)}
+          className="ml-auto rounded-pill border border-border px-2.5 py-0.5 text-2xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"
+        >
+          Team wins
+        </button>
+      </div>
+      <div className="space-y-3 border-b border-border bg-surface px-4 pb-4">
+        {/* Progress toward target — the one accent event on this screen. */}
+        <div>
+          <div className="flex items-baseline justify-between">
+            <span className="tnum text-xs text-fg-muted" style={{ fontFamily: 'var(--font-mono)' }}>
+              ₹{inrCompact(month.sold)} of ₹{inrCompact(REP_PLAN.monthlyTargetValue)}
+            </span>
+            <span className="text-xs font-medium text-fg">
+              {targetPct >= 100
+                ? 'Target hit — bonus unlocked.'
+                : `₹${inrCompact(month.toGo)} to go`}
+            </span>
+          </div>
+          <div className="mt-1.5 h-2 overflow-hidden rounded-pill bg-surface-sunk">
+            <div
+              className="h-full rounded-pill bg-accent transition-[width]"
+              style={{ width: `${Math.max(targetPct, 2)}%` }}
+              role="progressbar"
+              aria-valuenow={targetPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progress toward monthly target"
+            />
+          </div>
         </div>
-      )}
-
-      {rest.length > 0 && (
-        <>
-          <SectionHeader title="Then" count={rest.length} />
-          <ThreadList items={rest} previews={previews} />
-        </>
-      )}
-
-      {/* My month — target strip (SA-05). Sold/won REAL; plan numbers SAMPLE. */}
-      <SectionHeader title="My month" hint="Target & incentive are sample until targets go live" />
-      <div className="grid grid-cols-2 gap-2 border-b border-border bg-surface px-4 pb-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {(
           [
             ['Target', `₹${inrCompact(REP_PLAN.monthlyTargetValue)}`, false],
             ['Sold', `₹${inrCompact(month.sold)}`, false],
             ['To go', month.toGo === 0 ? 'Done' : `₹${inrCompact(month.toGo)}`, false],
-            ['Incentive', `₹${inrCompact(month.incentive)}`, true],
+            // Neutral tile — the progress bar above already holds this
+            // screen's one accent (§1.7).
+            ['Incentive', `₹${inrCompact(month.incentive)}`, false],
           ] as const
         ).map(([label, value, accent]) => (
           <div key={label} className="rounded-md border border-border bg-canvas px-3 py-2.5">
@@ -132,6 +155,11 @@ export function Today() {
             </div>
           </div>
         ))}
+        </div>
+        <p className="text-2xs text-fg-subtle">
+          Sold and won are live from your leads. Target and incentive amounts are sample until
+          targets go live.
+        </p>
       </div>
 
       {/* Todos from the manager — SAMPLE (employee_todos, Wave 1). */}
@@ -197,6 +225,70 @@ export function Today() {
           ))}
         </ul>
       )}
+
+      {/* The queue — below the numbers (Joyal's order), still one tap away. */}
+      {oldest ? (
+        <>
+          <SectionHeader title="Waiting longest" />
+          <ThreadHero
+            item={oldest}
+            preview={previews.get(oldest.id) ?? oldest.contact?.profile_name ?? '—'}
+          />
+        </>
+      ) : (
+        <div className="p-6">
+          {/* Nobody waiting is the GOOD outcome, so it reads as one. */}
+          <EmptyState
+            title="Everyone's been answered."
+            body="New WhatsApp and Instagram messages land here as they arrive."
+          />
+        </div>
+      )}
+
+      {rest.length > 0 && (
+        <>
+          <SectionHeader title="Then" count={rest.length} />
+          <ThreadList items={rest} previews={previews} />
+        </>
+      )}
+
+      {/* Team wins — healthy comparison: celebrate closes, no last-place
+          shaming, own target progress stays the primary frame. SAMPLE until
+          per-rep attribution exists. */}
+      <Sheet open={boardOpen} onClose={() => setBoardOpen(false)} title="Team wins this month">
+        <div className="space-y-3">
+          <p className="text-xs text-fg-muted">
+            Every close counts. Sample numbers until team tracking goes live.
+          </p>
+          {[...DASH.reps]
+            .sort((a, b) => b.won - a.won)
+            .map((r, i) => (
+              <div key={r.name} className="flex items-center gap-3">
+                <span
+                  className="tnum w-5 shrink-0 text-sm text-fg-subtle"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-fg">{r.name}</span>
+                {i === 0 && (
+                  <span
+                    className="shrink-0 text-2xs text-accent uppercase"
+                    style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
+                  >
+                    Top closer
+                  </span>
+                )}
+                <span
+                  className="tnum shrink-0 text-sm text-fg"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  {r.won} won
+                </span>
+              </div>
+            ))}
+        </div>
+      </Sheet>
     </div>
   )
 }

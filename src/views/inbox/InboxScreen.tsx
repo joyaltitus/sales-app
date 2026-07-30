@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
+import { useAuth } from '../../auth/AuthProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
 import type { QueueItem } from '../../lib/inbox-data'
+import { useTeammates, teammateLabel } from '../../lib/crm-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { QueueRow } from './QueueRow'
@@ -67,7 +69,10 @@ function matchesStatus(item: QueueItem, f: StatusFilter): boolean {
 
 export function InboxScreen({ canSend }: { canSend: boolean }) {
   const { activeClient } = useClient()
+  const { session } = useAuth()
   const clientId = activeClient?.id ?? null
+  const userId = session?.user?.id ?? null
+  const role = activeClient?.role ?? null
 
   // `?c=<conversation_id>` is how a landing hands a thread over (SA-03). The
   // open thread stays LOCAL state — clicking around the queue must not rewrite
@@ -91,6 +96,21 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   }
   const [status, setStatus] = useState<StatusFilter>('open')
   const [query, setQuery] = useState('')
+
+  // SA-06 "My inbox": chats labeled to me (`conversations.assigned_to`).
+  // Reps land on My (Joyal's spec — the employee opens to their own chats,
+  // with All one tap away); desktop roles land on All. Rendering scope only.
+  const [scope, setScope] = useState<'my' | 'all'>(role === 'agent' ? 'my' : 'all')
+  const { items: teammates } = useTeammates(clientId)
+  const labelFor = useCallback(
+    (assignedTo: string | null): string | null => {
+      if (!assignedTo) return null
+      if (assignedTo === userId) return 'You'
+      const t = teammates.find((x) => x.user_id === assignedTo)
+      return t ? teammateLabel(t) : 'Teammate'
+    },
+    [userId, teammates],
+  )
 
   // SA-05 context rail: its own pane at xl+, a sheet below that. The AI draft
   // seeds the composer through this counter-keyed value (a bare string could
@@ -131,12 +151,16 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   // Client-side filter over the already-fetched bounded list. The needs-human
   // count is over the channel-filtered set so the badge agrees with the list
   // the chip would show.
+  const scopedItems = useMemo(
+    () => (scope === 'my' ? items.filter((i) => i.assigned_to === userId) : items),
+    [items, scope, userId],
+  )
   const channelItems = useMemo(
     () =>
       channel
-        ? items.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
-        : items,
-    [items, channel],
+        ? scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
+        : scopedItems,
+    [scopedItems, channel],
   )
   const needsHumanCount = useMemo(
     () => channelItems.filter((i) => matchesStatus(i, 'needs_human')).length,
@@ -183,8 +207,33 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
 
   const filterBar = (
     <div className="shrink-0 space-y-2 border-b border-border bg-surface px-3 pt-2.5 pb-2">
-      {/* Channel: URL-backed segmented control. */}
+      {/* Scope + channel controls. */}
       <div className="flex items-center gap-2">
+        <div
+          role="tablist"
+          aria-label="Inbox scope"
+          className="flex rounded-md border border-border bg-surface-sunk p-0.5"
+        >
+          {(
+            [
+              ['my', 'My inbox'],
+              ['all', 'All'],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={scope === key}
+              onClick={() => setScope(key)}
+              className={[
+                'rounded-sm px-2.5 py-1 text-xs font-medium transition-colors',
+                scope === key ? 'bg-surface text-fg' : 'text-fg-muted hover:text-fg',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div
           role="tablist"
           aria-label="Channel"
@@ -207,22 +256,24 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             </button>
           ))}
         </div>
-        <div className="relative min-w-0 flex-1">
-          <Search
-            aria-hidden
-            size={14}
-            strokeWidth={1.75}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or number"
-            aria-label="Search conversations"
-            className="h-8 w-full rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
-          />
-        </div>
+      </div>
+      {/* Search on its own line — three controls plus a usable input don't
+          share 390px. */}
+      <div className="relative">
+        <Search
+          aria-hidden
+          size={14}
+          strokeWidth={1.75}
+          className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search name or number"
+          aria-label="Search conversations"
+          className="h-8 w-full rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
+        />
       </div>
       {/* Status chips — horizontal scroll on phone, wraps nowhere. */}
       <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Status filter">
@@ -264,11 +315,19 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         </div>
       ) : visibleItems.length === 0 ? (
         <div className="p-6">
-          <EmptyState
-            icon={Search}
-            title="No matches."
-            body="Nothing fits these filters. Clear the search or switch to All."
-          />
+          {scope === 'my' && scopedItems.length === 0 ? (
+            <EmptyState
+              icon={InboxIcon}
+              title="No chats labeled to you yet."
+              body="Switch to All to pick up new customers, or ask your manager to label chats to you."
+            />
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="No matches."
+              body="Nothing fits these filters. Clear the search or switch to All."
+            />
+          )}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -279,6 +338,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               preview={previews.get(item.id) ?? item.contact?.profile_name ?? '—'}
               selected={item.id === selectedId}
               onSelect={() => setSelectedId(item.id)}
+              assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
             />
           ))}
         </div>

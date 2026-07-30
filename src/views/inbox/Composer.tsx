@@ -1,8 +1,29 @@
 import { useEffect, useState } from 'react'
+import { Zap, Trash2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
 import { loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
+
+// SA-06 quick replies — the retype-killer. Device-local (localStorage) until a
+// templates table exists; the marker in the picker says so. Saved from the
+// current draft, inserted into the input (the human still edits + sends —
+// nothing auto-sends).
+const QR_KEY = 'sales-app.quick-replies'
+
+function loadReplies(): string[] {
+  try {
+    const raw = localStorage.getItem(QR_KEY)
+    const arr = raw ? (JSON.parse(raw) as unknown) : []
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function saveReplies(items: string[]) {
+  localStorage.setItem(QR_KEY, JSON.stringify(items.slice(0, 30)))
+}
 
 // The composer. `messages` INSERT policies are empty, so the browser CANNOT
 // write the row — every reply goes through POST /api/agent-send. There is no
@@ -73,6 +94,8 @@ export function Composer({
   }, [seed])
   const [needsKey, setNeedsKey] = useState(!loadGatewayKey())
   const [keyDraft, setKeyDraft] = useState('')
+  const [replies, setReplies] = useState<string[]>(() => loadReplies())
+  const [repliesOpen, setRepliesOpen] = useState(false)
 
   if (!canSend) return <ReadOnlyNotice />
 
@@ -143,7 +166,78 @@ export function Composer({
           {state.message}
         </div>
       )}
+
+      {/* Quick replies — tap to insert; save the current draft for next time. */}
+      {repliesOpen && (
+        <div className="max-h-48 space-y-1 overflow-y-auto border-b border-border px-4 py-2.5">
+          <div className="flex items-baseline justify-between">
+            <span
+              className="text-2xs text-fg-subtle uppercase"
+              style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
+            >
+              Quick replies
+            </span>
+            <span className="text-2xs text-fg-subtle">Saved on this device</span>
+          </div>
+          {replies.length === 0 && (
+            <p className="py-1 text-xs text-fg-subtle">
+              None yet. Type a reply below, then Save as quick reply.
+            </p>
+          )}
+          {replies.map((r, i) => (
+            <div key={i} className="group flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setText(r)
+                  setRepliesOpen(false)
+                }}
+                className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs text-fg hover:bg-surface-sunk"
+              >
+                {r}
+              </button>
+              <button
+                onClick={() => {
+                  const next = replies.filter((_, j) => j !== i)
+                  setReplies(next)
+                  saveReplies(next)
+                }}
+                aria-label="Delete quick reply"
+                className="shrink-0 rounded-sm p-1 text-fg-subtle opacity-0 group-hover:opacity-100 hover:text-danger"
+              >
+                <Trash2 aria-hidden size={13} strokeWidth={1.75} />
+              </button>
+            </div>
+          ))}
+          {text.trim() && !replies.includes(text.trim()) && (
+            <button
+              onClick={() => {
+                const next = [text.trim(), ...replies]
+                setReplies(next)
+                saveReplies(next)
+              }}
+              className="w-full rounded-md border border-dashed border-border-strong px-2 py-1.5 text-left text-xs text-fg-muted hover:text-fg"
+            >
+              Save current draft as quick reply
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 px-4 py-3">
+        <button
+          onClick={() => setRepliesOpen((o) => !o)}
+          aria-label="Quick replies"
+          aria-expanded={repliesOpen}
+          title="Quick replies"
+          className={[
+            'shrink-0 rounded-md border p-2 transition-colors',
+            repliesOpen
+              ? 'border-transparent bg-accent-subtle text-accent'
+              : 'border-border text-fg-muted hover:border-border-strong hover:text-fg',
+          ].join(' ')}
+        >
+          <Zap aria-hidden size={15} strokeWidth={1.75} />
+        </button>
         <Input
           aria-label="Type a reply"
           placeholder="Type a reply"

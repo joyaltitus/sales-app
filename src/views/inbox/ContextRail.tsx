@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles, Pause, Play, Trash2 } from 'lucide-react'
 import type { QueueItem } from '../../lib/inbox-data'
 import { useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
-import { useConvLead, useNotes } from '../../lib/crm-data'
-import { setBotPaused, addFollowUp, addNote, deleteNote } from '../../lib/crm-actions'
+import { useConvLead, useNotes, useTeammates, teammateLabel } from '../../lib/crm-data'
+import { setBotPaused, assignConversation, addFollowUp, addNote, deleteNote } from '../../lib/crm-actions'
 import { fetchInsight } from '../../lib/api'
 import type { Insight } from '../../lib/api'
 import { useAuth } from '../../auth/AuthProvider'
@@ -74,6 +74,24 @@ export function ContextRail({
     onChanged()
   }
 
+  // --- label (assignment) ----------------------------------------------
+  // Joyal's "easy label option": one select, right on the chat. RLS decides
+  // who may actually write it; a denied write reverts with a message.
+  const { items: teammates } = useTeammates(clientId)
+  const [labelBusy, setLabelBusy] = useState(false)
+  const [labelErr, setLabelErr] = useState(false)
+  const changeLabel = async (value: string) => {
+    setLabelBusy(true)
+    setLabelErr(false)
+    const res = await assignConversation(clientId, item.id, value === '' ? null : value)
+    setLabelBusy(false)
+    if (!res.ok) {
+      setLabelErr(true)
+      return
+    }
+    onChanged()
+  }
+
   // --- lead + stage ----------------------------------------------------
   const { lead, reload: reloadLead } = useConvLead(clientId, item.contact_id)
   const { stages } = useLeadStages(clientId)
@@ -134,6 +152,22 @@ export function ContextRail({
     setInsight(null)
     setInsightState('idle')
   }, [item.id])
+  // Handover moment: the bot stepped aside and a human is picking this up —
+  // fetch the summary unprompted, once per conversation (it's the exact moment
+  // "don't make the customer repeat themselves" is decided). Ordinary threads
+  // keep the button; every LLM call costs money.
+  const autoFetched = useRef<string | null>(null)
+  useEffect(() => {
+    if (
+      item.bot_paused &&
+      !item.escalation_resolved &&
+      autoFetched.current !== item.id
+    ) {
+      autoFetched.current = item.id
+      void getInsight()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire on thread change only
+  }, [item.id, item.bot_paused, item.escalation_resolved])
   const getInsight = async () => {
     setInsightState('loading')
     const res = await fetchInsight(item.id)
@@ -226,6 +260,44 @@ export function ContextRail({
           </Button>
           {pauseErr && <p className="mt-1.5 text-2xs text-danger">{pauseErr}</p>}
         </div>
+        {/* Label — which employee owns this chat. */}
+        <div className="mt-3">
+          <label className="block">
+            <span className="mb-1 block text-2xs text-fg-subtle uppercase" style={capsStyle}>
+              Labeled to
+            </span>
+            <select
+              value={item.assigned_to ?? ''}
+              onChange={(e) => void changeLabel(e.target.value)}
+              disabled={labelBusy}
+              aria-label={`Label ${name} to an employee`}
+              className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm text-fg hover:border-border-strong disabled:opacity-60"
+            >
+              <option value="">Unlabeled</option>
+              {userId && <option value={userId}>Me</option>}
+              {teammates
+                .filter((t) => t.user_id !== userId)
+                .map((t) => (
+                  <option key={t.user_id} value={t.user_id}>
+                    {teammateLabel(t)}
+                  </option>
+                ))}
+              {/* Assigned to someone the roster can't see — keep it selectable
+                  so the select doesn't lie. */}
+              {item.assigned_to &&
+                item.assigned_to !== userId &&
+                !teammates.some((t) => t.user_id === item.assigned_to) && (
+                  <option value={item.assigned_to}>Teammate</option>
+                )}
+            </select>
+          </label>
+          {labelErr && (
+            <p className="mt-1.5 text-2xs text-danger">
+              Couldn't change the label — you may not have permission.
+            </p>
+          )}
+        </div>
+
         {windowClosed && (
           <p className="mt-3 rounded-md bg-surface-sunk px-2.5 py-2 text-2xs text-fg-muted">
             {isIG
