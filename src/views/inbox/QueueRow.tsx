@@ -1,5 +1,7 @@
 import type { QueueItem } from '../../lib/inbox-data'
 import { waitStamp, urgency } from '../../lib/wait'
+import { Avatar } from '../../ui/Avatar'
+import { ChannelIcon } from '../../ui/ChannelIcon'
 
 // A queue row is a departure board row (§1.4): ordered by urgency, time in a
 // fixed gutter, monospaced, dense, scannable at arm's length.
@@ -40,7 +42,6 @@ export function QueueRow({
   const level = urgency(item.last_customer_message_at)
   const stamp = waitStamp(item.last_customer_message_at)
   const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
-  const channel = item.contact?.channel === 'instagram' ? 'IG' : 'WA'
 
   return (
     <button
@@ -100,16 +101,12 @@ export function QueueRow({
           </span>
         </div>
 
-        {/* The name is recall, so it sits second and small. */}
+        {/* The name is recall, so it sits second and small — now anchored by
+            the avatar (SA-05, Joyal's ask; §1.10 #4 superseded for contacts). */}
         <div className="mt-1 flex items-center gap-2">
+          <Avatar name={name} profile={item.contact?.profile} size="sm" />
           <span className="truncate text-xs text-fg-subtle">{name}</span>
-          <span
-            className="shrink-0 text-2xs text-fg-subtle uppercase"
-            style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-            aria-label={channel === 'WA' ? 'WhatsApp' : 'Instagram'}
-          >
-            {channel}
-          </span>
+          <ChannelIcon channel={item.contact?.channel ?? null} size={13} />
           {item.bot_paused && (
             <span
               className="ml-auto shrink-0 text-2xs text-warn uppercase"

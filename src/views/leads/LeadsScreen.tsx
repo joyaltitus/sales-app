@@ -1,13 +1,18 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Search, Kanban } from 'lucide-react'
+import { Search, Kanban, Download } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useLeads, useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
 import type { LeadItem } from '../../lib/leads-data'
+import { downloadCsv } from '../../lib/crm-data'
+import { leadTemperature } from '../../lib/temperature'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
+import { Sheet } from '../../ui/Sheet'
 import { LeadRow } from './LeadRow'
 import { PipelineStrip } from '../crm/PipelineStrip'
+import { BoardView } from '../crm/BoardView'
+import { LeadDrawer } from '../crm/LeadDrawer'
 
 // ONE Leads implementation, mounted by both RepShell and ManagerShell — same
 // pattern as InboxScreen (amendment item 1). The difference between the two
@@ -45,14 +50,40 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   // bounded list (300 rows) — zero backend change, same as the Inbox filters.
   const [query, setQuery] = useState('')
   const [stageFilter, setStageFilter] = useState<string | null>(null)
+  const [tempFilter, setTempFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [selected, setSelected] = useState<LeadItem | null>(null)
 
   const stageById = useMemo(() => new Map(stages.map((s) => [s.id, s])), [stages])
+  const now = Date.now()
+
+  // SA-05 rep scope (Joyal's ruling 2026-07-30: employees get the CRM, seeing
+  // their own + unassigned leads; manager/admin see the tenant). RENDERING
+  // scope only — `leads` SELECT is tenant-wide under RLS for every role, and
+  // the WRITE wall stays migration 035. Hiding a row grants nothing.
+  const scopedItems = useMemo(() => {
+    if (!crm || role !== 'agent') return items
+    return items.filter(
+      (l) => l.conversation?.assigned_to == null || l.conversation.assigned_to === userId,
+    )
+  }, [crm, role, items, userId])
 
   const visibleItems = useMemo(() => {
-    if (!crm) return items
+    if (!crm) return scopedItems
     const q = query.trim().toLowerCase()
-    return items.filter((lead) => {
+    return scopedItems.filter((lead) => {
       if (stageFilter && lead.stage_id !== stageFilter) return false
+      if (statusFilter && lead.status !== statusFilter) return false
+      if (tempFilter) {
+        const { temp } = leadTemperature(
+          lead,
+          stages,
+          false,
+          lead.conversation?.last_customer_message_at ?? null,
+          now,
+        )
+        if (temp !== tempFilter) return false
+      }
       if (!q) return true
       const hay = [
         lead.contact?.profile_name,
@@ -63,7 +94,34 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
       ]
       return hay.some((v) => v?.toLowerCase().includes(q))
     })
-  }, [crm, items, query, stageFilter])
+  }, [crm, scopedItems, query, stageFilter, statusFilter, tempFilter, stages, now])
+
+  const exportCsv = useCallback(() => {
+    downloadCsv(
+      `leads-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Name', 'Phone / handle', 'Channel', 'Stage', 'Status', 'Temperature', 'Est. value', 'Objection', 'Last activity'],
+      visibleItems.map((l) => {
+        const { temp } = leadTemperature(
+          l,
+          stages,
+          false,
+          l.conversation?.last_customer_message_at ?? null,
+          now,
+        )
+        return [
+          l.contact?.profile_name ?? '',
+          l.contact?.external_id ?? '',
+          l.contact?.channel ?? '',
+          stageById.get(l.stage_id)?.label ?? '',
+          l.status,
+          temp,
+          l.est_value,
+          l.objection,
+          l.conversation?.last_customer_message_at ?? '',
+        ]
+      }),
+    )
+  }, [visibleItems, stages, stageById, now])
 
   // Earliest pending/snoozed follow-up per lead — the rest are quieter than
   // the board has room for (§1.10's bounded-lists rule applies here too).
@@ -150,34 +208,82 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   }
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex h-full min-h-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {crm && (
         <div className="shrink-0 space-y-2 border-b border-border bg-surface px-3 pt-2.5 pb-2">
           <PipelineStrip
             stages={stages}
-            items={items}
+            items={scopedItems}
             activeStageId={stageFilter}
             onStageClick={(id) => setStageFilter((cur) => (cur === id ? null : id))}
           />
-          <div className="relative">
-            <Search
-              aria-hidden
-              size={14}
-              strokeWidth={1.75}
-              className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, number, objection"
-              aria-label="Search leads"
-              className="h-8 w-full max-w-sm rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                aria-hidden
+                size={14}
+                strokeWidth={1.75}
+                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, number, objection"
+                aria-label="Search leads"
+                className="h-8 w-full max-w-sm rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
+              />
+            </div>
+            <select
+              value={tempFilter}
+              onChange={(e) => setTempFilter(e.target.value)}
+              aria-label="Temperature filter"
+              className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-fg-muted hover:border-border-strong"
+            >
+              <option value="">All temps</option>
+              <option value="hot">Hot</option>
+              <option value="warm">Warm</option>
+              <option value="cold">Cold</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Status filter"
+              className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-fg-muted hover:border-border-strong"
+            >
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+            </select>
+            <button
+              onClick={exportCsv}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
+            >
+              <Download aria-hidden size={13} strokeWidth={1.75} />
+              Export
+            </button>
           </div>
         </div>
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+
+      {/* Desktop CRM: the kanban board. */}
+      {crm && (
+        <div className="hidden min-h-0 flex-1 lg:flex">
+          <BoardView
+            stages={stages}
+            items={visibleItems}
+            followUpByLead={followUpByLead}
+            selectedId={selected?.id ?? null}
+            onSelect={(lead) => setSelected((cur) => (cur?.id === lead.id ? null : lead))}
+            now={now}
+          />
+        </div>
+      )}
+
+      {/* Row list: the whole story below lg; phone-first, same rows as SA-02. */}
+      <div className={['min-h-0 flex-1 overflow-y-auto', crm ? 'lg:hidden' : ''].join(' ')}>
         {crm && visibleItems.length === 0 && (
           <div className="p-6">
             <EmptyState
@@ -191,7 +297,11 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
             ? { ...lead, stage_id: optimistic.get(lead.id)! }
             : lead
           return (
-            <div key={lead.id}>
+            <div
+              key={lead.id}
+              onClick={crm ? () => setSelected(lead) : undefined}
+              className={crm ? 'cursor-pointer' : undefined}
+            >
               <LeadRow
                 lead={displayLead}
                 stage={stageById.get(displayLead.stage_id) ?? null}
@@ -210,6 +320,35 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
           )
         })}
       </div>
+      </div>
+
+      {/* Lead drawer — inline panel at lg+, sheet below (§1.10 #12). */}
+      {crm && selected && clientId && (
+        <div className="hidden w-96 shrink-0 border-l border-border bg-surface lg:block">
+          <LeadDrawer
+            clientId={clientId}
+            lead={selected}
+            stages={stages}
+            onClose={() => setSelected(null)}
+            onSaved={() => void reload()}
+          />
+        </div>
+      )}
+      {crm && clientId && (
+        <div className="lg:hidden">
+          <Sheet open={!!selected} onClose={() => setSelected(null)} title="Lead">
+            {selected && (
+              <LeadDrawer
+                clientId={clientId}
+                lead={selected}
+                stages={stages}
+                onClose={() => setSelected(null)}
+                onSaved={() => void reload()}
+              />
+            )}
+          </Sheet>
+        </div>
+      )}
     </div>
   )
 }

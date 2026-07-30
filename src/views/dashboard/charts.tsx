@@ -21,15 +21,24 @@ export function Panel({
   title,
   children,
   caption,
+  sample = false,
 }: {
   title: string
   children: React.ReactNode
   caption?: string
+  /** SA-05: per-panel honesty tag — real and sample numbers share one screen
+   *  now, so each panel declares itself. */
+  sample?: boolean
 }) {
   return (
     <section className="rounded-md border border-border bg-surface p-4">
-      <h2 className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+      <h2 className="flex items-baseline gap-2 text-2xs text-fg-subtle uppercase" style={capsStyle}>
         {title}
+        {sample && (
+          <span className="rounded-pill border border-dashed border-border-strong px-1.5">
+            Sample
+          </span>
+        )}
       </h2>
       <div className="mt-3">{children}</div>
       {caption && <p className="mt-2 text-2xs text-fg-subtle">{caption}</p>}

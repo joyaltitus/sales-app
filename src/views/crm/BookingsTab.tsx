@@ -1,11 +1,12 @@
-import { useMockBookings } from '../../lib/mock-data'
-import type { MockBooking } from '../../lib/mock-data'
+import { useClient } from '../../shell/ClientProvider'
+import { useBookings } from '../../lib/crm-data'
+import type { BookingRow } from '../../lib/crm-data'
 import { Chip } from '../../ui/Chip'
-import { SampleBanner } from './CrmScreen'
+import { EmptyState } from '../../ui/EmptyState'
 
-// Bookings — SAMPLE DATA (lib/mock-data.ts). Read-only ledger, matching the
-// Workbench Bookings tab's columns: ref, customer, when, guests, total,
-// status, payment. The wiring session swaps the hook for a `bookings` read.
+// Bookings — REAL as of SA-05 (crm-data.useBookings: the `bookings` read
+// Workbench already issues browser-side under RLS). Read-only ledger: ref,
+// customer, when, guests, total, status, payment.
 
 const capsStyle = {
   fontWeight: 'var(--weight-caps)',
@@ -14,24 +15,34 @@ const capsStyle = {
 
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
-function when(b: MockBooking): string {
-  if (b.slot_time) return `${b.checkin_date ?? '—'} · ${b.slot_time}`
-  if (b.checkin_date && b.checkout_date) return `${b.checkin_date} → ${b.checkout_date}`
-  return b.checkin_date ?? 'dateless'
+function when(b: BookingRow): string {
+  const start = b.checkin_date ?? b.start_date
+  const end = b.checkout_date ?? b.end_date
+  if (b.slot_time) return `${start ?? '—'} · ${b.slot_time}`
+  if (start && end) return `${start} → ${end}`
+  return start ?? 'dateless'
 }
 
-const STATUS_TONE: Record<MockBooking['status'], 'success' | 'warn' | 'danger'> = {
-  confirmed: 'success',
-  pending: 'warn',
-  cancelled: 'danger',
+function statusTone(status: string | null): 'success' | 'warn' | 'danger' {
+  if (status === 'confirmed') return 'success'
+  if (status === 'cancelled') return 'danger'
+  return 'warn'
 }
 
 export function BookingsTab() {
-  const { items } = useMockBookings()
+  const { activeClient } = useClient()
+  const { items, loading } = useBookings(activeClient?.id ?? null)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SampleBanner>Sample data — bookings wiring lands in a follow-up session</SampleBanner>
+      {!loading && items.length === 0 && (
+        <div className="p-6">
+          <EmptyState
+            title="No bookings yet."
+            body="Confirmed bookings from conversations appear here."
+          />
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.map((b) => (
           <div
@@ -39,7 +50,7 @@ export function BookingsTab() {
             className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3"
           >
             <span className="tnum shrink-0 text-sm font-semibold text-fg" style={monoStyle}>
-              {b.booking_ref}
+              {b.booking_ref ?? '—'}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
@@ -52,9 +63,9 @@ export function BookingsTab() {
                 <span className="tnum text-xs text-fg-subtle sm:hidden" style={monoStyle}>
                   {when(b)}
                 </span>
-                {b.guests != null && (
+                {(b.guests ?? b.party_size) != null && (
                   <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
-                    {b.guests} guests
+                    {b.guests ?? b.party_size} guests
                   </span>
                 )}
               </div>
@@ -65,9 +76,9 @@ export function BookingsTab() {
               </span>
             )}
             <span className="flex shrink-0 items-center gap-1.5">
-              <Chip tone={STATUS_TONE[b.status]}>{b.status}</Chip>
+              <Chip tone={statusTone(b.status)}>{b.status ?? 'pending'}</Chip>
               <Chip tone={b.payment_status === 'paid' ? 'success' : 'warn'}>
-                {b.payment_status}
+                {b.payment_status ?? 'pending'}
               </Chip>
             </span>
           </div>

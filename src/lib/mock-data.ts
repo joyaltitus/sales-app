@@ -19,36 +19,6 @@ import { useState } from 'react'
 // ---------------------------------------------------------------------------
 // Types — real-table shapes first
 
-/** Matches `contacts` columns (subset the UI shows). */
-export type MockContact = {
-  id: string
-  channel: 'whatsapp' | 'instagram'
-  external_id: string
-  profile_name: string | null
-  notes: string | null
-  is_vip: boolean
-  is_opted_out: boolean
-  created_at: string
-  /** derived in the real layer from conversations.last_customer_message_at */
-  last_activity_at: string | null
-}
-
-/** Matches `bookings` columns (subset the UI shows). */
-export type MockBooking = {
-  id: string
-  booking_ref: string
-  booking_mode: 'nights' | 'date_range' | 'slot'
-  status: 'confirmed' | 'pending' | 'cancelled'
-  payment_status: 'paid' | 'pending'
-  customer_name: string | null
-  checkin_date: string | null
-  checkout_date: string | null
-  slot_time: string | null
-  guests: number | null
-  total_price: number | null
-  created_at: string
-}
-
 /** NOT a real table. UI proposal for Wave-1 `employee_todos`. */
 export type MockTodo = {
   id: string
@@ -87,25 +57,6 @@ export const MOCK_REPS: MockRep[] = [
   { id: 'rep-1', name: 'Priya' },
   { id: 'rep-2', name: 'Arjun' },
   { id: 'rep-3', name: 'Sana' },
-]
-
-const CONTACTS: MockContact[] = [
-  { id: 'ct-01', channel: 'whatsapp', external_id: '919812340001', profile_name: 'Ravi Menon', notes: 'Asked for weekend rates', is_vip: true, is_opted_out: false, created_at: iso(32 * D), last_activity_at: iso(2 * H) },
-  { id: 'ct-02', channel: 'instagram', external_id: 'meera.travels', profile_name: 'Meera Pillai', notes: null, is_vip: false, is_opted_out: false, created_at: iso(21 * D), last_activity_at: iso(5 * H) },
-  { id: 'ct-03', channel: 'whatsapp', external_id: '919812340003', profile_name: 'Joseph K', notes: 'Corporate — 12 rooms', is_vip: true, is_opted_out: false, created_at: iso(45 * D), last_activity_at: iso(26 * H) },
-  { id: 'ct-04', channel: 'whatsapp', external_id: '919812340004', profile_name: 'Anita Shah', notes: null, is_vip: false, is_opted_out: false, created_at: iso(11 * D), last_activity_at: iso(3 * D) },
-  { id: 'ct-05', channel: 'instagram', external_id: 'dev_kerala', profile_name: 'Dev Nair', notes: null, is_vip: false, is_opted_out: true, created_at: iso(60 * D), last_activity_at: iso(9 * D) },
-  { id: 'ct-06', channel: 'whatsapp', external_id: '919812340006', profile_name: 'Lakshmi R', notes: 'Prefers Malayalam', is_vip: false, is_opted_out: false, created_at: iso(8 * D), last_activity_at: iso(30 * 60_000) },
-  { id: 'ct-07', channel: 'whatsapp', external_id: '919812340007', profile_name: null, notes: null, is_vip: false, is_opted_out: false, created_at: iso(2 * D), last_activity_at: iso(6 * H) },
-  { id: 'ct-08', channel: 'instagram', external_id: 'tanvi.b', profile_name: 'Tanvi Bhatt', notes: 'Honeymoon package', is_vip: false, is_opted_out: false, created_at: iso(5 * D), last_activity_at: iso(12 * H) },
-]
-
-const BOOKINGS: MockBooking[] = [
-  { id: 'bk-01', booking_ref: 'BK-2047', booking_mode: 'nights', status: 'confirmed', payment_status: 'paid', customer_name: 'Ravi Menon', checkin_date: '2026-08-08', checkout_date: '2026-08-10', slot_time: null, guests: 2, total_price: 14500, created_at: iso(3 * H) },
-  { id: 'bk-02', booking_ref: 'BK-2046', booking_mode: 'nights', status: 'pending', payment_status: 'pending', customer_name: 'Tanvi Bhatt', checkin_date: '2026-08-14', checkout_date: '2026-08-18', slot_time: null, guests: 2, total_price: 32000, created_at: iso(9 * H) },
-  { id: 'bk-03', booking_ref: 'BK-2045', booking_mode: 'slot', status: 'confirmed', payment_status: 'paid', customer_name: 'Lakshmi R', checkin_date: '2026-08-02', checkout_date: null, slot_time: '11:00', guests: 4, total_price: 3600, created_at: iso(1 * D) },
-  { id: 'bk-04', booking_ref: 'BK-2044', booking_mode: 'nights', status: 'confirmed', payment_status: 'pending', customer_name: 'Joseph K', checkin_date: '2026-09-01', checkout_date: '2026-09-04', slot_time: null, guests: 24, total_price: 168000, created_at: iso(2 * D) },
-  { id: 'bk-05', booking_ref: 'BK-2043', booking_mode: 'nights', status: 'cancelled', payment_status: 'pending', customer_name: 'Anita Shah', checkin_date: '2026-08-05', checkout_date: '2026-08-06', slot_time: null, guests: 3, total_price: 7200, created_at: iso(4 * D) },
 ]
 
 const TODOS: MockTodo[] = [
@@ -155,15 +106,19 @@ export const DASH = {
 }
 
 // ---------------------------------------------------------------------------
+// Employee plan — SAMPLE (Joyal's SA-05 ask: target / sold / pending /
+// incentives per employee). No table holds targets or incentive rules yet;
+// this is the UI's proposal for it. Sold/won are computed from REAL leads by
+// the caller — only the plan numbers here are sample.
+
+export const REP_PLAN = {
+  monthlyTargetValue: 300_000, // ₹ won-lead value per month
+  incentivePerWon: 2_000, // ₹ per won lead
+  bonusAtTarget: 10_000, // ₹ on hitting the monthly target
+}
+
+// ---------------------------------------------------------------------------
 // Hooks — same call shape as the real layer, so wiring is a body swap.
-
-export function useMockContacts() {
-  return { items: CONTACTS, loading: false as const }
-}
-
-export function useMockBookings() {
-  return { items: BOOKINGS, loading: false as const }
-}
 
 /** Local-state-only todos: toggling "Done" works in the session, writes nowhere. */
 export function useMockTodos() {

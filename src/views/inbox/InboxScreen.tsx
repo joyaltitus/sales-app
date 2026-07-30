@@ -9,6 +9,8 @@ import { Skeleton } from '../../ui/Skeleton'
 import { QueueRow } from './QueueRow'
 import { Thread } from './Thread'
 import { Composer } from './Composer'
+import { ContextRail } from './ContextRail'
+import { Sheet } from '../../ui/Sheet'
 
 // SA-04 Inbox parity (real, not mock — §S6 item 2): channel tabs, status
 // chips, search. ALL of it is client-side filtering over the already-fetched
@@ -89,6 +91,12 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   }
   const [status, setStatus] = useState<StatusFilter>('open')
   const [query, setQuery] = useState('')
+
+  // SA-05 context rail: its own pane at xl+, a sheet below that. The AI draft
+  // seeds the composer through this counter-keyed value (a bare string could
+  // not be "used twice").
+  const [railOpen, setRailOpen] = useState(false)
+  const [draftSeed, setDraftSeed] = useState<{ n: number; text: string } | null>(null)
 
   // Seeding on mount alone is not enough. React Router keeps this component
   // mounted when only the query string changes, so a second hand-off to a
@@ -291,9 +299,18 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         </button>
         {/* On the thread the hierarchy flips back and the NAME leads (§1.5). */}
         <span className="truncate text-md font-semibold text-fg">{selectedName}</span>
-        {!channelLive && (
-          <span className="ml-auto shrink-0 text-2xs text-fg-subtle">Checking for updates</span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {!channelLive && (
+            <span className="text-2xs text-fg-subtle">Checking for updates</span>
+          )}
+          {/* Rail toggle — the third pane below xl, where it renders as a sheet. */}
+          <button
+            onClick={() => setRailOpen(true)}
+            className="rounded-sm px-2 py-1 text-xs text-fg-muted hover:bg-surface-sunk xl:hidden"
+          >
+            Details
+          </button>
+        </span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -307,8 +324,25 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         )}
       </div>
 
-      <Composer conversationId={selected.id} canSend={canSend} onSent={refreshAll} />
+      <Composer
+        conversationId={selected.id}
+        canSend={canSend}
+        onSent={refreshAll}
+        seed={draftSeed}
+      />
     </div>
+  )
+
+  const rail = selected && clientId && (
+    <ContextRail
+      clientId={clientId}
+      item={selected}
+      onChanged={refreshAll}
+      onUseDraft={(text) => {
+        setDraftSeed((prev) => ({ n: (prev?.n ?? 0) + 1, text }))
+        setRailOpen(false)
+      }}
+    />
   )
 
   return (
@@ -328,12 +362,25 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         {thread ?? (
           <div className="hidden flex-1 items-center justify-center lg:flex">
             <EmptyState
-            icon={MessageCircle}
-            title="Pick a conversation"
-            body="The queue is ordered by who has waited longest."
-          />
+              icon={MessageCircle}
+              title="Pick a conversation"
+              body="The queue is ordered by who has waited longest."
+            />
           </div>
         )}
+      </div>
+
+      {/* SA-05 context rail: its own pane at xl+ … */}
+      {rail && (
+        <div className="hidden w-80 shrink-0 border-l border-border bg-surface xl:block">
+          {rail}
+        </div>
+      )}
+      {/* … and a sheet below xl (§1.10 #12: sheets on phone, inline on desktop). */}
+      <div className="xl:hidden">
+        <Sheet open={railOpen && !!rail} onClose={() => setRailOpen(false)} title={selectedName}>
+          {rail}
+        </Sheet>
       </div>
     </div>
   )
