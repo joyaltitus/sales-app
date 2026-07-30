@@ -6,7 +6,7 @@ import { useLeads, useLeadStages, useFollowUps } from '../../lib/leads-data'
 import { useBookings } from '../../lib/crm-data'
 import { DASH } from '../../lib/mock-data'
 import { inrCompact } from '../crm/PipelineStrip'
-import { Panel, StatTile, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
+import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
 import { Skeleton } from '../../ui/Skeleton'
 
 // SA-05 company dashboard — manager/client_admin. REAL wherever the browser
@@ -75,8 +75,18 @@ export function DashboardScreen() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto max-w-5xl space-y-3 p-4">
-        {/* Headline tiles — REAL, from the same reads the working screens use. */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* The one number first (UI-DESIGN-01, audit A5): pipeline value leads
+            as a hero band; the rest are REAL tiles that defer to it. */}
+        <HeroStat
+          label="Open pipeline"
+          value={`₹${inrCompact(real.pipelineValue)}`}
+          sub={
+            real.winRate == null
+              ? 'Estimated value across open leads'
+              : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`
+          }
+        />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatTile label="Open conversations" value={String(real.open)} />
           <StatTile
             label="Needs human"
@@ -85,15 +95,6 @@ export function DashboardScreen() {
             sub="waiting for a person"
           />
           <StatTile label="Bookings (7 days)" value={String(real.bookingsWeek)} />
-          <StatTile
-            label="Open pipeline"
-            value={`₹${inrCompact(real.pipelineValue)}`}
-            sub={
-              real.winRate == null
-                ? 'est. value, open leads'
-                : `win rate ${real.winRate}% (${real.won}W ${real.lost}L)`
-            }
-          />
         </div>
 
         {/* Follow-up pressure — REAL; links straight to the work. */}

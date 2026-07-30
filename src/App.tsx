@@ -18,6 +18,9 @@ const SampleBoard = lazy(() =>
 )
 // SA-05: the SA-04 /preview design route is GONE — its surfaces (Dashboard,
 // CRM tabs) went real and now sit behind the session like everything else.
+// UI-DESIGN-01: /preview returns as the DIRECTION GALLERY — mock-only
+// composites for picking an identity direction, not screen mirrors.
+const PreviewGallery = lazy(() => import('./views/preview/PreviewGallery'))
 
 // Public design routes bypass the auth gate so they render for review + PWA
 // screenshots without a session. Everything else is auth-gated + role-routed.
@@ -28,6 +31,7 @@ export function App() {
       <Routes>
         <Route path="/kitchen-sink" element={<KitchenSink />} />
         <Route path="/samples" element={<SampleBoard />} />
+        <Route path="/preview" element={<PreviewGallery />} />
         <Route path="/*" element={<AuthedApp />} />
       </Routes>
     </Suspense>

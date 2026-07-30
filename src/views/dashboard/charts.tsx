@@ -30,12 +30,17 @@ export function Panel({
    *  now, so each panel declares itself. */
   sample?: boolean
 }) {
+  // UI-DESIGN-01 (audit A5): panel titles lead as real titles — the 12px caps
+  // title made every panel whisper at the same volume as its own labels.
   return (
-    <section className="rounded-md border border-border bg-surface p-4">
-      <h2 className="flex items-baseline gap-2 text-2xs text-fg-subtle uppercase" style={capsStyle}>
+    <section className="rounded-md border border-border bg-surface p-5 shadow-elev-1">
+      <h2 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
         {title}
         {sample && (
-          <span className="rounded-pill border border-dashed border-border-strong px-1.5">
+          <span
+            className="rounded-pill border border-dashed border-border-strong px-1.5 text-2xs text-fg-subtle uppercase"
+            style={capsStyle}
+          >
             Sample
           </span>
         )}
@@ -43,6 +48,43 @@ export function Panel({
       <div className="mt-3">{children}</div>
       {caption && <p className="mt-2 text-2xs text-fg-subtle">{caption}</p>}
     </section>
+  )
+}
+
+/** The one number the eye lands on first (UI-DESIGN-01, audit A5) — a full-
+ *  width band, display numeral, everything else on the screen defers to it. */
+export function HeroStat({
+  label,
+  value,
+  sub,
+  detail,
+}: {
+  label: string
+  value: string
+  sub?: string
+  detail?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 rounded-md border border-border bg-surface-raised px-5 py-4 shadow-elev-1">
+      <div>
+        <div className="text-2xs text-fg-muted uppercase" style={capsStyle}>
+          {label}
+        </div>
+        <div
+          className="tnum mt-1.5 leading-none text-fg"
+          style={{
+            ...monoStyle,
+            fontSize: 'var(--text-display)',
+            fontWeight: 'var(--weight-num)',
+            letterSpacing: 'var(--tracking-tight)',
+          }}
+        >
+          {value}
+        </div>
+        {sub && <div className="mt-1.5 text-xs text-fg-muted">{sub}</div>}
+      </div>
+      {detail && <div className="min-w-0">{detail}</div>}
+    </div>
   )
 }
 
@@ -90,7 +132,7 @@ export function Funnel({ stages }: { stages: { label: string; count: number }[] 
             <span className="w-16 shrink-0 truncate text-xs text-fg-muted">{s.label}</span>
             <div className="h-4 min-w-0 flex-1">
               <div
-                className="h-full rounded-[4px] bg-fg-subtle"
+                className="h-full rounded-[4px] bg-chart-ink"
                 style={{ width: `${(s.count / max) * 100}%`, minWidth: 2 }}
                 title={`${s.label}: ${s.count}`}
               />
@@ -141,7 +183,15 @@ export function TrendLine({
       >
         {/* recessive midline, not a full grid */}
         <line x1={PAD} x2={W - PAD} y1={y(max / 2)} y2={y(max / 2)} stroke="var(--border)" strokeWidth="1" />
-        <path d={d} fill="none" stroke="var(--fg)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        <path
+          d={d}
+          fill="none"
+          stroke="var(--fg)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
         {points.map((v, i) => (
           <circle key={i} cx={x(i)} cy={y(v)} r="6" fill="transparent">
             <title>{`Day ${i + 1}: ${v}${unit}`}</title>
@@ -187,7 +237,7 @@ export function DayBars({
         {values.map((v, i) => (
           <div
             key={i}
-            className="min-w-0 flex-1 rounded-t-[3px] bg-fg-subtle"
+            className="min-w-0 flex-1 rounded-t-[3px] bg-chart-ink"
             style={{ height: `${Math.max((v / max) * 100, 3)}%` }}
             title={`${days[i]}: ${v}`}
           />

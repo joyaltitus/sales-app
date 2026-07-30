@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './ui/tokens.css';
+@import './ui/directions.css'; /* UI-DESIGN-01 direction overrides — inert without data-direction */
 
 /* Dark mode is driven by data-theme on <html>, not the OS media query alone,
  * so the in-app toggle wins. */
@@ -15,6 +16,7 @@
   --color-surface-sunk: var(--surface-sunk);
   --color-surface-raised: var(--surface-raised);
   --color-skeleton: var(--skeleton);
+  --color-chart-ink: var(--chart-ink);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
