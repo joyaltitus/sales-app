@@ -174,10 +174,12 @@ export function BoardView({
                       }}
                       aria-current={selectedId === lead.id ? 'true' : undefined}
                       className={[
-                        'block w-full cursor-grab rounded-md border p-2.5 text-left transition-colors active:cursor-grabbing',
+                        // Cards sit ON the sunk column (elev-1); the grab
+                        // affordance is cursor + lift-on-hover (UI-DESIGN-01).
+                        'block w-full cursor-grab rounded-md border p-2.5 text-left transition-[border-color,box-shadow] shadow-elev-1 active:cursor-grabbing',
                         selectedId === lead.id
                           ? 'border-accent bg-surface'
-                          : 'border-border bg-surface hover:border-border-strong',
+                          : 'border-border bg-surface hover:border-border-strong hover:shadow-elev-2',
                       ].join(' ')}
                     >
                       <div className="flex items-center gap-2">

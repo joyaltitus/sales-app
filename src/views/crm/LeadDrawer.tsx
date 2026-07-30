@@ -135,10 +135,10 @@ export function LeadDrawer({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Avatar name={name} size="md" />
+      <header className="flex items-center gap-3 border-b border-border bg-surface-raised px-4 py-3">
+        <Avatar name={name} size="lg" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-fg">{name}</div>
+          <div className="truncate text-md font-semibold text-fg">{name}</div>
           <div className="mt-0.5 flex items-center gap-1.5">
             <ChannelIcon channel={lead.contact?.channel ?? null} size={12} />
             <span className="tnum truncate text-2xs text-fg-subtle" style={monoStyle}>
