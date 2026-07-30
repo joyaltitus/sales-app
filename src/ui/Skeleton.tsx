@@ -5,7 +5,7 @@ export function Skeleton({ className = '', ...rest }: HTMLAttributes<HTMLDivElem
   return (
     <div
       aria-hidden
-      className={['animate-pulse rounded-sm bg-surface-sunk', className].join(' ')}
+      className={['animate-pulse rounded-sm bg-skeleton', className].join(' ')}
       {...rest}
     />
   )

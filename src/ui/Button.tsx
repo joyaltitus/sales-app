@@ -28,7 +28,7 @@ const variants: Record<Variant, string> = {
   secondary:
     'border border-border-strong bg-surface text-fg hover:bg-surface-sunk active:bg-surface-sunk',
   ghost: 'text-fg-muted hover:bg-surface-sunk hover:text-fg active:bg-surface-sunk',
-  danger: 'bg-danger text-white hover:opacity-90 active:opacity-80',
+  danger: 'bg-danger text-danger-fg hover:bg-danger-hover active:bg-danger-active',
 }
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(

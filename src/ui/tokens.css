@@ -35,6 +35,22 @@
   --weight-num: 650;          /* wait-time numerals */
   --weight-caps: 550;         /* micro-caps labels */
 
+  /* Display stop (UI-DESIGN-01, PROPOSED-SUPERSESSION #1 — §C froze 12..24).
+   * Used ONLY via --text-display (dashboard hero numeral, login mark).
+   * Reverting the proposal = `--text-display: var(--text-xl);` — one line. */
+  --text-2xl: 2rem; /* 32 */
+  --text-display: var(--text-2xl);
+
+  /* --- Spacing: 4px base scale (UI-DESIGN-01) — layout rhythm, encoded --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
   /* --- Shape: 8px grid, radii 6-8, pills only for status --- */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -60,6 +76,18 @@
   --border-strong: #d3d2cb;
   --overlay: rgba(20, 20, 17, 0.32);
 
+  /* Depth (UI-DESIGN-01, PROPOSED-SUPERSESSION #4): borders stay the PRIMARY
+   * cue (§1.10 #3); elevation is a whisper-quiet ambient assist, light theme
+   * only. Dark theme separates by lightening surfaces, not by shadow.
+   * Rejecting the proposal = set both --elev-* to none. */
+  --surface-raised: #ffffff; /* light: same as surface — dark theme diverges */
+  --elev-1: 0 1px 2px rgba(26, 26, 23, 0.05);
+  --elev-2: 0 4px 16px -4px rgba(26, 26, 23, 0.09), 0 1px 2px rgba(26, 26, 23, 0.05);
+
+  /* State surfaces (UI-DESIGN-01) — loading must be VISIBLE (audit A10) */
+  --skeleton: #e9e8e3;
+  --chart-ink: #57564f;   /* chart marks — never the disabled colour (A5/A14) */
+
   /* --- Accent: ONE family — primary actions, focus, live indicators only --- */
   /* FROZEN SA-00: Teal-green (deep, WhatsApp-adjacent). A hue is a token. */
   --accent: #0d7a63;
@@ -73,6 +101,9 @@
   --success: #17795e;
   --warn: #a6690b;
   --danger: #b3261e;
+  --danger-hover: #9e211a;   /* ramps, not opacity (audit A12) */
+  --danger-active: #891d17;
+  --danger-fg: #ffffff;
   --danger-subtle: #fbeae9;
 
   color-scheme: light;
@@ -89,6 +120,13 @@
   --border-strong: #343a38;
   --overlay: rgba(0, 0, 0, 0.55);
 
+  --surface-raised: #1d2220; /* dark separates by light, not shadow */
+  --elev-1: none;
+  --elev-2: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+
+  --skeleton: #232826;
+  --chart-ink: #a7a79f;
+
   --accent: #2bb392;
   --accent-hover: #38c4a1;
   --accent-active: #23a084;
@@ -99,6 +137,9 @@
   --success: #35c495;
   --warn: #d69334;
   --danger: #e5675f;
+  --danger-hover: #eb7d76;
+  --danger-active: #dc554c;
+  --danger-fg: #2a0f0d;
   --danger-subtle: #2a1614;
 
   color-scheme: dark;
