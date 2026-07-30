@@ -1,9 +1,19 @@
+import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import { Home, Inbox, Kanban, Ellipsis } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useFlags, flagOn } from '../lib/flags'
 import { TopBar } from './TopBar'
-import { Today, RepInbox, Leads, More, ProductAiDoor } from '../views/rep/screens'
+import { Skeleton } from '../ui/Skeleton'
+import { Today, RepInbox, More, ProductAiDoor } from '../views/rep/screens'
+
+// SA-05 (Joyal's ruling 2026-07-30, supersedes SA-04's "rep gets no CRM"):
+// the Leads tab now mounts the full CRM — reps see their own + unassigned
+// leads (scoped in LeadsScreen, rendering-only; RLS unchanged). Lazy, same as
+// the desktop shells, so the rep's first load doesn't pay for it.
+const CrmScreen = lazy(() =>
+  import('../views/crm/CrmScreen').then((m) => ({ default: m.CrmScreen })),
+)
 
 // Rep view: phone-first. Fixed bottom tab bar, 4 tabs max (§C). Content-only
 // transitions; the shell never moves.
@@ -23,15 +33,24 @@ export function RepShell() {
     <div className="flex h-full flex-col bg-canvas">
       <TopBar />
       <main className="flex-1 overflow-y-auto pb-16">
-        <Routes>
-          <Route index element={<Today />} />
-          <Route path="inbox" element={<RepInbox />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="more" element={<More productAi={productAi} />} />
-          {/* Flag-gated door: only mounts when the flag is on. */}
-          {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense
+          fallback={
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          }
+        >
+          <Routes>
+            <Route index element={<Today />} />
+            <Route path="inbox" element={<RepInbox />} />
+            <Route path="leads" element={<CrmScreen />} />
+            <Route path="more" element={<More productAi={productAi} />} />
+            {/* Flag-gated door: only mounts when the flag is on. */}
+            {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <nav

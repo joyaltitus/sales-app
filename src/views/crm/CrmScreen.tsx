@@ -6,18 +6,17 @@ import { BookingsTab } from './BookingsTab'
 import { FollowUpsTab } from './FollowUpsTab'
 import { TodosTab } from './TodosTab'
 
-// SA-04 CRM — one rail door, five tabs (Joyal's call 2026-07-30: one CRM item,
-// tabs inside). manager/client_admin scope only; RepShell never mounts this.
+// SA-05 CRM — one rail door, five tabs. Mounted by ALL THREE shells now
+// (Joyal's ruling 2026-07-30 supersedes SA-04's rep exclusion): reps see
+// their own + unassigned leads (scoped in LeadsScreen, rendering-only).
 //
-// What is REAL vs SAMPLE here (§S6 acceptance requires the split be explicit):
-//   Pipeline   → REAL (the SA-02 Leads board + value strip/search, same reads,
-//                same RLS; only the assignment/objection selects on each row
-//                are SAMPLE)
-//   Follow-ups → REAL reads (follow_ups via the existing leads-data hook);
-//                actions are not wired this pass
-//   Contacts   → SAMPLE (lib/mock-data.ts)
-//   Bookings   → SAMPLE (lib/mock-data.ts)
-//   Todos      → SAMPLE (employee_todos is not even a table yet — Wave 1)
+// REAL vs SAMPLE:
+//   Pipeline   → REAL (board + drawer, RLS-gated writes; only the row-level
+//                assignment/objection selects remain SAMPLE)
+//   Follow-ups → REAL reads; actions still deferred
+//   Contacts   → REAL (SA-05)
+//   Bookings   → REAL (SA-05)
+//   Todos      → SAMPLE (employee_todos is not a table yet — Wave 1)
 //
 // The tab is URL-backed (`?tab=`) so a filtered view survives refresh, same
 // convention as the Inbox channel tabs.

@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { EmptyState } from '../../ui/EmptyState'
 import { Button } from '../../ui/Button'
 import { InboxScreen } from '../inbox/InboxScreen'
-import { LeadsScreen } from '../leads/LeadsScreen'
 
 // Rep view stubs (SA-00 scaffold). Real screens land in the ONB/FLW/inbox epics.
 function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -23,9 +22,7 @@ export function RepInbox() {
   return <InboxScreen canSend />
 }
 
-export function Leads() {
-  return <LeadsScreen />
-}
+// SA-05: `Leads` is GONE — RepShell mounts the CRM (lazy) on /leads.
 
 // "More" holds the labeled doors (Joyal's doors model). A door whose flag is
 // off is not rendered — proven here by the flag-gated Product-AI door.

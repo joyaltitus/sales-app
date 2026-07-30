@@ -33,7 +33,10 @@ export type LeadItem = {
   lost_reason: string | null
   updated_at: string
   contact: { profile_name: string | null; channel: string; external_id: string } | null
-  conversation: { assigned_to: string | null } | null
+  // SA-05: `last_customer_message_at` joined for temperature derivation (the
+  // Workbench definition of lastActivityAt) — one read shape, not a second
+  // conversation query (same law as inbox-data's SA-03 note).
+  conversation: { assigned_to: string | null; last_customer_message_at: string | null } | null
 }
 
 export type FollowUpItem = {
@@ -93,7 +96,7 @@ export function useLeads(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('leads')
       .select(
-        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, next_action, objection, lost_reason, updated_at, contacts ( profile_name, channel, external_id ), conversations ( assigned_to )',
+        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, next_action, objection, lost_reason, updated_at, contacts ( profile_name, channel, external_id ), conversations ( assigned_to, last_customer_message_at )',
       )
       .eq('client_id', clientId)
       .order('updated_at', { ascending: false })

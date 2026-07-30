@@ -88,6 +88,47 @@ export async function hubFetch<T = unknown>(
 }
 
 export const AGENT_SEND_PATH = '/api/agent-send'
+export const INSIGHTS_PATH = '/api/insights'
+
+export type Insight = {
+  summary: string | null
+  next_action: string
+  draft_reply: string
+  rationale: string | null
+}
+
+/** POST /api/insights — PM6 counsellor copilot (READ-ONLY: it returns a
+ *  suggestion the human reviews; sending stays the composer's job). Same
+ *  key+JWT model as agent-send; role membership enforced server-side. A 502
+ *  from this path means the LLM call failed server-side (dead-lettered there),
+ *  not that the network broke. */
+export async function fetchInsight(
+  conversationId: string,
+): Promise<HubResult<Insight> | { kind: 'llm_failed' }> {
+  const res = await hubFetch<{
+    ok?: boolean
+    summary?: string
+    next_action?: string
+    draft_reply?: string
+    rationale?: string
+  }>(INSIGHTS_PATH, {
+    method: 'POST',
+    body: JSON.stringify({ conversation_id: conversationId }),
+  })
+  if (res.kind === 'network' && res.message === 'HTTP 502') return { kind: 'llm_failed' }
+  if (res.kind !== 'ok') return res
+  const b = res.data
+  if (!b?.ok || !b.next_action || !b.draft_reply) return { kind: 'llm_failed' }
+  return {
+    kind: 'ok',
+    data: {
+      summary: b.summary ?? null,
+      next_action: b.next_action,
+      draft_reply: b.draft_reply,
+      rationale: b.rationale ?? null,
+    },
+  }
+}
 
 /** POST /api/agent-send — the ONLY way a reply reaches a customer. `messages`
  *  INSERT policies are empty, so the browser cannot write the row itself; every

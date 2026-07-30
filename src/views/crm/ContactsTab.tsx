@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
-import { useMockContacts } from '../../lib/mock-data'
+import { useClient } from '../../shell/ClientProvider'
+import { useContacts } from '../../lib/crm-data'
 import { waitStamp } from '../../lib/wait'
+import { Avatar } from '../../ui/Avatar'
 import { Chip } from '../../ui/Chip'
 import { EmptyState } from '../../ui/EmptyState'
-import { SampleBanner } from './CrmScreen'
 
-// Contacts — SAMPLE DATA (lib/mock-data.ts). The wiring session swaps the hook
-// for a `contacts` read (+ last activity from conversations) and this file
-// should not otherwise change. Feature parity target: Workbench Crm.tsx
-// Contacts tab — search, channel filter, VIP/opted-out flags, last activity.
+// Contacts — REAL as of SA-05 (crm-data.useContacts: the `contacts` read
+// Workbench already issues browser-side under RLS). Search, channel filter,
+// VIP/opted-out flags. Last activity column arrives when a cheap source for
+// it exists; showing created-at instead of a wrong number.
 
 const capsStyle = {
   fontWeight: 'var(--weight-caps)',
@@ -17,7 +18,8 @@ const capsStyle = {
 } as const
 
 export function ContactsTab() {
-  const { items } = useMockContacts()
+  const { activeClient } = useClient()
+  const { items } = useContacts(activeClient?.id ?? null)
   const [query, setQuery] = useState('')
   const [channel, setChannel] = useState<'' | 'whatsapp' | 'instagram'>('')
 
@@ -35,8 +37,6 @@ export function ContactsTab() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SampleBanner>Sample data — contacts wiring lands in a follow-up session</SampleBanner>
-
       <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-2">
         <div className="relative min-w-0 flex-1">
           <Search
@@ -77,6 +77,7 @@ export function ContactsTab() {
               key={c.id}
               className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3"
             >
+              <Avatar name={c.profile_name ?? c.external_id} profile={c.profile} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="truncate text-sm font-semibold text-fg">
@@ -105,9 +106,9 @@ export function ContactsTab() {
               <span
                 className="tnum shrink-0 text-sm text-fg-subtle"
                 style={{ fontFamily: 'var(--font-mono)' }}
-                title="Last activity"
+                title="Contact age"
               >
-                {c.last_activity_at ? waitStamp(c.last_activity_at) : '—'}
+                {waitStamp(c.created_at)}
               </span>
             </div>
           ))

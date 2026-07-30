@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
@@ -57,13 +57,20 @@ export function Composer({
   conversationId,
   canSend,
   onSent,
+  seed,
 }: {
   conversationId: string
   canSend: boolean
   onSent: () => void
+  /** SA-05: AI draft from the context rail. Counter-keyed so the same draft
+   *  can be pushed twice; it seeds the input, the human still edits + sends. */
+  seed?: { n: number; text: string } | null
 }) {
   const [text, setText] = useState('')
   const [state, setState] = useState<SendState>({ kind: 'idle' })
+  useEffect(() => {
+    if (seed) setText(seed.text)
+  }, [seed])
   const [needsKey, setNeedsKey] = useState(!loadGatewayKey())
   const [keyDraft, setKeyDraft] = useState('')
 

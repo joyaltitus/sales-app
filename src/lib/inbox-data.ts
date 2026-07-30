@@ -35,7 +35,15 @@ export type QueueItem = {
   // fetches columns "in case a screen wants them" is how a read shape rots.
   last_bot_message_at: string | null
   escalation_resolved: boolean
-  contact: { profile_name: string | null; channel: string; external_id: string } | null
+  // SA-05: `profile` (JSON) joined for the avatar; `is_opted_out` for the
+  // context rail's send-window state. One read shape, same law as above.
+  contact: {
+    profile_name: string | null
+    channel: string
+    external_id: string
+    profile: unknown
+    is_opted_out: boolean
+  } | null
 }
 
 export type Message = {
@@ -72,7 +80,7 @@ export function useQueue(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('conversations')
       .select(
-        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, contacts ( profile_name, channel, external_id )',
+        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, contacts ( profile_name, channel, external_id, profile, is_opted_out )',
       )
       .eq('client_id', clientId)
       .order('last_customer_message_at', { ascending: false, nullsFirst: false })
