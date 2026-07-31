@@ -14,15 +14,12 @@ type Props = {
 export function EmptyState({ title, body, action, icon: Icon }: Props) {
   return (
     <div className="mx-auto max-w-xs py-10 text-center">
-      {Icon ? (
-        <div className="mx-auto mb-3 flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border-strong text-fg-subtle">
-          <Icon aria-hidden size={16} strokeWidth={1.75} />
+      {/* Solid icon tile — the dashed ghost box read as an unfinished
+          component, not a designed moment (audit A9). */}
+      {Icon && (
+        <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface-sunk text-fg-muted">
+          <Icon aria-hidden size={18} strokeWidth={1.75} />
         </div>
-      ) : (
-        <div
-          aria-hidden
-          className="mx-auto mb-3 h-8 w-8 rounded-md border border-dashed border-border-strong"
-        />
       )}
       <h3 className="mb-1 text-sm font-semibold text-fg">{title}</h3>
       {body && <p className="text-xs text-fg-muted">{body}</p>}

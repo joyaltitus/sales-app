@@ -64,8 +64,12 @@ export function RepShell() {
             end={t.end}
             className={({ isActive }) =>
               [
-                'flex min-h-[3rem] flex-col items-center justify-center gap-0.5 py-2 text-2xs font-medium transition-colors',
-                isActive ? 'text-accent' : 'text-fg-subtle hover:text-fg-muted',
+                // Active = colour + weight + a 2px indicator bar — never colour
+                // alone (audit A17, CVD).
+                'relative flex min-h-[3rem] flex-col items-center justify-center gap-0.5 py-2 text-2xs transition-colors',
+                isActive
+                  ? 'font-semibold text-accent after:absolute after:top-0 after:h-0.5 after:w-8 after:rounded-pill after:bg-accent'
+                  : 'font-medium text-fg-subtle hover:text-fg-muted',
               ].join(' ')
             }
           >

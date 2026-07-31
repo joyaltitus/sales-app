@@ -19,11 +19,9 @@ export function TopBar() {
         {activeClient?.name ?? 'Sales App'}
       </span>
 
-      {/* Bot/AI health — placeholder wiring lands with the inbox epic. */}
-      <Chip tone="success" className="ml-1">
-        AI on
-      </Chip>
-
+      {/* Only REAL signals render here (audit A7): the hardcoded "AI on" chip
+          was a fake health indicator — removed until a real per-client
+          bot-state read exists (PROPOSED-SUPERSESSION #3). */}
       <div className="ml-auto flex items-center gap-2">
         {!online && (
           <Chip tone="warn" aria-live="polite">

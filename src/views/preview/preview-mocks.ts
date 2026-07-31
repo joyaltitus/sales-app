@@ -1,0 +1,123 @@
+import type { QueueItem, Message } from '../../lib/inbox-data'
+import type { Trace } from '../../lib/seam'
+
+// Mock data for the /preview design gallery ONLY — the route is public, so
+// nothing here may come from (or resemble) a live read. Names/numbers are the
+// demo-tenant fiction (education vertical, SEED-01's world).
+
+const min = (n: number) => new Date(Date.now() - n * 60_000).toISOString()
+
+function q(
+  id: string,
+  name: string,
+  channel: string,
+  waitedMin: number,
+  unread: number,
+  extra: Partial<QueueItem> = {},
+): QueueItem {
+  return {
+    id,
+    contact_id: `c-${id}`,
+    status: 'open',
+    bot_paused: false,
+    unread_count: unread,
+    last_customer_message_at: min(waitedMin),
+    last_bot_message_at: min(waitedMin + 2),
+    escalation_resolved: false,
+    assigned_to: null,
+    contact: {
+      profile_name: name,
+      channel,
+      external_id: '+91 98470 12345',
+      profile: null,
+      is_opted_out: false,
+    },
+    ...extra,
+  }
+}
+
+export const MOCK_QUEUE: { item: QueueItem; preview: string; assignee?: string | null }[] = [
+  {
+    item: q('1', 'Anjali Ramesh', 'whatsapp', 42, 2, { bot_paused: true }),
+    preview: 'What is the fee if I pay in two parts?',
+    assignee: 'You',
+  },
+  {
+    item: q('2', 'Vishnu K', 'whatsapp', 12, 1),
+    preview: 'Is the demo class free on Saturday?',
+  },
+  {
+    item: q('3', 'Fathima Noor', 'instagram', 4, 0),
+    preview: 'Sent a voice note',
+    assignee: 'Anil',
+  },
+  {
+    item: q('4', 'Divya Menon', 'whatsapp', 1, 0),
+    preview: 'Okay, thank you — will confirm tomorrow.',
+  },
+]
+
+export const MOCK_MESSAGES: Message[] = [
+  {
+    id: 'm1',
+    sender_type: 'contact',
+    direction: 'inbound',
+    body: 'Do you have evening batches for NEET repeaters?',
+    msg_type: 'text',
+    created_at: min(9),
+    media: null,
+    delivery_status: 'delivered',
+    failure_reason: null,
+    transcription: null,
+  },
+  {
+    id: 'm2',
+    sender_type: 'system',
+    direction: 'outbound',
+    body: 'Yes — 6pm and 8pm batches, Monday to Saturday. Both are taken by our NEET faculty.',
+    msg_type: 'text',
+    created_at: min(8),
+    media: null,
+    delivery_status: 'delivered',
+    failure_reason: null,
+    transcription: null,
+  },
+  {
+    id: 'm3',
+    sender_type: 'contact',
+    direction: 'inbound',
+    body: "What's the fee if I pay in two parts?",
+    msg_type: 'text',
+    created_at: min(7),
+    media: null,
+    delivery_status: 'delivered',
+    failure_reason: null,
+    transcription: null,
+  },
+]
+
+/** One escalate trace after the last customer message → the seam renders
+ *  trailing, exactly the §1.3 "handed to you, no reply yet" moment. */
+export const MOCK_TRACES: Trace[] = [
+  { id: 't1', route: 'llm', matched_rule_key: null, created_at: min(8) },
+  { id: 't2', route: 'escalate', matched_rule_key: 'pricing', created_at: min(6) },
+]
+
+export const MOCK_FUNNEL = [
+  { label: 'New', count: 34 },
+  { label: 'Qualified', count: 21 },
+  { label: 'Visit', count: 9 },
+  { label: 'Won', count: 5 },
+]
+
+export const MOCK_HERO = {
+  label: 'Open pipeline',
+  value: '₹4.2L',
+  sub: 'Win rate 38% — 5 won, 8 lost',
+}
+
+export const MOCK_TILES = [
+  { label: 'Open conversations', value: '18' },
+  { label: 'Needs human', value: '3', tone: 'danger' as const, sub: 'waiting for a person' },
+  { label: 'Bookings (7 days)', value: '6' },
+]

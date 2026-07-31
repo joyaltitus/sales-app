@@ -17,6 +17,11 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem(KEY, theme)
+    // Status-bar/browser chrome follows the active canvas (audit A2/A18) —
+    // the hardcoded dark value painted the wrong chrome in light mode.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0f1211' : '#fbfbfa')
   }, [theme])
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))

@@ -33,7 +33,7 @@ const IG_HUMAN_WINDOW_MS = 7 * 24 * 3_600_000
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+    <h3 className="label-caps text-fg-subtle">
       {children}
     </h3>
   )

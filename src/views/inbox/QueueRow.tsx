@@ -95,7 +95,10 @@ export function QueueRow({
             >
               {preview}
             </span>
-            {assigneeLabel && (
+            {/* Right-edge metadata is capped at TWO chips (audit A16): paused
+                state > assignee > unread count. Three stacked chips collided
+                with the preview at 390px. */}
+            {assigneeLabel && !(item.bot_paused && item.unread_count > 0) && (
               <span
                 className={[
                   'shrink-0 text-2xs uppercase',

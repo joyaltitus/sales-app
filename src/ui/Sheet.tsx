@@ -23,12 +23,12 @@ export function Sheet({ open, onClose, title, children }: Props) {
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title}>
       <div
-        className="absolute inset-0 bg-[var(--overlay)] transition-opacity"
+        className="sheet-overlay absolute inset-0 bg-[var(--overlay)]"
         onClick={onClose}
       />
       <div
         className={[
-          'absolute bg-surface transition-transform',
+          'sheet-panel absolute bg-surface shadow-elev-2',
           // phone: bottom sheet · desktop (sm+): right side panel
           'inset-x-0 bottom-0 rounded-t-md border-t border-border',
           'sm:inset-y-0 sm:right-0 sm:left-auto sm:w-96 sm:rounded-none sm:rounded-l-md sm:border-l sm:border-t-0',

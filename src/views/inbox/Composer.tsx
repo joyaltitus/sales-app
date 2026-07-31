@@ -171,12 +171,7 @@ export function Composer({
       {repliesOpen && (
         <div className="max-h-48 space-y-1 overflow-y-auto border-b border-border px-4 py-2.5">
           <div className="flex items-baseline justify-between">
-            <span
-              className="text-2xs text-fg-subtle uppercase"
-              style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-            >
-              Quick replies
-            </span>
+            <span className="label-caps text-fg-subtle">Quick replies</span>
             <span className="text-2xs text-fg-subtle">Saved on this device</span>
           </div>
           {replies.length === 0 && (

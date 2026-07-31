@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './ui/tokens.css';
+@import './ui/directions.css'; /* UI-DESIGN-01 direction overrides — inert without data-direction */
 
 /* Dark mode is driven by data-theme on <html>, not the OS media query alone,
  * so the in-app toggle wins. */
@@ -13,6 +14,9 @@
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-sunk: var(--surface-sunk);
+  --color-surface-raised: var(--surface-raised);
+  --color-skeleton: var(--skeleton);
+  --color-chart-ink: var(--chart-ink);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
@@ -28,7 +32,13 @@
   --color-success: var(--success);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-active: var(--danger-active);
+  --color-danger-fg: var(--danger-fg);
   --color-danger-subtle: var(--danger-subtle);
+
+  --shadow-elev-1: var(--elev-1);
+  --shadow-elev-2: var(--elev-2);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -75,9 +85,36 @@ body {
   color: var(--fg-muted);
 }
 
-/* visible focus ring, honored app-wide (accessibility, §C) */
+/* The signature transition (§1.8 #3, audit A8): sheets actually slide in.
+ * One motion, 200ms ease-out, transform/opacity only. Reduced-motion kills it. */
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes sheet-side {
+  from { transform: translateX(32px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sheet-panel {
+  animation: sheet-up 200ms var(--ease) both;
+}
+@media (min-width: 640px) {
+  .sheet-panel { animation-name: sheet-side; }
+}
+.sheet-overlay {
+  animation: overlay-in 150ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel, .sheet-overlay { animation: none; }
+}
+
+/* visible focus ring, honored app-wide (accessibility, §C). The ring follows
+ * each control's own radius — forcing radius-sm on focus was audit A11. */
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  outline-offset: 1px;
 }
