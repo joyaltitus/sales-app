@@ -1,0 +1,45 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
+import { Sheet } from '../../ui/Sheet'
+import { AgentPanel } from './AgentPanel'
+
+// One door to the agent from anywhere in the shell: desktop opens the
+// slide-over next to the work; phone navigates to the full-screen /agent
+// route (voice + approvals want the whole screen there).
+export function AgentLauncher() {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
+  const launch = () => {
+    if (window.matchMedia('(min-width: 640px)').matches) setOpen(true)
+    else navigate('/agent')
+  }
+
+  return (
+    <>
+      <button
+        onClick={launch}
+        className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-2xs font-semibold text-accent hover:bg-accent-subtle"
+        aria-label="Open AI sales agent"
+      >
+        <Sparkles aria-hidden size={14} strokeWidth={2} />
+        Agent
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Sales agent">
+        <div className="-m-4 h-[calc(100vh-3.25rem)] sm:h-[calc(100vh-3.25rem)]">
+          <AgentPanel />
+        </div>
+      </Sheet>
+    </>
+  )
+}
+
+/** Full-screen phone surface (route /agent). */
+export function AgentScreen() {
+  return (
+    <div className="h-full">
+      <AgentPanel />
+    </div>
+  )
+}

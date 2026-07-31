@@ -1,3 +1,4 @@
+import { BookingPlanner } from './BookingPlanner'
 import { useClient } from '../../shell/ClientProvider'
 import { useBookings } from '../../lib/crm-data'
 import type { BookingRow } from '../../lib/crm-data'
@@ -35,6 +36,10 @@ export function BookingsTab() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* UI-BUILD-02: mock visit planner sits above the real ledger */}
+      <div className="p-4 pb-0">
+        <BookingPlanner />
+      </div>
       {!loading && items.length === 0 && (
         <div className="p-6">
           <EmptyState

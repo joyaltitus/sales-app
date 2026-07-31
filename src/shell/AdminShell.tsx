@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText } from 'lucide-react'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
 import { Health, AdminInbox } from '../views/admin/screens'
@@ -9,6 +9,12 @@ import { Health, AdminInbox } from '../views/admin/screens'
 // first load and off the rep bundle entirely.
 const CrmScreen = lazy(() =>
   import('../views/crm/CrmScreen').then((m) => ({ default: m.CrmScreen })),
+)
+const DocsStudio = lazy(() =>
+  import('../views/docs/DocsStudio').then((m) => ({ default: m.DocsStudio })),
+)
+const AgentScreen = lazy(() =>
+  import('../views/agent/AgentLauncher').then((m) => ({ default: m.AgentScreen })),
 )
 const DashboardScreen = lazy(() =>
   import('../views/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
@@ -38,6 +44,7 @@ const RAIL = [
   { to: '/inbox', label: 'Inbox', icon: Inbox },
   { to: '/crm', label: 'CRM', icon: Users },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/docs', label: 'Documents', icon: FileText },
 ]
 
 function LazyFallback() {
@@ -81,6 +88,8 @@ export function AdminShell() {
               <Route path="inbox" element={<AdminInbox />} />
               <Route path="crm" element={<CrmScreen />} />
               <Route path="dashboard" element={<DashboardScreen />} />
+              <Route path="agent" element={<AgentScreen />} />
+              <Route path="docs" element={<DocsStudio />} />
               <Route path="leads" element={<Navigate to="/crm" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

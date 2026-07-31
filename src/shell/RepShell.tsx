@@ -14,6 +14,13 @@ import { Today, RepInbox, More, ProductAiDoor } from '../views/rep/screens'
 const CrmScreen = lazy(() =>
   import('../views/crm/CrmScreen').then((m) => ({ default: m.CrmScreen })),
 )
+// UI-BUILD-02: full-screen agent surface (phone entry from the TopBar launcher).
+const AgentScreen = lazy(() =>
+  import('../views/agent/AgentLauncher').then((m) => ({ default: m.AgentScreen })),
+)
+const DocsStudio = lazy(() =>
+  import('../views/docs/DocsStudio').then((m) => ({ default: m.DocsStudio })),
+)
 
 // Rep view: phone-first. Fixed bottom tab bar, 4 tabs max (§C). Content-only
 // transitions; the shell never moves.
@@ -46,6 +53,8 @@ export function RepShell() {
             <Route path="inbox" element={<RepInbox />} />
             <Route path="leads" element={<CrmScreen />} />
             <Route path="more" element={<More productAi={productAi} />} />
+            <Route path="agent" element={<AgentScreen />} />
+            <Route path="docs" element={<DocsStudio />} />
             {/* Flag-gated door: only mounts when the flag is on. */}
             {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
             <Route path="*" element={<Navigate to="/" replace />} />

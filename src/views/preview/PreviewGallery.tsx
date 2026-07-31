@@ -9,6 +9,11 @@ import { Skeleton } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
 import { ErrorState } from '../../ui/ErrorState'
 import { LoginCard, Wordmark } from '../../auth/LoginPage'
+import { ApprovalCard } from '../../ui/agent/ApprovalCard'
+import { FactCard } from '../../ui/agent/FactCard'
+import { VoiceButton } from '../../ui/agent/VoiceButton'
+import { DocumentCard } from '../../ui/agent/DocumentCard'
+import { MOCK_PROPOSALS, MOCK_FACTS, MOCK_DOCS } from '../../lib/mock-wave3'
 import { QueueRow } from '../inbox/QueueRow'
 import { Thread } from '../inbox/Thread'
 import { Panel, StatTile, HeroStat, Funnel } from '../dashboard/charts'
@@ -180,6 +185,27 @@ export default function PreviewGallery() {
               <MockComposer />
             </div>
           </PhoneFrame>
+        </Section>
+
+        <Section
+          title="AI surface kit"
+          note="UI-BUILD-02: approval ladder, Lead Brain facts, voice states — the vocabulary every agent surface reuses."
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ApprovalCard proposal={MOCK_PROPOSALS[0]} />
+            <ApprovalCard proposal={MOCK_PROPOSALS[1]} />
+            <FactCard fact={MOCK_FACTS[1]} />
+            <FactCard fact={MOCK_FACTS[3]} />
+            <div className="space-y-2">
+              <VoiceButton />
+              <VoiceButton lowConfidenceDemo />
+            </div>
+            <div className="space-y-2">
+              {MOCK_DOCS.slice(0, 2).map((d) => (
+                <DocumentCard key={d.id} doc={d} />
+              ))}
+            </div>
+          </div>
         </Section>
 
         <Section title="Primitives" note="Buttons, chips, inputs, and the designed states.">
