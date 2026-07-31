@@ -9,6 +9,9 @@ import { fetchInsight } from '../../lib/api'
 import type { Insight } from '../../lib/api'
 import { useAuth } from '../../auth/AuthProvider'
 import { Avatar } from '../../ui/Avatar'
+import { FactCard } from '../../ui/agent/FactCard'
+import { SampleTag } from '../../ui/agent/primitives'
+import { MOCK_FACTS } from '../../lib/mock-wave3'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
@@ -409,6 +412,19 @@ export function ContextRail({
             {pendingFu ? 'Add another' : 'Set follow-up'}
           </Button>
         )}
+      </div>
+
+      {/* Lead Brain — compact (UI-BUILD-02, mock; full view = drawer Memory tab) */}
+      <div className="space-y-2 border-b border-border px-4 py-4">
+        <div className="flex items-center justify-between">
+          <SectionTitle>Customer memory</SectionTitle>
+          <SampleTag label="Preview" />
+        </div>
+        <div className="space-y-2">
+          {MOCK_FACTS.slice(0, 3).map((f) => (
+            <FactCard key={f.id} fact={f} compact />
+          ))}
+        </div>
       </div>
 
       {/* AI summary */}

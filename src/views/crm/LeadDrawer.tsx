@@ -6,6 +6,7 @@ import { saveLead } from '../../lib/crm-actions'
 import { useNotes } from '../../lib/crm-data'
 import { addNote } from '../../lib/crm-actions'
 import { useAuth } from '../../auth/AuthProvider'
+import { MemoryTab } from './MemoryTab'
 import { leadTemperature } from '../../lib/temperature'
 import { TempBadge } from './BoardView'
 import { Avatar } from '../../ui/Avatar'
@@ -62,6 +63,7 @@ export function LeadDrawer({
   const [state, setState] = useState<'idle' | 'busy' | 'saved' | 'denied' | 'error' | 'need_reason'>(
     'idle',
   )
+  const [tab, setTab] = useState<'details' | 'memory'>('details')
 
   // Re-sync when another lead is opened in the same mounted drawer.
   useEffect(() => {
@@ -164,6 +166,31 @@ export function LeadDrawer({
         </button>
       </header>
 
+      {/* UI-BUILD-02: Details | Memory (Lead Brain) tabs */}
+      <div className="flex gap-1 border-b border-border px-4 pt-2">
+        {(['details', 'memory'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            aria-selected={tab === t}
+            role="tab"
+            className={[
+              'rounded-t-sm border-b-2 px-3 py-1.5 text-xs transition-colors',
+              tab === t
+                ? 'border-accent font-semibold text-fg'
+                : 'border-transparent text-fg-muted hover:text-fg',
+            ].join(' ')}
+          >
+            {t === 'details' ? 'Details' : 'Memory'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'memory' ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <MemoryTab />
+        </div>
+      ) : (
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -286,6 +313,7 @@ export function LeadDrawer({
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

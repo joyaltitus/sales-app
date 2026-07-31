@@ -30,6 +30,8 @@ export function More({ productAi }: { productAi: boolean }) {
   return (
     <Screen title="More">
       <div className="divide-y divide-border overflow-hidden rounded-md border border-border bg-surface">
+        {/* UI-BUILD-02 (Joyal ruling): reps get the Documents studio too. */}
+        <Door label="Documents" to="/docs" />
         <Door label="Objections" to="#" />
         <Door label="Fees" to="#" />
         {productAi ? (

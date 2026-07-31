@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText } from 'lucide-react'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
 import { Floor, ManagerInbox } from '../views/manager/screens'
@@ -9,6 +9,12 @@ import { Floor, ManagerInbox } from '../views/manager/screens'
 // own weight (charts, board), and the rep bundle must never pay for them.
 const CrmScreen = lazy(() =>
   import('../views/crm/CrmScreen').then((m) => ({ default: m.CrmScreen })),
+)
+const DocsStudio = lazy(() =>
+  import('../views/docs/DocsStudio').then((m) => ({ default: m.DocsStudio })),
+)
+const AgentScreen = lazy(() =>
+  import('../views/agent/AgentLauncher').then((m) => ({ default: m.AgentScreen })),
 )
 const DashboardScreen = lazy(() =>
   import('../views/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
@@ -25,6 +31,7 @@ const RAIL = [
   { to: '/inbox', label: 'Inbox', icon: Inbox },
   { to: '/crm', label: 'CRM', icon: Users },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/docs', label: 'Documents', icon: FileText },
 ]
 
 function LazyFallback() {
@@ -71,6 +78,8 @@ export function ManagerShell() {
               <Route path="inbox" element={<ManagerInbox />} />
               <Route path="crm" element={<CrmScreen />} />
               <Route path="dashboard" element={<DashboardScreen />} />
+              <Route path="agent" element={<AgentScreen />} />
+              <Route path="docs" element={<DocsStudio />} />
               {/* Pre-SA-04 paths — keep deep links alive. */}
               <Route path="leads" element={<Navigate to="/crm" replace />} />
               <Route path="assign" element={<Navigate to="/crm" replace />} />

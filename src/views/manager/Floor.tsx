@@ -1,3 +1,4 @@
+import { ManagerIntel } from './ManagerIntel'
 import { useMemo } from 'react'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews, useLiveRefresh } from '../../lib/inbox-data'
@@ -73,6 +74,7 @@ export function Floor() {
       ) : (
         <ThreadList items={unpicked} previews={previews} cap={10} />
       )}
+      <ManagerIntel />
     </div>
   )
 }

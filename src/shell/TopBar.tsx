@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useTheme } from './theme'
 import { useOnline } from '../pwa/useOnline'
 import { Chip } from '../ui/Chip'
+import { AgentLauncher } from '../views/agent/AgentLauncher'
 
 // Fixed shell header. Visible health (§C): AI/bot state + connection are always
 // on screen — no silent failures.
@@ -23,6 +24,7 @@ export function TopBar() {
           was a fake health indicator — removed until a real per-client
           bot-state read exists (PROPOSED-SUPERSESSION #3). */}
       <div className="ml-auto flex items-center gap-2">
+        <AgentLauncher />
         {!online && (
           <Chip tone="warn" aria-live="polite">
             Reconnecting…

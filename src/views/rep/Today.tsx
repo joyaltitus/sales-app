@@ -12,6 +12,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { SectionHeader, SectionEmpty, ThreadList } from '../landing/LandingSection'
 import { ThreadHero } from '../landing/ThreadHero'
+import { ActionFeed } from './ActionFeed'
 
 // TODAY — the rep's landing (§1.11): "what do I do next?" still opens with the
 // oldest waiting thread, NOT stats. SA-05 (Joyal's ruling 2026-07-30,
@@ -161,6 +162,9 @@ export function Today() {
           targets go live.
         </p>
       </div>
+
+      {/* UI-BUILD-02: next-best-action feed (mock) — the day's queue with reasons. */}
+      <ActionFeed />
 
       {/* Todos from the manager — SAMPLE (employee_todos, Wave 1). */}
       <SectionHeader title="Todos" count={myTodos.length} hint="Sample — todos aren't saved yet" />
