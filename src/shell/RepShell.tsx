@@ -37,9 +37,9 @@ export function RepShell() {
   const productAi = flagOn(flags, 'product_ai')
 
   return (
-    <div className="flex h-full flex-col bg-canvas">
+    <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
-      <main className="flex-1 overflow-y-auto pb-16">
+      <main className="min-h-0 flex-1 overflow-y-auto pb-24">
         <Suspense
           fallback={
             <div className="space-y-2 p-4">
@@ -63,7 +63,7 @@ export function RepShell() {
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 overflow-hidden rounded-xl border border-border bg-surface-glass px-1 pb-[env(safe-area-inset-bottom)] shadow-elev-3 backdrop-blur-xl sm:inset-x-auto sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2"
         aria-label="Primary"
       >
         {TABS.map((t) => (
@@ -75,14 +75,14 @@ export function RepShell() {
               [
                 // Active = colour + weight + a 2px indicator bar — never colour
                 // alone (audit A17, CVD).
-                'relative flex min-h-[3rem] flex-col items-center justify-center gap-0.5 py-2 text-2xs transition-colors',
+                'relative flex min-h-[3.5rem] flex-col items-center justify-center gap-1 rounded-lg py-2 text-2xs transition-[color,background-color,transform] duration-[var(--motion-fast)]',
                 isActive
-                  ? 'font-semibold text-accent after:absolute after:top-0 after:h-0.5 after:w-8 after:rounded-pill after:bg-accent'
-                  : 'font-medium text-fg-subtle hover:text-fg-muted',
+                  ? 'bg-accent-subtle font-semibold text-accent'
+                  : 'font-medium text-fg-subtle hover:bg-surface-sunk hover:text-fg active:scale-[0.98]',
               ].join(' ')
             }
           >
-            <t.icon aria-hidden size={20} strokeWidth={1.75} />
+            <t.icon aria-hidden size={19} strokeWidth={1.8} />
             {t.label}
           </NavLink>
         ))}

@@ -31,8 +31,8 @@ export function ListRow({
     <button
       onClick={onClick}
       className={[
-        'flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors',
-        selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:bg-surface-sunk',
+        'relative flex w-full items-center gap-3 border-b border-border px-4 py-3.5 text-left transition-[background-color,color] duration-[var(--motion-fast)] last:border-b-0',
+        selected ? 'signal-edge bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:bg-surface-sunk',
       ].join(' ')}
     >
       <div className="min-w-0 flex-1">
@@ -40,7 +40,7 @@ export function ListRow({
           <span
             className={[
               'truncate text-sm text-fg',
-              unread ? 'font-semibold' : 'font-normal',
+              unread ? 'font-bold' : 'font-medium',
             ].join(' ')}
           >
             {name}

@@ -18,9 +18,9 @@ export function profilePicUrl(profile: unknown): string | null {
 }
 
 const SIZE = {
-  sm: 'h-6 w-6 text-2xs',
-  md: 'h-8 w-8 text-xs',
-  lg: 'h-10 w-10 text-sm',
+  sm: 'h-7 w-7 text-2xs',
+  md: 'h-9 w-9 text-xs',
+  lg: 'h-11 w-11 text-sm',
 } as const
 
 export function Avatar({
@@ -43,7 +43,7 @@ export function Avatar({
         alt=""
         aria-hidden
         onError={() => setBroken(true)}
-        className={[SIZE[size], 'shrink-0 rounded-md border border-border object-cover'].join(' ')}
+        className={[SIZE[size], 'shrink-0 rounded-[10px] border border-border-strong object-cover shadow-elev-1'].join(' ')}
       />
     )
   }
@@ -52,7 +52,7 @@ export function Avatar({
       aria-hidden
       className={[
         SIZE[size],
-        'flex shrink-0 items-center justify-center rounded-md border border-border bg-surface-sunk font-semibold text-fg-muted select-none',
+        'flex shrink-0 items-center justify-center rounded-[10px] border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--surface-sunk))] font-semibold text-fg-muted shadow-elev-1 select-none',
       ].join(' ')}
     >
       {initial}

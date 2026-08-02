@@ -57,7 +57,7 @@ export function PipelineStrip({
   }, [stages, items])
 
   return (
-    <div className="flex gap-1 overflow-x-auto" role="group" aria-label="Pipeline by stage">
+    <div className="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Pipeline by stage">
       {stages.map((s) => {
         const cell = byStage.m.get(s.id) ?? { count: 0, value: 0 }
         const active = activeStageId === s.id
@@ -67,10 +67,10 @@ export function PipelineStrip({
             onClick={() => onStageClick(s.id)}
             aria-pressed={active}
             className={[
-              'flex min-w-[4.5rem] shrink-0 flex-col items-start rounded-md border px-2.5 py-1.5 text-left transition-colors',
+              'flex min-w-[5.5rem] shrink-0 flex-col items-start rounded-lg border px-3 py-2.5 text-left shadow-elev-1 transition-[background-color,border-color,transform]',
               active
-                ? 'border-transparent bg-accent-subtle'
-                : 'border-border bg-surface hover:border-border-strong',
+                ? 'border-accent bg-accent-subtle'
+                : 'border-border bg-surface hover:-translate-y-px hover:border-border-strong',
             ].join(' ')}
           >
             <span
@@ -97,7 +97,7 @@ export function PipelineStrip({
       })}
 
       {/* Win rate — derived from decided leads only; dash until one decides. */}
-      <div className="flex min-w-[4.5rem] shrink-0 flex-col items-start rounded-md border border-border bg-surface-sunk px-2.5 py-1.5">
+      <div className="flex min-w-[5.5rem] shrink-0 flex-col items-start rounded-lg border border-border bg-surface-sunk px-3 py-2.5">
         <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
           Win rate
         </span>

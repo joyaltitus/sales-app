@@ -9,7 +9,7 @@ import { MOCK_MANAGER } from '../../lib/mock-wave3'
 
 function Card({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="rounded-md border border-border bg-surface p-3.5 shadow-elev-1">
+    <section className="rounded-lg border border-border bg-surface p-4 shadow-elev-1">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-fg">{title}</h3>
         {action}
@@ -24,14 +24,14 @@ export function ManagerIntel() {
   const max = Math.max(...m.pipelineHealth.map((s) => s.count))
 
   return (
-    <div className="space-y-3 px-4 py-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-fg">This month, honestly</h2>
         <SampleTag label="Preview — not wired" />
       </div>
 
       {/* Forecast + health numbers */}
-      <div className="tnum grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="tnum grid grid-cols-2 gap-3 lg:grid-cols-4">
         {(
           [
             ['Forecast', m.forecast.month],
@@ -40,7 +40,7 @@ export function ManagerIntel() {
             ['Median reply', `${m.medianResponseMin}m`],
           ] as const
         ).map(([l, v]) => (
-          <div key={l} className="rounded-md border border-border bg-surface px-3 py-2.5 shadow-elev-1">
+          <div key={l} className="rounded-lg border border-border bg-surface px-4 py-3.5 shadow-elev-1">
             <div className="label-caps">{l}</div>
             <div className="mt-1 text-lg leading-none font-semibold text-fg" style={{ fontFamily: 'var(--font-mono)' }}>
               {v}
@@ -49,8 +49,9 @@ export function ManagerIntel() {
         ))}
       </div>
 
+      <div className="grid gap-3 lg:grid-cols-2">
       <Card title="Pipeline health">
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           {m.pipelineHealth.map((s) => (
             <div key={s.stage} className="flex items-center gap-2 text-xs">
               <span className="w-16 shrink-0 text-fg-muted">{s.stage}</span>
@@ -91,6 +92,7 @@ export function ManagerIntel() {
           Pattern: {m.winning}
         </p>
       </Card>
+      </div>
 
       <Card
         title="Why deals were lost"

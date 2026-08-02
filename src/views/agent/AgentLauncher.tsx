@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import { Sheet } from '../../ui/Sheet'
-import { AgentPanel } from './AgentPanel'
+
+const AgentPanel = lazy(() => import('./AgentPanel').then((module) => ({ default: module.AgentPanel })))
 
 // One door to the agent from anywhere in the shell: desktop opens the
 // slide-over next to the work; phone navigates to the full-screen /agent
@@ -20,7 +21,7 @@ export function AgentLauncher() {
     <>
       <button
         onClick={launch}
-        className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-2xs font-semibold text-accent hover:bg-accent-subtle"
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[color-mix(in_srgb,var(--accent)_20%,var(--border))] bg-accent-subtle px-2.5 text-2xs font-semibold text-accent hover:bg-accent-soft"
         aria-label="Open AI sales agent"
       >
         <Sparkles aria-hidden size={14} strokeWidth={2} />
@@ -28,7 +29,7 @@ export function AgentLauncher() {
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title="Sales agent">
         <div className="-m-4 h-[calc(100vh-3.25rem)] sm:h-[calc(100vh-3.25rem)]">
-          <AgentPanel />
+          <Suspense fallback={<div className="p-4 text-xs text-fg-muted">Loading copilot…</div>}><AgentPanel /></Suspense>
         </div>
       </Sheet>
     </>
@@ -39,7 +40,7 @@ export function AgentLauncher() {
 export function AgentScreen() {
   return (
     <div className="h-full">
-      <AgentPanel />
+      <Suspense fallback={<div className="p-4 text-xs text-fg-muted">Loading copilot…</div>}><AgentPanel /></Suspense>
     </div>
   )
 }

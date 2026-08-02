@@ -45,10 +45,17 @@ export function CrmScreen() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 items-end justify-between gap-3 border-b border-border bg-surface px-4 pt-4 pb-3">
+        <div>
+          <p className="label-caps text-accent">Revenue workspace</p>
+          <h1 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">CRM</h1>
+        </div>
+        <p className="hidden text-xs text-fg-muted sm:block">Move the work forward, not the rows around.</p>
+      </div>
       <div
         role="tablist"
         aria-label="CRM sections"
-        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-2 pt-1.5"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-3 pt-1.5"
       >
         {TABS.map((t) => (
           <button
@@ -57,7 +64,7 @@ export function CrmScreen() {
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
             className={[
-              'flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 pt-1 pb-1.5 text-sm font-medium transition-colors',
+              'flex min-h-10 shrink-0 items-center gap-1.5 border-b-2 px-3 pt-1 pb-1.5 text-sm font-semibold transition-colors',
               tab === t.key
                 ? 'border-accent text-fg'
                 : 'border-transparent text-fg-muted hover:text-fg',

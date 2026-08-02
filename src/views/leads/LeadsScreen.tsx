@@ -211,14 +211,14 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
     <div className="flex h-full min-h-0">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {crm && (
-        <div className="shrink-0 space-y-2 border-b border-border bg-surface px-3 pt-2.5 pb-2">
+        <div className="shrink-0 space-y-3 border-b border-border bg-surface px-4 pt-3 pb-3">
           <PipelineStrip
             stages={stages}
             items={scopedItems}
             activeStageId={stageFilter}
             onStageClick={(id) => setStageFilter((cur) => (cur === id ? null : id))}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto">
             <div className="relative min-w-0 flex-1">
               <Search
                 aria-hidden
@@ -232,14 +232,14 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name, number, objection"
                 aria-label="Search leads"
-                className="h-8 w-full max-w-sm rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
+                className="h-10 w-full max-w-sm rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg shadow-[var(--inset-highlight)] transition-colors placeholder:text-fg-subtle hover:border-border-strong"
               />
             </div>
             <select
               value={tempFilter}
               onChange={(e) => setTempFilter(e.target.value)}
               aria-label="Temperature filter"
-              className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-fg-muted hover:border-border-strong"
+              className="h-10 shrink-0 rounded-md border border-border bg-surface px-2.5 text-xs text-fg-muted hover:border-border-strong"
             >
               <option value="">All temps</option>
               <option value="hot">Hot</option>
@@ -250,7 +250,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               aria-label="Status filter"
-              className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-fg-muted hover:border-border-strong"
+              className="h-10 shrink-0 rounded-md border border-border bg-surface px-2.5 text-xs text-fg-muted hover:border-border-strong"
             >
               <option value="">All statuses</option>
               <option value="open">Open</option>
@@ -259,7 +259,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
             </select>
             <button
               onClick={exportCsv}
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
             >
               <Download aria-hidden size={13} strokeWidth={1.75} />
               Export
@@ -287,7 +287,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
       )}
 
       {/* Row list: the whole story below lg; phone-first, same rows as SA-02. */}
-      <div className={['min-h-0 flex-1 overflow-y-auto', crm ? 'lg:hidden' : ''].join(' ')}>
+      <div className={['min-h-0 flex-1 overflow-y-auto bg-canvas sm:bg-surface', crm ? 'lg:hidden' : ''].join(' ')}>
         {crm && visibleItems.length === 0 && (
           <div className="p-6">
             <EmptyState

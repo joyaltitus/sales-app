@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import './ui/tokens.css';
-@import './ui/directions.css'; /* UI-DESIGN-01 direction overrides — inert without data-direction */
 
 /* Dark mode is driven by data-theme on <html>, not the OS media query alone,
  * so the in-app toggle wins. */
@@ -12,9 +11,11 @@
   --font-sans: var(--font-sans);
 
   --color-canvas: var(--canvas);
+  --color-canvas-tint: var(--canvas-tint);
   --color-surface: var(--surface);
   --color-surface-sunk: var(--surface-sunk);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-glass: var(--surface-glass);
   --color-skeleton: var(--skeleton);
   --color-chart-ink: var(--chart-ink);
   --color-fg: var(--fg);
@@ -28,20 +29,34 @@
   --color-accent-active: var(--accent-active);
   --color-accent-fg: var(--accent-fg);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-soft: var(--accent-soft);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+
+  --color-channel-wa: var(--channel-wa);
+  --color-channel-ig: var(--channel-ig);
 
   --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
   --color-warn: var(--warn);
+  --color-warn-subtle: var(--warn-subtle);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-active: var(--danger-active);
   --color-danger-fg: var(--danger-fg);
   --color-danger-subtle: var(--danger-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
 
   --shadow-elev-1: var(--elev-1);
   --shadow-elev-2: var(--elev-2);
+  --shadow-elev-3: var(--elev-3);
 
+  --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
   --radius-pill: var(--radius-pill);
 
   --text-2xs: var(--text-2xs);
@@ -50,6 +65,8 @@
   --text-md: var(--text-md);
   --text-lg: var(--text-lg);
   --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
 }
 
 html,
@@ -64,9 +81,31 @@ body {
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  line-height: 1.45;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+* {
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
 }
 
 /* tabular figures on every number/₹/phone/timestamp (§C) */
@@ -80,9 +119,49 @@ body {
 .label-caps {
   font-size: var(--text-2xs);
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--fg-muted);
+}
+
+.app-grid {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.page-frame {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 24px;
+}
+
+.panel-surface {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--elev-1), var(--inset-highlight);
+}
+
+.signal-edge {
+  position: relative;
+}
+
+.signal-edge::before {
+  content: '';
+  position: absolute;
+  inset-block: 12px;
+  inset-inline-start: 0;
+  width: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--signal);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--signal) 50%, transparent);
+}
+
+@media (max-width: 639px) {
+  .page-frame { padding: 16px; }
 }
 
 /* The signature transition (§1.8 #3, audit A8): sheets actually slide in.
@@ -98,6 +177,9 @@ body {
 @keyframes overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
 }
 .sheet-panel {
   animation: sheet-up 200ms var(--ease) both;
@@ -116,5 +198,117 @@ body {
  * each control's own radius — forcing radius-sm on focus was audit A11. */
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-ring);
+}
+
+/* RPT-owner — the report is the printable object, never the dashboard shell.
+ * Scoped print tokens keep an A4 handoff legible even when the app is dark. */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+.owner-report-print-preview {
+  background: #fff;
+  color: #17201c;
+  box-shadow: none;
+  --surface: #fff;
+  --surface-raised: #fff;
+  --surface-sunk: #f2f4f1;
+  --fg: #17201c;
+  --fg-muted: #49554f;
+  --fg-subtle: #65716b;
+  --border: #d7ddd9;
+  --border-strong: #aab5ae;
+  --chart-ink: #49554f;
+  --accent: #146b4a;
+  --accent-fg: #fff;
+  --accent-subtle: #e5f2ea;
+  --success: #206b49;
+  --success-subtle: #e5f2ea;
+  --warn: #865f16;
+  --warn-subtle: #faf0d8;
+}
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .owner-report,
+  .owner-report * {
+    visibility: visible !important;
+  }
+
+  .owner-report {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #17201c !important;
+    box-shadow: none !important;
+    --surface: #fff;
+    --surface-raised: #fff;
+    --surface-sunk: #f2f4f1;
+    --fg: #17201c;
+    --fg-muted: #49554f;
+    --fg-subtle: #65716b;
+    --border: #d7ddd9;
+    --border-strong: #aab5ae;
+    --chart-ink: #49554f;
+    --accent: #146b4a;
+    --accent-fg: #fff;
+    --accent-subtle: #e5f2ea;
+    --success: #206b49;
+    --success-subtle: #e5f2ea;
+    --warn: #865f16;
+    --warn-subtle: #faf0d8;
+  }
+
+  .owner-report-actions {
+    display: none !important;
+  }
+
+  .owner-report-header {
+    margin-bottom: 4mm;
+  }
+
+  .owner-report-readout,
+  .owner-report-metrics,
+  .owner-report-charts,
+  .owner-report-tables,
+  .owner-report article,
+  .owner-report table,
+  .owner-report svg {
+    break-inside: avoid;
+  }
+
+  .owner-report .owner-report-readout {
+    padding-block: 3mm;
+  }
+
+  .owner-report .owner-report-metric {
+    padding: 3mm;
+  }
+
+  .owner-report .owner-report-charts,
+  .owner-report .owner-report-tables {
+    gap: 3mm;
+  }
+
+  .owner-report svg {
+    max-height: 42mm;
+  }
 }

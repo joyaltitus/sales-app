@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { LeadItem, LeadStage, FollowUpItem } from '../../lib/leads-data'
 import { leadTemperature } from '../../lib/temperature'
 import type { Temperature } from '../../lib/temperature'
@@ -6,7 +6,10 @@ import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { inrCompact } from './PipelineStrip'
 import { waitStamp } from '../../lib/wait'
-import { Flame, Sun, Snowflake, Pin } from 'lucide-react'
+import { Flame, MoreHorizontal, Sun, Snowflake, Pin } from 'lucide-react'
+import { CallButton } from '../calls/CallButton'
+import { DealProbability } from '../revenue/DealProbability'
+import { LeadQuickActions } from '../leads/LeadQuickActions'
 
 // SA-05 pipeline board — the Workbench kanban rebuilt in the Board language:
 // desktop-only (≥lg; phones keep the row list — a 4-column board at 390px is
@@ -67,6 +70,9 @@ export function BoardView({
 }) {
   const [dragging, setDragging] = useState(false)
   const [overStage, setOverStage] = useState<string | null>(null)
+  const [quickLead, setQuickLead] = useState<LeadItem | null>(null)
+  const [captureOpen, setCaptureOpen] = useState(false)
+  const holdTimer = useRef<number | null>(null)
 
   const byStage = useMemo(() => {
     const m = new Map<string, LeadItem[]>()
@@ -90,7 +96,7 @@ export function BoardView({
     },
   })
 
-  return (
+  return <>
     <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-3">
       {stages.map((stage) => {
         const leads = byStage.get(stage.id) ?? []
@@ -159,9 +165,16 @@ export function BoardView({
                   const fu = followUpByLead.get(lead.id)
                   const fuOverdue = fu && new Date(fu.due_at).getTime() < now
                   return (
-                    <button
+                    <div
                       key={lead.id}
                       onClick={() => onSelect(lead)}
+                      onContextMenu={(event) => { event.preventDefault(); setQuickLead(lead) }}
+                      onPointerDown={(event) => { if (event.pointerType === 'touch') holdTimer.current = window.setTimeout(() => setQuickLead(lead), 520) }}
+                      onPointerUp={() => { if (holdTimer.current) window.clearTimeout(holdTimer.current); holdTimer.current = null }}
+                      onPointerCancel={() => { if (holdTimer.current) window.clearTimeout(holdTimer.current); holdTimer.current = null }}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(lead) } }}
+                      role="button"
+                      tabIndex={0}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/lead-id', lead.id)
@@ -188,9 +201,12 @@ export function BoardView({
                           {name}
                         </span>
                         <ChannelIcon channel={lead.contact?.channel ?? null} size={13} />
+                        <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" />
+                        <button onClick={(event) => { event.stopPropagation(); setQuickLead(lead) }} aria-label={`Quick actions for ${name}`} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-sunk hover:text-fg"><MoreHorizontal aria-hidden size={14} /></button>
                       </div>
                       <div className="mt-1.5 flex items-center gap-2.5">
                         <TempBadge temp={temp} overridden={overridden} />
+                        <DealProbability probability={68} person={name} />
                         {lead.est_value != null && (
                           <span className="tnum text-2xs text-fg-subtle" style={monoStyle}>
                             ₹{inrCompact(Number(lead.est_value))}
@@ -228,7 +244,7 @@ export function BoardView({
                           )}
                         </div>
                       )}
-                    </button>
+                    </div>
                   )
                 })
               )}
@@ -237,5 +253,6 @@ export function BoardView({
         )
       })}
     </div>
-  )
+    {quickLead && <LeadQuickActions open onClose={() => { setQuickLead(null); setCaptureOpen(false) }} person={quickLead.contact?.profile_name ?? quickLead.contact?.external_id ?? 'Unknown contact'} phone={quickLead.contact?.external_id} dealValue={Number(quickLead.est_value ?? 60000)} conversationId={quickLead.conversation_id} contactId={quickLead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />}
+  </>
 }

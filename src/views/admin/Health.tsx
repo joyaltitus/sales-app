@@ -10,6 +10,7 @@ import {
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { SectionHeader, SectionEmpty, ThreadList } from '../landing/LandingSection'
+import { Activity, CircleAlert, PauseCircle, ShieldCheck } from 'lucide-react'
 
 // HEALTH — the admin's landing (§1.11). The one question: is the machine
 // behaving? Three answers, in the order an admin actually cares about them:
@@ -61,21 +62,46 @@ export function Health() {
   }
 
   return (
-    <div className="pb-6">
+    <div className="page-frame space-y-5">
+      <header>
+        <div className="flex items-center gap-2 text-xs font-semibold text-success"><Activity aria-hidden size={14} /> Tenant status</div>
+        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Only show me what’s broken.</h1>
+        <p className="mt-1 text-sm text-fg-muted">Pauses, failed turns and consent exceptions across this workspace.</p>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {([
+          ['Bot paused', paused.length, PauseCircle, paused.length ? 'text-warn' : 'text-success'],
+          ['Last turn failed', failing.length, CircleAlert, failing.length ? 'text-danger' : 'text-success'],
+          ['Opted out', optedOut.length, ShieldCheck, 'text-fg'],
+        ] as const).map(([label, value, Icon, tone]) => (
+          <div key={String(label)} className="rounded-lg border border-border bg-surface p-4 shadow-elev-1">
+            <Icon aria-hidden size={17} className={String(tone)} />
+            <p className="label-caps mt-3">{String(label)}</p>
+            <strong className={['tnum mt-1 block text-2xl tracking-[-0.04em]', String(tone)].join(' ')}>{String(value)}</strong>
+          </div>
+        ))}
+      </div>
+
+      <section className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
       <SectionHeader title="Bot paused" count={paused.length} hint="Machine has stopped replying" />
       {paused.length === 0 ? (
         <SectionEmpty>The bot is running on every conversation.</SectionEmpty>
       ) : (
         <ThreadList items={paused} previews={previews} cap={10} />
       )}
+      </section>
 
+      <section className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
       <SectionHeader title="Last turn failed" count={failing.length} hint="Most recent trace is an error" />
       {failing.length === 0 ? (
         <SectionEmpty>No conversation ended its last turn in an error.</SectionEmpty>
       ) : (
         <ThreadList items={failing} previews={previews} cap={10} />
       )}
+      </section>
 
+      <section className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
       <SectionHeader title="Opted out" count={optedOut.length} hint="Will not be messaged again" />
       {optedOut.length === 0 ? (
         <SectionEmpty>Nobody has opted out.</SectionEmpty>
@@ -104,6 +130,7 @@ export function Health() {
           )}
         </ul>
       )}
+      </section>
     </div>
   )
 }

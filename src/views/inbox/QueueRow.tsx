@@ -50,8 +50,8 @@ export function QueueRow({
       onClick={onSelect}
       aria-current={selected ? 'true' : undefined}
       className={[
-        'flex w-full items-stretch gap-0 border-b border-border text-left transition-colors',
-        selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:bg-surface-sunk',
+        'flex min-h-[76px] w-full items-stretch gap-0 border-b border-border text-left transition-[background-color,transform] duration-[var(--motion-fast)]',
+        selected ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk active:scale-[0.995] active:bg-surface-sunk',
       ].join(' ')}
     >
       {/* The 4px urgency spine — colour still carries "how long", quietly. */}
@@ -61,7 +61,7 @@ export function QueueRow({
         style={{ width: 'var(--spine-w)' }}
       />
 
-      <div className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pr-3 pl-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 pl-3">
         <Avatar name={name} profile={item.contact?.profile} size="md" />
 
         <div className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ export function QueueRow({
             <span
               className={[
                 'min-w-0 flex-1 truncate text-sm text-fg',
-                item.unread_count > 0 ? 'font-semibold' : 'font-medium',
+                item.unread_count > 0 ? 'font-bold' : 'font-semibold',
               ].join(' ')}
             >
               {name}
@@ -90,7 +90,7 @@ export function QueueRow({
             <span
               className={[
                 'min-w-0 flex-1 truncate text-xs',
-                item.unread_count > 0 ? 'text-fg-muted' : 'text-fg-subtle',
+                item.unread_count > 0 ? 'font-medium text-fg-muted' : 'text-fg-subtle',
               ].join(' ')}
             >
               {preview}
@@ -113,6 +113,9 @@ export function QueueRow({
               <span className="shrink-0 text-2xs text-warn uppercase" style={capsStyle}>
                 {item.escalation_resolved ? 'Bot paused' : 'Needs human'}
               </span>
+            )}
+            {!item.bot_paused && !assigneeLabel && (
+              <span className="shrink-0 text-2xs font-semibold text-success">AI</span>
             )}
             {item.unread_count > 0 && (
               <span

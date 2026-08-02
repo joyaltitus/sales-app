@@ -1,47 +1,32 @@
-/* ============================================================================
- * DESIGN TOKENS — the single source of truth for both apps (MASTER-PLAN §C).
- * This file is byte-copied into Workbench (src/ui-tokens/tokens.css) and
- * checksum-guarded in CI. A hue is a token, never a brand name.
+/* ==========================================================================
+ * SIGNAL DESK — shared product tokens
  *
- * DECISION VARIABLES — FROZEN with Joyal at SA-00 (2026-07-23):
- *   accent = Teal-green (#0d7a63, WhatsApp-adjacent)   font = Inter Variable.
- * Everything else (neutrals, scale, radii) is locked by §C.
- * ==========================================================================*/
+ * Mineral neutrals keep dense work calm; spruce communicates trust and the
+ * mint signal is reserved for live, selected, or recommended moments.
+ * Everything is semantic so the same components hold together in both themes.
+ * ======================================================================= */
 
 :root {
-  /* --- Type: Inter Variable — FROZEN SA-00 --- */
-  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-feature-tnum: 'tnum' 1, 'cv01' 1, 'cv03' 1;
+  /* Typography — Geist is bundled locally; no runtime font request. */
+  --font-sans: 'Geist Variable', 'Avenir Next', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-feature-tnum: 'tnum' 1, 'ss01' 1, 'cv02' 1, 'cv03' 1;
 
-  /* Platform mono — zero bytes, no webfont (SA-01a). Times, phone numbers,
-   * external_ids and trace data are machine data and should look like it; on
-   * an Indian mobile network a webfont for a timestamp is a bad trade, and
-   * flight boards and terminals use the platform's own mono anyway. */
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  /* Type scale — 12/13/14/16/20/24 (§C), rem at 16px root */
-  --text-2xs: 0.75rem;   /* 12 — ALL-CAPS metadata labels */
-  --text-xs: 0.8125rem;  /* 13 */
-  --text-sm: 0.875rem;   /* 14 — body default */
+  --text-2xs: 0.6875rem; /* 11 */
+  --text-xs: 0.75rem;    /* 12 */
+  --text-sm: 0.875rem;   /* 14 */
   --text-md: 1rem;       /* 16 */
   --text-lg: 1.25rem;    /* 20 */
   --text-xl: 1.5rem;     /* 24 */
+  --text-2xl: 2rem;      /* 32 */
+  --text-3xl: 2.5rem;    /* 40 */
+  --text-display: var(--text-3xl);
+  --tracking-tight: -0.035em;
+  --tracking-caps: 0.105em;
+  --weight-num: 650;
+  --weight-caps: 650;
 
-  /* Type — weight & tracking (SA-01a): huge-and-tight numerals against
-   * tiny-and-wide caps IS the identity, not a novelty typeface. First weight
-   * tokens in this file. */
-  --tracking-tight: -0.03em;  /* wait-time numerals */
-  --tracking-caps: 0.08em;    /* ALL-CAPS metadata labels, pairs with --text-2xs */
-  --weight-num: 650;          /* wait-time numerals */
-  --weight-caps: 550;         /* micro-caps labels */
-
-  /* Display stop (UI-DESIGN-01, PROPOSED-SUPERSESSION #1 — §C froze 12..24).
-   * Used ONLY via --text-display (dashboard hero numeral, login mark).
-   * Reverting the proposal = `--text-display: var(--text-xl);` — one line. */
-  --text-2xl: 2rem; /* 32 */
-  --text-display: var(--text-2xl);
-
-  /* --- Spacing: 4px base scale (UI-DESIGN-01) — layout rhythm, encoded --- */
+  /* 4px rhythm */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -50,104 +35,132 @@
   --space-6: 24px;
   --space-7: 32px;
   --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
 
-  /* --- Shape: 8px grid, radii 6-8, pills only for status --- */
-  --radius-sm: 6px;
-  --radius-md: 8px;
+  /* Shape — nested radii step down consistently. */
+  --radius-xs: 5px;
+  --radius-sm: 7px;
+  --radius-md: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
   --radius-pill: 999px;
+  --spine-w: 3px;
+  --gutter-w: 56px;
+  --rail-w: 232px;
 
-  /* Queue-row widths (SA-01a) */
-  --spine-w: 4px;     /* phone queue-row urgency spine */
-  --gutter-w: 56px;   /* desktop queue mono time gutter */
+  /* Motion — transform and opacity are the product's motion vocabulary. */
+  --motion-fast: 110ms;
+  --motion-med: 170ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* --- Motion (§C): 120-160ms ease-out, content-only --- */
-  --motion-fast: 120ms;
-  --motion-med: 160ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Light theme */
+  --canvas: #f2f4f1;
+  --canvas-tint: #e9eeea;
+  --surface: #fafbf9;
+  --surface-raised: #ffffff;
+  --surface-sunk: #edf0ec;
+  --surface-glass: rgba(250, 251, 249, 0.86);
+  --fg: #17201c;
+  --fg-muted: #4d5a54;
+  --fg-subtle: #66726c;
+  --border: #dce2dd;
+  --border-strong: #c8d1ca;
+  --overlay: rgba(10, 20, 15, 0.46);
 
-  /* --- Neutrals: warm scale, off-black text never #000, off-white canvas --- */
-  --canvas: #fbfbfa;      /* off-white app background */
-  --surface: #ffffff;     /* raised rows/panels */
-  --surface-sunk: #f4f4f2;
-  --fg: #1a1a17;          /* off-black text (warm gray-900) */
-  --fg-muted: #57564f;    /* secondary */
-  --fg-subtle: #8a897f;   /* metadata */
-  --border: #e6e5e0;      /* hairline */
-  --border-strong: #d3d2cb;
-  --overlay: rgba(20, 20, 17, 0.32);
+  /* Primary signal */
+  --accent: #146b4a;
+  --accent-hover: #0f5c3f;
+  --accent-active: #0b4e35;
+  --accent-fg: #ffffff;
+  --accent-subtle: #dff1e7;
+  --accent-soft: #c8ead7;
+  --accent-ring: rgba(20, 107, 74, 0.28);
+  --signal: #8dddaf;
+  --signal-ink: #123d2a;
 
-  /* Depth (UI-DESIGN-01, PROPOSED-SUPERSESSION #4): borders stay the PRIMARY
-   * cue (§1.10 #3); elevation is a whisper-quiet ambient assist, light theme
-   * only. Dark theme separates by lightening surfaces, not by shadow.
-   * Rejecting the proposal = set both --elev-* to none. */
-  --surface-raised: #ffffff; /* light: same as surface — dark theme diverges */
-  --elev-1: 0 1px 2px rgba(26, 26, 23, 0.05);
-  --elev-2: 0 4px 16px -4px rgba(26, 26, 23, 0.09), 0 1px 2px rgba(26, 26, 23, 0.05);
-
-  /* State surfaces (UI-DESIGN-01) — loading must be VISIBLE (audit A10) */
-  --skeleton: #e9e8e3;
-  --chart-ink: #57564f;   /* chart marks — never the disabled colour (A5/A14) */
-
-  /* --- Accent: ONE family — primary actions, focus, live indicators only --- */
-  /* FROZEN SA-00: Teal-green (deep, WhatsApp-adjacent). A hue is a token. */
-  --accent: #0d7a63;
-  --accent-hover: #0a6853;
-  --accent-active: #085643;
-  --accent-fg: #ffffff;         /* text on accent */
-  --accent-subtle: #e6f3ef;     /* tint background */
-  --accent-ring: rgba(13, 122, 99, 0.35);
-
-  /* --- Status (structural, sparing) --- */
-  --success: #17795e;
-  --warn: #a6690b;
-  --danger: #b3261e;
-  --danger-hover: #9e211a;   /* ramps, not opacity (audit A12) */
-  --danger-active: #891d17;
+  /* Channel + state */
+  --channel-wa: #167a55;
+  --channel-ig: #a1427c;
+  --success: #197451;
+  --success-subtle: #e1f2e9;
+  --warn: #97610b;
+  --warn-subtle: #fbefd8;
+  --danger: #ad342d;
+  --danger-hover: #952a25;
+  --danger-active: #7f211e;
   --danger-fg: #ffffff;
-  --danger-subtle: #fbeae9;
+  --danger-subtle: #fae9e7;
+  --info: #315e9a;
+  --info-subtle: #e7eef8;
+
+  /* Data and depth */
+  --skeleton: #e0e5e1;
+  --chart-ink: #475750;
+  --grid-line: rgba(23, 32, 28, 0.055);
+  --elev-1: 0 1px 2px rgba(20, 31, 26, 0.04), 0 1px 8px rgba(20, 31, 26, 0.035);
+  --elev-2: 0 16px 42px -24px rgba(15, 34, 25, 0.34), 0 2px 8px rgba(20, 31, 26, 0.05);
+  --elev-3: 0 28px 70px -30px rgba(8, 26, 17, 0.42), 0 8px 24px rgba(20, 31, 26, 0.08);
+  --inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 
   color-scheme: light;
 }
 
 [data-theme='dark'] {
-  --canvas: #0f1211;
-  --surface: #171b1a;
-  --surface-sunk: #0b0e0d;
-  --fg: #ecece7;
-  --fg-muted: #a7a79f;
-  --fg-subtle: #75756d;
-  --border: #262b29;
-  --border-strong: #343a38;
-  --overlay: rgba(0, 0, 0, 0.55);
+  --canvas: #0c110f;
+  --canvas-tint: #101713;
+  --surface: #121915;
+  --surface-raised: #17201b;
+  --surface-sunk: #0f1512;
+  --surface-glass: rgba(18, 25, 21, 0.88);
+  --fg: #edf3ef;
+  --fg-muted: #a7b5ad;
+  --fg-subtle: #829188;
+  --border: #26332c;
+  --border-strong: #38483f;
+  --overlay: rgba(0, 0, 0, 0.68);
 
-  --surface-raised: #1d2220; /* dark separates by light, not shadow */
-  --elev-1: none;
-  --elev-2: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --accent: #66d99a;
+  --accent-hover: #7be4aa;
+  --accent-active: #50c887;
+  --accent-fg: #082418;
+  --accent-subtle: #173a29;
+  --accent-soft: #215139;
+  --accent-ring: rgba(102, 217, 154, 0.34);
+  --signal: #9be9bc;
+  --signal-ink: #09271a;
 
-  --skeleton: #232826;
-  --chart-ink: #a7a79f;
+  --channel-wa: #65d89a;
+  --channel-ig: #ec84c2;
+  --success: #66d99a;
+  --success-subtle: #173a29;
+  --warn: #edbb66;
+  --warn-subtle: #3a2b16;
+  --danger: #ff8c83;
+  --danger-hover: #ffa099;
+  --danger-active: #ec756d;
+  --danger-fg: #310c09;
+  --danger-subtle: #3b1d1a;
+  --info: #90baff;
+  --info-subtle: #192c49;
 
-  --accent: #2bb392;
-  --accent-hover: #38c4a1;
-  --accent-active: #23a084;
-  --accent-fg: #06231c;
-  --accent-subtle: #12312a;
-  --accent-ring: rgba(43, 179, 146, 0.4);
-
-  --success: #35c495;
-  --warn: #d69334;
-  --danger: #e5675f;
-  --danger-hover: #eb7d76;
-  --danger-active: #dc554c;
-  --danger-fg: #2a0f0d;
-  --danger-subtle: #2a1614;
+  --skeleton: #202c26;
+  --chart-ink: #b4c4bb;
+  --grid-line: rgba(237, 243, 239, 0.045);
+  --elev-1: 0 1px 0 rgba(255, 255, 255, 0.025);
+  --elev-2: 0 18px 48px -24px rgba(0, 0, 0, 0.78), 0 1px 0 rgba(255, 255, 255, 0.025);
+  --elev-3: 0 32px 80px -30px rgba(0, 0, 0, 0.9);
+  --inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 
   color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

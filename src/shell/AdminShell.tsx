@@ -58,10 +58,14 @@ function LazyFallback() {
 
 export function AdminShell() {
   return (
-    <div className="flex h-full flex-col bg-canvas">
+    <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
       <div className="flex min-h-0 flex-1">
-        <nav className="w-48 shrink-0 border-r border-border bg-surface p-2" aria-label="Primary">
+        <nav className="hidden w-[var(--rail-w)] shrink-0 border-r border-border bg-surface px-3 py-4 md:block" aria-label="Primary">
+          <div className="mb-4 px-3">
+            <p className="label-caps">Admin workspace</p>
+            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Failures and policy exceptions, before volume.</p>
+          </div>
           {RAIL.map((t) => (
             <NavLink
               key={t.to}
@@ -69,10 +73,10 @@ export function AdminShell() {
               end={t.end}
               className={({ isActive }) =>
                 [
-                  'mb-0.5 flex items-center gap-2.5 rounded-sm px-3 py-2 text-sm font-medium transition-colors',
+                  'relative mb-1 flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-[color,background-color,transform] duration-[var(--motion-fast)]',
                   isActive
-                    ? 'bg-accent-subtle text-accent'
-                    : 'text-fg-muted hover:bg-surface-sunk hover:text-fg',
+                    ? 'signal-edge bg-accent-subtle text-accent'
+                    : 'text-fg-muted hover:translate-x-0.5 hover:bg-surface-sunk hover:text-fg',
                 ].join(' ')
               }
             >
@@ -81,7 +85,7 @@ export function AdminShell() {
             </NavLink>
           ))}
         </nav>
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="app-grid min-w-0 flex-1 overflow-y-auto">
           <Suspense fallback={<LazyFallback />}>
             <Routes>
               <Route index element={<Health />} />
@@ -96,6 +100,22 @@ export function AdminShell() {
           </Suspense>
         </main>
       </div>
+      <nav className="grid shrink-0 grid-cols-5 border-t border-border bg-surface md:hidden" aria-label="Primary">
+        {RAIL.map((t) => (
+          <NavLink
+            key={t.to}
+            to={t.to}
+            end={t.end}
+            className={({ isActive }) => [
+              'flex min-h-14 flex-col items-center justify-center gap-1 text-2xs font-medium',
+              isActive ? 'text-accent' : 'text-fg-subtle',
+            ].join(' ')}
+          >
+            <t.icon aria-hidden size={18} />
+            <span className="max-w-full truncate px-1">{t.label === 'Documents' ? 'Docs' : t.label === 'Health' ? 'Status' : t.label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }

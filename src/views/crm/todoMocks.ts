@@ -1,0 +1,38 @@
+export type TodoPriorityPreview = 'normal' | 'high' | 'urgent'
+
+export type TodoAssignmentPreview = {
+  id: string
+  title: string
+  assignees: string[]
+  dueLabel: string
+  dueAt: string
+  overdue: boolean
+  priority: TodoPriorityPreview
+  status: 'open' | 'done'
+  createdBy: string
+  link?: { kind: 'lead' | 'conversation'; id: string; label: string }
+  sample: true
+}
+
+export type TodoRepPreview = {
+  id: string
+  name: string
+  role: string
+  sample: true
+}
+
+export const TODO_REPS: TodoRepPreview[] = [
+  { id: 'rep-asha', name: 'Asha Thomas', role: 'Admissions', sample: true },
+  { id: 'rep-nikhil', name: 'Nikhil S.', role: 'Admissions', sample: true },
+  { id: 'rep-arun', name: 'Arun P.', role: 'Counselling', sample: true },
+  { id: 'rep-diya', name: 'Diya Jose', role: 'Admissions', sample: true },
+]
+
+export const TODO_PREVIEW_ITEMS: TodoAssignmentPreview[] = [
+  { id: 'todo-p1', title: 'Call Anjali before the fee deadline', assignees: ['Asha Thomas'], dueLabel: 'Today · 4:30 pm', dueAt: '2026-08-02T16:30:00+05:30', overdue: false, priority: 'urgent', status: 'open', createdBy: 'Meera Nair', link: { kind: 'lead', id: 'lead-anjali', label: 'Anjali Ramesh' }, sample: true },
+  { id: 'todo-p2', title: 'Send the parent reference to Rahul', assignees: ['Asha Thomas'], dueLabel: 'Today · 2:00 pm', dueAt: '2026-08-02T14:00:00+05:30', overdue: true, priority: 'high', status: 'open', createdBy: 'Meera Nair', link: { kind: 'conversation', id: 'conv-rahul', label: 'Rahul Das' }, sample: true },
+  { id: 'todo-p3', title: 'Confirm Tuesday campus visit slots', assignees: ['Nikhil S.'], dueLabel: 'Tomorrow · 10:00 am', dueAt: '2026-08-03T10:00:00+05:30', overdue: false, priority: 'normal', status: 'open', createdBy: 'Meera Nair', sample: true },
+  { id: 'todo-p4', title: 'Review the Trust v2 call notes', assignees: ['Arun P.', 'Diya Jose'], dueLabel: 'Today · 5:00 pm', dueAt: '2026-08-02T17:00:00+05:30', overdue: false, priority: 'high', status: 'open', createdBy: 'Meera Nair', link: { kind: 'lead', id: 'lead-fathima', label: 'Fathima P.' }, sample: true },
+  { id: 'todo-p5', title: 'Update the competitor comparison', assignees: ['Nikhil S.'], dueLabel: 'Done yesterday', dueAt: '2026-08-01T12:00:00+05:30', overdue: false, priority: 'normal', status: 'done', createdBy: 'Meera Nair', sample: true },
+]
+

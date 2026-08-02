@@ -2,7 +2,7 @@ import { forwardRef } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type Size = 'sm' | 'md'
+type Size = 'sm' | 'md' | 'lg' | 'icon'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant
@@ -15,20 +15,22 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 // focus via the global :focus-visible ring, loading via the `loading` prop,
 // empty via callers. No shadow stacks, no gradients (ban list §C).
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-semibold transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-[var(--motion-fast)] ease-[var(--ease)] select-none hover:-translate-y-px active:translate-y-0 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-45'
 
 const sizes: Record<Size, string> = {
   sm: 'h-8 px-3 text-xs',
   md: 'h-10 px-4 text-sm',
+  lg: 'h-12 px-5 text-sm',
+  icon: 'h-10 w-10 p-0',
 }
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-active',
+    'border-accent bg-accent text-accent-fg shadow-[0_6px_18px_-10px_var(--accent)] hover:border-accent-hover hover:bg-accent-hover active:border-accent-active active:bg-accent-active',
   secondary:
-    'border border-border-strong bg-surface text-fg hover:bg-surface-sunk active:bg-surface-sunk',
-  ghost: 'text-fg-muted hover:bg-surface-sunk hover:text-fg active:bg-surface-sunk',
-  danger: 'bg-danger text-danger-fg hover:bg-danger-hover active:bg-danger-active',
+    'border-border-strong bg-surface-raised text-fg shadow-elev-1 hover:border-[color-mix(in_srgb,var(--fg-subtle)_55%,var(--border))] hover:bg-surface active:bg-surface-sunk',
+  ghost: 'border-transparent bg-transparent text-fg-muted hover:bg-surface-sunk hover:text-fg active:bg-surface-sunk',
+  danger: 'border-danger bg-danger text-danger-fg hover:border-danger-hover hover:bg-danger-hover active:border-danger-active active:bg-danger-active',
 }
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
@@ -46,7 +48,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       {loading && (
         <span
           aria-hidden
-          className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current border-t-transparent"
+          className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current border-t-transparent motion-reduce:animate-none"
         />
       )}
       {children}

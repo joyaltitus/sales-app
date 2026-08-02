@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles } from 'lucide-react'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
 import { Floor, ManagerInbox } from '../views/manager/screens'
@@ -45,13 +45,17 @@ function LazyFallback() {
 
 export function ManagerShell() {
   return (
-    <div className="flex h-full flex-col bg-canvas">
+    <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <nav
-          className="w-48 shrink-0 border-r border-border bg-surface p-2"
+          className="hidden w-[var(--rail-w)] shrink-0 flex-col border-r border-border bg-surface px-3 py-4 md:flex"
           aria-label="Primary"
         >
+          <div className="mb-4 px-3">
+            <p className="label-caps">Workspace</p>
+            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Exceptions first. Everything else second.</p>
+          </div>
           {RAIL.map((t) => (
             <NavLink
               key={t.to}
@@ -59,19 +63,29 @@ export function ManagerShell() {
               end={t.end}
               className={({ isActive }) =>
                 [
-                  'mb-0.5 flex items-center gap-2.5 rounded-sm px-3 py-2 text-sm font-medium transition-colors',
+                  'relative mb-1 flex min-h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-[color,background-color,transform] duration-[var(--motion-fast)]',
                   isActive
-                    ? 'bg-accent-subtle text-accent'
-                    : 'text-fg-muted hover:bg-surface-sunk hover:text-fg',
+                    ? 'signal-edge bg-accent-subtle text-accent'
+                    : 'text-fg-muted hover:translate-x-0.5 hover:bg-surface-sunk hover:text-fg',
                 ].join(' ')
               }
             >
-              <t.icon aria-hidden size={16} strokeWidth={1.75} />
+              <t.icon aria-hidden size={17} strokeWidth={1.8} />
               {t.label}
             </NavLink>
           ))}
+          <div className="mt-auto rounded-lg border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--surface-sunk))] p-3 shadow-elev-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-fg">
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-accent-subtle text-accent">
+                <Sparkles aria-hidden size={14} />
+                <CircleDot aria-hidden size={7} className="absolute -right-0.5 -bottom-0.5 fill-signal text-signal" />
+              </span>
+              AI is standing by
+            </div>
+            <p className="mt-2 text-2xs leading-relaxed text-fg-muted">Drafts, summaries and approvals stay reviewable.</p>
+          </div>
         </nav>
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="app-grid min-w-0 flex-1 overflow-y-auto">
           <Suspense fallback={<LazyFallback />}>
             <Routes>
               <Route index element={<Floor />} />
@@ -89,6 +103,22 @@ export function ManagerShell() {
           </Suspense>
         </main>
       </div>
+      <nav className="grid shrink-0 grid-cols-5 border-t border-border bg-surface md:hidden" aria-label="Primary">
+        {RAIL.map((t) => (
+          <NavLink
+            key={t.to}
+            to={t.to}
+            end={t.end}
+            className={({ isActive }) => [
+              'flex min-h-14 flex-col items-center justify-center gap-1 text-2xs font-medium',
+              isActive ? 'text-accent' : 'text-fg-subtle',
+            ].join(' ')}
+          >
+            <t.icon aria-hidden size={18} />
+            <span className="max-w-full truncate px-1">{t.label === 'Documents' ? 'Docs' : t.label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, Inbox as InboxIcon, MessageCircle } from 'lucide-react'
+import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
@@ -13,6 +13,10 @@ import { Thread } from './Thread'
 import { Composer } from './Composer'
 import { ContextRail } from './ContextRail'
 import { Sheet } from '../../ui/Sheet'
+import { EmailQueueRow } from '../email/EmailQueueRow'
+import { CallButton } from '../calls/CallButton'
+
+const EmailConversation = lazy(() => import('../email/EmailConversation'))
 
 // SA-04 Inbox parity (real, not mock — §S6 item 2): channel tabs, status
 // chips, search. ALL of it is client-side filtering over the already-fetched
@@ -24,7 +28,7 @@ import { Sheet } from '../../ui/Sheet'
 //   closed      → status !== 'open'
 // Channel matches on contacts.channel ?? 'whatsapp' (same fallback).
 type StatusFilter = 'open' | 'needs_human' | 'unread' | 'closed' | 'all'
-type ChannelFilter = '' | 'whatsapp' | 'instagram'
+type ChannelFilter = '' | 'whatsapp' | 'instagram' | 'email'
 
 const STATUS_CHIPS: { key: StatusFilter; label: string }[] = [
   { key: 'open', label: 'Open' },
@@ -38,6 +42,7 @@ const CHANNEL_TABS: { key: ChannelFilter; label: string }[] = [
   { key: '', label: 'All' },
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'instagram', label: 'Instagram' },
+  { key: 'email', label: 'Email' },
 ]
 
 function matchesStatus(item: QueueItem, f: StatusFilter): boolean {
@@ -81,13 +86,14 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkId = searchParams.get('c')
   const [selectedId, setSelectedId] = useState<string | null>(() => deepLinkId)
+  const [emailOpen, setEmailOpen] = useState(false)
 
   // Channel tab is URL-backed (§S6 item 2, same param Workbench uses) so a
   // filtered view survives refresh and can be linked. Status + search stay
   // local — they are working state, not an address.
   const rawChannel = searchParams.get('channel')
   const channel: ChannelFilter =
-    rawChannel === 'whatsapp' || rawChannel === 'instagram' ? rawChannel : ''
+    rawChannel === 'whatsapp' || rawChannel === 'instagram' || rawChannel === 'email' ? rawChannel : ''
   const setChannel = (next: ChannelFilter) => {
     const params = new URLSearchParams(searchParams)
     if (next) params.set('channel', next)
@@ -158,7 +164,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const channelItems = useMemo(
     () =>
       channel
-        ? scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
+        ? channel === 'email' ? [] : scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
         : scopedItems,
     [scopedItems, channel],
   )
@@ -176,6 +182,12 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       return name.includes(q) || ext.includes(q)
     })
   }, [channelItems, status, query])
+  const emailVisible = useMemo(() => {
+    if (channel && channel !== 'email') return false
+    if (status === 'closed' || status === 'needs_human') return false
+    const q = query.trim().toLowerCase()
+    return !q || 'kavya menon corporate wellness proposal mumbai clinic'.includes(q)
+  }, [channel, status, query])
 
   // Selection is looked up in the UNFILTERED list on purpose: a landing can
   // deep-link a closed conversation while the queue shows Open — the thread
@@ -206,13 +218,23 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   }
 
   const filterBar = (
-    <div className="shrink-0 space-y-2 border-b border-border bg-surface px-3 pt-2.5 pb-2">
+    <div className="shrink-0 space-y-3 border-b border-border bg-surface px-4 pt-4 pb-3">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold tracking-[-0.025em] text-fg">Inbox</h1>
+            {channelLive && <span className="flex items-center gap-1 text-2xs font-semibold text-success"><Radio aria-hidden size={11} /> Live</span>}
+          </div>
+          <p className="mt-0.5 text-2xs text-fg-muted">{visibleItems.length + (emailVisible ? 1 : 0)} conversations in view</p>
+        </div>
+        {needsHumanCount > 0 && <span className="tnum rounded-pill bg-danger-subtle px-2 py-1 text-2xs font-semibold text-danger">{needsHumanCount} need you</span>}
+      </div>
       {/* Scope + channel controls. */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto">
         <div
           role="tablist"
           aria-label="Inbox scope"
-          className="flex rounded-md border border-border bg-surface-sunk p-0.5"
+          className="flex shrink-0 rounded-md border border-border bg-surface-sunk p-0.5"
         >
           {(
             [
@@ -226,8 +248,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               aria-selected={scope === key}
               onClick={() => setScope(key)}
               className={[
-                'rounded-sm px-2.5 py-1 text-xs font-medium transition-colors',
-                scope === key ? 'bg-surface text-fg' : 'text-fg-muted hover:text-fg',
+                'rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
+                scope === key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg',
               ].join(' ')}
             >
               {label}
@@ -237,7 +259,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         <div
           role="tablist"
           aria-label="Channel"
-          className="flex rounded-md border border-border bg-surface-sunk p-0.5"
+          className="flex shrink-0 rounded-md border border-border bg-surface-sunk p-0.5"
         >
           {CHANNEL_TABS.map((t) => (
             <button
@@ -246,9 +268,9 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               aria-selected={channel === t.key}
               onClick={() => setChannel(t.key)}
               className={[
-                'rounded-sm px-2.5 py-1 text-xs font-medium transition-colors',
+                'rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
                 channel === t.key
-                  ? 'bg-surface text-fg shadow-none'
+                  ? 'bg-surface-raised text-fg shadow-elev-1'
                   : 'text-fg-muted hover:text-fg',
               ].join(' ')}
             >
@@ -264,7 +286,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           aria-hidden
           size={14}
           strokeWidth={1.75}
-          className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle"
+          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle"
         />
         <input
           type="search"
@@ -272,7 +294,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search name or number"
           aria-label="Search conversations"
-          className="h-8 w-full rounded-md border border-border bg-surface pr-2 pl-8 text-xs text-fg transition-colors placeholder:text-fg-subtle hover:border-border-strong"
+          className="h-10 w-full rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg shadow-[var(--inset-highlight)] transition-colors placeholder:text-fg-subtle hover:border-border-strong"
         />
       </div>
       {/* Status chips — horizontal scroll on phone, wraps nowhere. */}
@@ -283,7 +305,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             aria-pressed={status === c.key}
             onClick={() => setStatus(c.key)}
             className={[
-              'shrink-0 rounded-pill border px-2.5 py-1 text-2xs font-semibold transition-colors',
+              'shrink-0 rounded-pill border px-2.5 py-1.5 text-2xs font-semibold transition-colors',
               status === c.key
                 ? 'border-transparent bg-accent-subtle text-accent'
                 : 'border-border text-fg-muted hover:border-border-strong hover:text-fg',
@@ -302,18 +324,18 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   )
 
   const queue = (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col bg-surface">
       {filterBar}
-      {items.length === 0 ? (
+      {items.length === 0 && !emailVisible ? (
         <div className="p-6">
           {/* §1.9: empty is an invitation, not a mood. */}
           <EmptyState
             icon={InboxIcon}
             title="Nothing waiting."
-            body="New WhatsApp and Instagram messages land here as they arrive."
+            body="New WhatsApp, Instagram and email conversations land here as they arrive."
           />
         </div>
-      ) : visibleItems.length === 0 ? (
+      ) : visibleItems.length === 0 && !emailVisible ? (
         <div className="p-6">
           {scope === 'my' && scopedItems.length === 0 ? (
             <EmptyState
@@ -331,13 +353,14 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {emailVisible && <EmailQueueRow selected={emailOpen} onSelect={() => { setSelectedId(null); setEmailOpen(true) }} />}
           {visibleItems.map((item) => (
             <QueueRow
               key={item.id}
               item={item}
               preview={previews.get(item.id) ?? item.contact?.profile_name ?? '—'}
               selected={item.id === selectedId}
-              onSelect={() => setSelectedId(item.id)}
+              onSelect={() => { setEmailOpen(false); setSelectedId(item.id) }}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
             />
           ))}
@@ -348,32 +371,37 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
 
   const thread = selected && (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-4 py-2.5">
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface-glass px-4 backdrop-blur-xl">
         {/* Phone: the thread replaces the queue, so it needs a way back. The
             two-pane desktop layout keeps both on screen and hides this. */}
         <button
           onClick={() => setSelectedId(null)}
-          className="rounded-sm px-1 py-1 text-xs text-fg-muted hover:bg-surface-sunk lg:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-fg-muted hover:bg-surface-sunk hover:text-fg lg:hidden"
+          aria-label="Back to queue"
         >
-          ← Queue
+          <ArrowLeft aria-hidden size={18} />
         </button>
         {/* On the thread the hierarchy flips back and the NAME leads (§1.5). */}
-        <span className="truncate text-md font-semibold text-fg">{selectedName}</span>
+        <div className="min-w-0">
+          <span className="block truncate text-md font-semibold tracking-[-0.015em] text-fg">{selectedName}</span>
+          <span className="mt-0.5 flex items-center gap-1 text-2xs font-medium text-accent"><span className="h-1.5 w-1.5 rounded-pill bg-signal" /> Next: answer the price question</span>
+        </div>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {!channelLive && (
             <span className="text-2xs text-fg-subtle">Checking for updates</span>
           )}
+          <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" />
           {/* Rail toggle — the third pane below xl, where it renders as a sheet. */}
           <button
             onClick={() => setRailOpen(true)}
-            className="rounded-sm px-2 py-1 text-xs text-fg-muted hover:bg-surface-sunk xl:hidden"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg xl:hidden"
           >
-            Details
+            <PanelRight aria-hidden size={15} /> Details
           </button>
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="app-grid min-h-0 flex-1 overflow-y-auto bg-canvas">
         {threadLoading ? (
           <div className="space-y-3 p-4">
             <Skeleton className="h-12 w-2/3" />
@@ -405,21 +433,25 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     />
   )
 
+  const emailThread = emailOpen && <Suspense fallback={<div className="flex flex-1 flex-col gap-3 p-4"><Skeleton className="h-20" /><Skeleton className="h-48" /><Skeleton className="h-40" /></div>}><EmailConversation canSend={canSend} onBack={() => setEmailOpen(false)} /></Suspense>
+  const activeThread = emailThread ?? thread
+  const hasSelection = emailOpen || !!selectedId
+
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 overflow-hidden bg-canvas md:p-3 md:pt-0">
       {/* Below lg: one pane at a time. At lg+: the board sits beside the
           conversation, which is what §1.4's desktop diagram shows. */}
       <div
         className={[
-          'min-h-0 w-full flex-col lg:flex lg:w-96 lg:shrink-0 lg:border-r lg:border-border',
-          selectedId ? 'hidden lg:flex' : 'flex',
+          'min-h-0 w-full flex-col overflow-hidden bg-surface lg:flex lg:w-[380px] lg:shrink-0 lg:border lg:border-border md:rounded-l-xl lg:shadow-elev-1',
+          hasSelection ? 'hidden lg:flex' : 'flex',
         ].join(' ')}
       >
         {queue}
       </div>
 
-      <div className={['min-h-0 flex-1', selectedId ? 'flex' : 'hidden lg:flex'].join(' ')}>
-        {thread ?? (
+      <div className={['min-h-0 flex-1 overflow-hidden bg-surface lg:border-y lg:border-r lg:border-border', hasSelection ? 'flex' : 'hidden lg:flex'].join(' ')}>
+        {activeThread ?? (
           <div className="hidden flex-1 items-center justify-center lg:flex">
             <EmptyState
               icon={MessageCircle}
@@ -432,7 +464,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
 
       {/* SA-05 context rail: its own pane at xl+ … */}
       {rail && (
-        <div className="hidden w-80 shrink-0 border-l border-border bg-surface xl:block">
+        <div className="hidden w-80 shrink-0 overflow-hidden rounded-r-xl border-y border-r border-border bg-surface shadow-elev-1 xl:block">
           {rail}
         </div>
       )}

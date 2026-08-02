@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Mail, Search } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useContacts } from '../../lib/crm-data'
+import type { ContactRow } from '../../lib/crm-data'
 import { waitStamp } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { Chip } from '../../ui/Chip'
 import { EmptyState } from '../../ui/EmptyState'
+import { Sheet } from '../../ui/Sheet'
+import { CallButton } from '../calls/CallButton'
+import { RelationshipTimeline } from './RelationshipTimeline'
+import { DealProbability } from '../revenue/DealProbability'
 
 // Contacts — REAL as of SA-05 (crm-data.useContacts: the `contacts` read
 // Workbench already issues browser-side under RLS). Search, channel filter,
@@ -21,7 +26,8 @@ export function ContactsTab() {
   const { activeClient } = useClient()
   const { items } = useContacts(activeClient?.id ?? null)
   const [query, setQuery] = useState('')
-  const [channel, setChannel] = useState<'' | 'whatsapp' | 'instagram'>('')
+  const [channel, setChannel] = useState<'' | 'whatsapp' | 'instagram' | 'email'>('')
+  const [selected, setSelected] = useState<ContactRow | null>(null)
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -63,6 +69,7 @@ export function ContactsTab() {
           <option value="">All channels</option>
           <option value="whatsapp">WhatsApp</option>
           <option value="instagram">Instagram</option>
+          <option value="email">Email</option>
         </select>
       </div>
 
@@ -73,9 +80,10 @@ export function ContactsTab() {
           </div>
         ) : (
           visible.map((c) => (
-            <div
+            <button
               key={c.id}
-              className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3"
+              onClick={() => setSelected(c)}
+              className="flex w-full items-center gap-3 border-b border-border bg-surface px-4 py-3 text-left hover:bg-surface-sunk"
             >
               <Avatar name={c.profile_name ?? c.external_id} profile={c.profile} size="md" />
               <div className="min-w-0 flex-1">
@@ -86,9 +94,9 @@ export function ContactsTab() {
                   <span
                     className="shrink-0 text-2xs text-fg-subtle uppercase"
                     style={capsStyle}
-                    aria-label={c.channel === 'instagram' ? 'Instagram' : 'WhatsApp'}
+                    aria-label={c.channel === 'email' ? 'Email' : c.channel === 'instagram' ? 'Instagram' : 'WhatsApp'}
                   >
-                    {c.channel === 'instagram' ? 'IG' : 'WA'}
+                    {c.channel === 'email' ? 'EM' : c.channel === 'instagram' ? 'IG' : 'WA'}
                   </span>
                   {c.is_vip && <Chip tone="accent">VIP</Chip>}
                   {c.is_opted_out && <Chip tone="danger">Opted out</Chip>}
@@ -110,10 +118,18 @@ export function ContactsTab() {
               >
                 {waitStamp(c.created_at)}
               </span>
-            </div>
+            </button>
           ))
         )}
       </div>
+
+      <Sheet open={!!selected} onClose={() => setSelected(null)} title="Contact relationship">
+        {selected && <div>
+          <div className="flex items-start gap-3"><Avatar name={selected.profile_name ?? selected.external_id} profile={selected.profile} size="lg" /><div className="min-w-0 flex-1"><h2 className="truncate text-lg font-semibold tracking-[-0.025em] text-fg">{selected.profile_name ?? 'Unknown contact'}</h2><p className="tnum mt-1 text-xs text-fg-muted">{selected.external_id}</p><div className="mt-2 flex items-center gap-2"><DealProbability probability={68} person={selected.profile_name ?? selected.external_id} /><span className="tnum text-xs font-semibold text-fg">₹60,000</span></div></div></div>
+          <div className="mt-4 grid grid-cols-2 gap-2"><CallButton person={selected.profile_name ?? selected.external_id} phone={selected.external_id} dealValue={60000} variant="primary" label="Call with brief" /><button className="inline-flex h-12 items-center justify-center gap-1.5 rounded-md border border-border-strong bg-surface-raised text-xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg" title="Preview — email composer"><Mail aria-hidden size={15} /> Email</button></div>
+          <div className="mt-6"><RelationshipTimeline contactId={selected.id} /></div>
+        </div>}
+      </Sheet>
     </div>
   )
 }

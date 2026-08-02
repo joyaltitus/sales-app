@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Mic, Square } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Mic, X } from 'lucide-react'
 import { Button } from '../Button'
 
 // Push-to-talk, UI states only (no transcription wired — Wave-3F). The state
@@ -14,19 +14,38 @@ const DEMO_TRANSCRIPT = 'Book a campus visit for Anjali on Saturday morning'
 export function VoiceButton({
   lowConfidenceDemo = false,
   onTranscript,
+  compact = false,
 }: {
   /** Preview hook: render the low-confidence treatment. */
   lowConfidenceDemo?: boolean
   onTranscript?: (text: string) => void
+  /** Icon-sized idle state for the conversation composer. */
+  compact?: boolean
 }) {
   const [state, setState] = useState<VoiceState>('ready')
   const [text, setText] = useState(DEMO_TRANSCRIPT)
+  const timers = useRef<number[]>([])
+
+  const clearTimers = () => {
+    timers.current.forEach(window.clearTimeout)
+    timers.current = []
+  }
+
+  useEffect(() => clearTimers, [])
 
   const start = () => {
+    clearTimers()
     setState('listening')
     // Mock timing: listening 1.2s → processing 0.9s → transcript
-    setTimeout(() => setState('processing'), 1200)
-    setTimeout(() => setState('transcript'), 2100)
+    timers.current = [
+      window.setTimeout(() => setState('processing'), 1200),
+      window.setTimeout(() => setState('transcript'), 2100),
+    ]
+  }
+
+  const cancel = () => {
+    clearTimers()
+    setState('ready')
   }
 
   if (state === 'transcript') {
@@ -68,12 +87,13 @@ export function VoiceButton({
 
   return (
     <button
-      onClick={state === 'ready' ? start : undefined}
+      onClick={state === 'ready' ? start : cancel}
       aria-label={
         state === 'ready' ? 'Push to talk' : state === 'listening' ? 'Listening — release to stop' : 'Processing'
       }
       className={[
-        'inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3.5 text-sm font-medium transition-colors select-none',
+        'inline-flex h-10 items-center justify-center gap-2 rounded-md border text-sm font-medium transition-colors select-none',
+        compact ? 'w-10 px-0' : 'px-3.5',
         state === 'ready' && 'border-border-strong bg-surface text-fg hover:bg-surface-sunk',
         state === 'listening' && 'border-danger bg-danger-subtle text-danger',
         state === 'processing' && 'border-border bg-surface-sunk text-fg-muted',
@@ -83,8 +103,12 @@ export function VoiceButton({
     >
       {state === 'listening' ? (
         <>
-          <Square aria-hidden size={14} className="animate-pulse" />
-          Listening…
+          <span className="flex h-4 items-end gap-0.5" aria-hidden>
+            {[8, 14, 10, 16, 7].map((height, i) => (
+              <span key={i} className="w-0.5 animate-pulse rounded-pill bg-current" style={{ height, animationDelay: `${i * 80}ms` }} />
+            ))}
+          </span>
+          {!compact && <>Listening <X aria-hidden size={13} /></>}
         </>
       ) : state === 'processing' ? (
         <>
@@ -92,12 +116,12 @@ export function VoiceButton({
             aria-hidden
             className="h-3.5 w-3.5 animate-spin rounded-pill border-2 border-current border-t-transparent"
           />
-          Processing
+          {!compact && 'Processing'}
         </>
       ) : (
         <>
           <Mic aria-hidden size={15} />
-          Talk
+          {!compact && 'Talk'}
         </>
       )}
     </button>

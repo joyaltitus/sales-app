@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react'
+import { Mail, MessageCircle } from 'lucide-react'
 
 // Small channel marker — Joyal's ask: "small icon where it's insta or
 // WhatsApp". lucide dropped brand glyphs upstream, so Instagram is drawn here
@@ -27,14 +27,19 @@ function InstagramGlyph({ size }: { size: number }) {
 
 export function ChannelIcon({ channel, size = 14 }: { channel: string | null; size?: number }) {
   const ig = channel === 'instagram'
+  const email = channel === 'email'
+  const label = email ? 'Email' : ig ? 'Instagram' : 'WhatsApp'
   return (
     <span
-      className="inline-flex shrink-0 items-center text-fg-subtle"
+      className={[
+        'inline-flex shrink-0 items-center',
+        email ? 'text-info' : ig ? 'text-channel-ig' : 'text-channel-wa',
+      ].join(' ')}
       role="img"
-      aria-label={ig ? 'Instagram' : 'WhatsApp'}
-      title={ig ? 'Instagram' : 'WhatsApp'}
+      aria-label={label}
+      title={label}
     >
-      {ig ? (
+      {email ? <Mail aria-hidden size={size} strokeWidth={1.75} /> : ig ? (
         <InstagramGlyph size={size} />
       ) : (
         <MessageCircle aria-hidden size={size} strokeWidth={1.75} />

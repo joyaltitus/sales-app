@@ -12,6 +12,8 @@ import { TempBadge } from './BoardView'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Button } from '../../ui/Button'
+import { ObjectionCapture } from '../objections/ObjectionCapture'
+import { ObjectionHistory } from '../objections/ObjectionHistory'
 
 // SA-05 lead drawer — the Workbench lead editor rebuilt: stage, status,
 // est. value, temperature override, lost reason (required on a lost move,
@@ -237,8 +239,10 @@ export function LeadDrawer({
           </label>
         </div>
 
+        <ObjectionCapture contactId={lead.contact_id} source="crm" detected={null} />
+
         <label className="block">
-          <Label>Objection</Label>
+          <Label>Current objection note (live field)</Label>
           <input
             value={objection}
             onChange={(e) => setObjection(e.target.value)}
@@ -246,6 +250,8 @@ export function LeadDrawer({
             className={field}
           />
         </label>
+
+        <ObjectionHistory contactId={lead.contact_id} />
 
         {lostMove && (
           <label className="block">

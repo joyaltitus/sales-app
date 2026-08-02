@@ -8,6 +8,12 @@ import { ListRow } from './ListRow'
 import { Sheet } from './Sheet'
 import { ToastProvider, useToast } from './Toast'
 import { useTheme } from '../shell/theme'
+import { ProductMark } from './ProductMark'
+import { NotificationCenter } from './NotificationCenter'
+import { VoiceButton } from './agent/VoiceButton'
+import { ApprovalCard } from './agent/ApprovalCard'
+import { FactCard } from './agent/FactCard'
+import { MOCK_FACTS, MOCK_PROPOSALS } from '../lib/mock-wave3'
 
 // Dev route: every primitive × its six control states (§C). Also the dark-mode
 // smoke test — toggle flips cleanly, no unstyled flashes.
@@ -26,12 +32,12 @@ function Inner() {
   const [sheet, setSheet] = useState(false)
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-fg">Kitchen sink</h1>
-        <Button variant="secondary" size="sm" onClick={toggle}>
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        </Button>
+    <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mb-8 flex items-center gap-3">
+        <ProductMark />
+        <div className="min-w-0 flex-1"><p className="label-caps text-accent">Design system</p><h1 className="mt-1 text-xl font-semibold tracking-[-0.035em] text-fg">Kitchen sink</h1></div>
+        <NotificationCenter />
+        <Button variant="secondary" size="sm" onClick={toggle}>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</Button>
       </div>
 
       <Section title="Button — variants">
@@ -39,6 +45,8 @@ function Inner() {
         <Button variant="secondary">Secondary</Button>
         <Button variant="ghost">Ghost</Button>
         <Button variant="danger">Danger</Button>
+        <Button size="lg">Large action</Button>
+        <Button size="icon" aria-label="Icon button">+</Button>
       </Section>
 
       <Section title="Button — six states (hover/focus/active/disabled/loading + empty label)">
@@ -94,6 +102,19 @@ function Inner() {
         </Sheet>
       </Section>
 
+      <Section title="Voice — idle / recording / processing / transcript">
+        <VoiceButton />
+        <VoiceButton compact />
+        <VoiceButton lowConfidenceDemo />
+      </Section>
+
+      <Section title="AI — approval and memory">
+        <div className="grid w-full gap-3 md:grid-cols-2">
+          <ApprovalCard proposal={MOCK_PROPOSALS[0]} />
+          <FactCard fact={MOCK_FACTS[1]} />
+        </div>
+      </Section>
+
       <Section title="EmptyState">
         <div className="w-full">
           <EmptyState
@@ -113,7 +134,7 @@ function Inner() {
         </div>
       </Section>
 
-      <Section title="Tokens — SA-01a: mono, tracking, weight, widths">
+      <Section title="Tokens — Signal Desk: type, tracking, rhythm, widths">
         <div className="flex w-full flex-col gap-4">
           <div className="flex items-baseline gap-6">
             <span className="text-sm text-fg" style={{ fontFamily: 'var(--font-sans)' }}>

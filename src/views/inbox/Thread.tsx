@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { Bot, Check, CheckCheck } from 'lucide-react'
 import type { Message } from '../../lib/inbox-data'
 import { resolveMarks, type SeamMark, type Trace } from '../../lib/seam'
 import { clockTime } from '../../lib/wait'
@@ -56,14 +57,17 @@ function Bubble({ message }: { message: Message }) {
 
   return (
     <div className={['flex flex-col', inbound ? 'items-start' : 'items-end'].join(' ')}>
+      {!inbound && !fromHuman && (
+        <span className="mb-1 flex items-center gap-1 px-1 text-2xs font-semibold text-accent"><Bot aria-hidden size={11} /> AI reply</span>
+      )}
       <div
         className={[
-          'max-w-[85%] rounded-md px-3 py-2 text-sm break-words sm:max-w-[70%]',
+          'max-w-[86%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed break-words shadow-elev-1 sm:max-w-[70%]',
           inbound
-            ? 'bg-surface-sunk text-fg'
+            ? 'rounded-bl-xs border border-border bg-surface-raised text-fg'
             : fromHuman
-              ? 'bg-accent-subtle text-fg'
-              : 'border border-border bg-surface text-fg',
+              ? 'rounded-br-xs bg-accent text-accent-fg'
+              : 'rounded-br-xs border border-[color-mix(in_srgb,var(--accent)_24%,var(--border))] bg-accent-subtle text-fg',
           failed ? 'border border-danger' : '',
         ].join(' ')}
       >
@@ -76,13 +80,10 @@ function Bubble({ message }: { message: Message }) {
         <span className="tnum text-2xs text-fg-subtle" style={{ fontFamily: 'var(--font-mono)' }}>
           {clockTime(message.created_at)}
         </span>
-        {!inbound && !fromHuman && (
-          <span
-            className="text-2xs text-fg-subtle uppercase"
-            style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-          >
-            Bot
-          </span>
+        {!inbound && !failed && (
+          message.delivery_status === 'read'
+            ? <CheckCheck aria-label="Read" size={13} className="text-info" />
+            : <Check aria-label={message.delivery_status || 'Sent'} size={13} className="text-fg-subtle" />
         )}
         {failed && (
           <span className="text-2xs text-danger">
@@ -134,9 +135,18 @@ export function Thread({ messages, traces }: { messages: Message[]; traces: Trac
   }, [messages.length])
 
   return (
-    <div className="flex flex-col gap-3 p-4">
-      {messages.map((m) => (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-4 py-6 sm:px-6">
+      {messages.map((m, index) => (
         <div key={m.id} className="flex flex-col gap-3">
+          {(index === 0 || new Date(messages[index - 1].created_at).toDateString() !== new Date(m.created_at).toDateString()) && (
+            <div className="flex items-center gap-3 py-2" role="separator">
+              <span className="h-px flex-1 bg-border" />
+              <span className="rounded-pill border border-border bg-surface-glass px-2.5 py-1 text-2xs font-semibold text-fg-muted shadow-elev-1">
+                {new Date(m.created_at).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          )}
           {marksBefore.get(m.id)?.map((mark) => <Seam key={mark.id} mark={mark} />)}
           <Bubble message={m} />
           {tagsFor.get(m.id) && (

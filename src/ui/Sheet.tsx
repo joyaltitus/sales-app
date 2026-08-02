@@ -30,17 +30,17 @@ export function Sheet({ open, onClose, title, children }: Props) {
         className={[
           'sheet-panel absolute bg-surface shadow-elev-2',
           // phone: bottom sheet · desktop (sm+): right side panel
-          'inset-x-0 bottom-0 rounded-t-md border-t border-border',
-          'sm:inset-y-0 sm:right-0 sm:left-auto sm:w-96 sm:rounded-none sm:rounded-l-md sm:border-l sm:border-t-0',
+          'inset-x-0 bottom-0 rounded-t-xl border-t border-border',
+          'sm:inset-y-0 sm:right-0 sm:left-auto sm:w-[420px] sm:rounded-none sm:rounded-l-xl sm:border-l sm:border-t-0',
         ].join(' ')}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-fg">{title}</h2>
+          <div className="flex min-h-14 items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-md font-semibold tracking-[-0.02em] text-fg">{title}</h2>
             <button
               onClick={onClose}
               aria-label="Close"
-              className="rounded-sm px-2 py-1 text-xs text-fg-subtle hover:bg-surface-sunk"
+              className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-fg-subtle hover:bg-surface-sunk hover:text-fg"
             >
               Close
             </button>

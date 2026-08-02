@@ -1,6 +1,15 @@
+import { useRef, useState } from 'react'
 import type { LeadItem, LeadStage, FollowUpItem } from '../../lib/leads-data'
 import { waitStamp, urgency } from '../../lib/wait'
-import { AssignSelect, ObjectionSelect } from '../crm/MockControls'
+import { AssignSelect } from '../crm/MockControls'
+import { Link } from 'react-router-dom'
+import { ChevronRight, MessageCircle, MoreHorizontal } from 'lucide-react'
+import { Avatar } from '../../ui/Avatar'
+import { ChannelIcon } from '../../ui/ChannelIcon'
+import { CallButton } from '../calls/CallButton'
+import { DealProbability } from '../revenue/DealProbability'
+import { NextAction } from '../../ui/NextAction'
+import { LeadQuickActions } from './LeadQuickActions'
 
 // A lead row is the SAME departure-board aesthetic as QueueRow (amendment
 // item 1) with one inversion: Inbox leads with the message, Leads leads with
@@ -72,14 +81,22 @@ export function LeadRow({
    *  (Wave-1 backlog, unwired). The rep board never sets this. */
   crm?: boolean
 }) {
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [captureOpen, setCaptureOpen] = useState(false)
+  const holdTimer = useRef<number | null>(null)
   const level = urgency(lead.updated_at)
   const stamp = waitStamp(lead.updated_at)
   const name = lead.contact?.profile_name ?? lead.contact?.external_id ?? 'Unknown contact'
-  const channel = lead.contact?.channel === 'instagram' ? 'IG' : 'WA'
   const bucket = followUp ? followUpBucket(followUp.due_at) : null
 
   return (
-    <div className="flex w-full items-stretch gap-0 border-b border-border bg-surface">
+    <div
+      onContextMenu={(event) => { event.preventDefault(); setQuickOpen(true) }}
+      onPointerDown={(event) => { if (event.pointerType === 'touch') holdTimer.current = window.setTimeout(() => setQuickOpen(true), 520) }}
+      onPointerUp={() => { if (holdTimer.current) window.clearTimeout(holdTimer.current) }}
+      onPointerCancel={() => { if (holdTimer.current) window.clearTimeout(holdTimer.current) }}
+      className="m-3 flex min-h-[132px] w-[calc(100%_-_1.5rem)] items-stretch gap-0 overflow-hidden rounded-lg border border-border bg-surface shadow-elev-1 sm:m-0 sm:min-h-0 sm:w-full sm:rounded-none sm:border-x-0 sm:border-t-0 sm:shadow-none"
+    >
       {/* Phone: the 4px urgency spine — same rhythm as QueueRow, standing in
           for "how long has this sat here" rather than "how long has the
           customer waited". */}
@@ -107,17 +124,14 @@ export function LeadRow({
         </span>
       </div>
 
-      <div className="min-w-0 flex-1 py-3 pr-4 pl-3">
+      <div className="min-w-0 flex-1 p-4 sm:py-3 sm:pr-4 sm:pl-3">
         {/* The person leads (§S4 THE WORK inverts Inbox's row hierarchy). */}
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-center gap-2">
+          <span className="sm:hidden"><Avatar name={name} size="sm" /></span>
           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{name}</span>
-          <span
-            className="shrink-0 text-2xs text-fg-subtle uppercase"
-            style={capsStyle}
-            aria-label={channel === 'WA' ? 'WhatsApp' : 'Instagram'}
-          >
-            {channel}
-          </span>
+          <ChannelIcon channel={lead.contact?.channel ?? null} size={13} />
+          <DealProbability probability={68} person={name} />
+          <button onClick={(event) => { event.stopPropagation(); setQuickOpen(true) }} aria-label={`Quick actions for ${name}`} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-sunk hover:text-fg"><MoreHorizontal aria-hidden size={15} /></button>
           {/* Phone-only inline stamp — the gutter's job at 4px. */}
           <span
             className={['tnum shrink-0 text-lg leading-none sm:hidden', GUTTER_TONE[level]].join(' ')}
@@ -133,6 +147,7 @@ export function LeadRow({
 
         {/* What is stuck — the line the rep actually reads. */}
         <div className="mt-1 truncate text-xs text-fg-muted">{stuckText(lead)}</div>
+        <div className="mt-2"><NextAction compact label={lead.next_action || 'Call and confirm the decision'} detail={lead.objection ? `Resolve ${lead.objection}` : undefined} /></div>
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           {/* Stage as a micro-caps label (§1.6), not a coloured pill. Editable
@@ -142,6 +157,7 @@ export function LeadRow({
           {canEditStage ? (
             <select
               value={lead.stage_id}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => onStageChange(e.target.value)}
               aria-label={`Stage for ${name}`}
               className="rounded-sm border border-transparent bg-transparent py-0.5 pr-1 text-2xs text-fg-subtle uppercase hover:border-border focus:border-border-strong"
@@ -191,11 +207,39 @@ export function LeadRow({
               hold state for the session and write nowhere. */}
           {crm && (
             <span className="ml-auto flex shrink-0 items-center gap-2">
+              <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" />
               <AssignSelect leadName={name} />
-              <ObjectionSelect leadName={name} current={lead.objection} />
             </span>
           )}
         </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 sm:hidden">
+          {lead.conversation_id ? (
+            <Link
+              to={`/inbox?c=${encodeURIComponent(lead.conversation_id)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-border text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"
+            >
+              <MessageCircle aria-hidden size={14} /> Message
+            </Link>
+          ) : <span />}
+          <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} />
+          {canEditStage && stages.findIndex((item) => item.id === lead.stage_id) < stages.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                const index = stages.findIndex((item) => item.id === lead.stage_id)
+                const next = stages[index + 1]
+                if (next) onStageChange(next.id)
+              }}
+              className="inline-flex min-h-10 items-center justify-center gap-1 rounded-md bg-accent-subtle text-xs font-semibold text-accent hover:bg-accent-soft"
+            >
+              Advance <ChevronRight aria-hidden size={14} />
+            </button>
+          )}
+        </div>
+
+        <LeadQuickActions open={quickOpen} onClose={() => { setQuickOpen(false); setCaptureOpen(false) }} person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} conversationId={lead.conversation_id} contactId={lead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />
       </div>
     </div>
   )

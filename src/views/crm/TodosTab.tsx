@@ -1,157 +1,113 @@
 import { useMemo, useState } from 'react'
-import { Check, NotebookPen } from 'lucide-react'
-import { useMockTodos } from '../../lib/mock-data'
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Link2,
+  ListTodo,
+  Plus,
+  Send,
+  Users,
+} from 'lucide-react'
+import { useClient } from '../../shell/ClientProvider'
+import { Avatar } from '../../ui/Avatar'
+import { Button } from '../../ui/Button'
+import { Chip } from '../../ui/Chip'
+import { EmptyState } from '../../ui/EmptyState'
+import { ErrorState } from '../../ui/ErrorState'
+import { Sheet } from '../../ui/Sheet'
+import { Skeleton } from '../../ui/Skeleton'
 import { SampleBanner } from './CrmScreen'
+import { TODO_PREVIEW_ITEMS, TODO_REPS } from './todoMocks'
+import type { TodoAssignmentPreview, TodoPriorityPreview } from './todoMocks'
+import { NextAction } from '../../ui/NextAction'
 
-// Todos — SAMPLE DATA for the proposed `employee_todos` concept (Wave 1 of
-// sales-ecosystem-brainstorm-seed.md). There is NO table behind this yet; the
-// row shape in lib/mock-data.ts is the UI's proposal for it. Toggling Done
-// works for the session and writes nowhere.
-
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
-const monoStyle = { fontFamily: 'var(--font-mono)' } as const
-
-const SOURCE_LABEL = {
-  follow_up: 'Follow-up',
-  escalation: 'Escalation',
-  manual: 'Manual',
-} as const
-
-function dueStamp(iso: string, now: number): string {
-  const diff = new Date(iso).getTime() - now
-  const abs = Math.abs(diff)
-  const m = Math.max(1, Math.round(abs / 60_000))
-  const stamp = m < 60 ? `${m}m` : m < 24 * 60 ? `${Math.round(m / 60)}h` : `${Math.round(m / (24 * 60))}d`
-  return diff < 0 ? `${stamp} late` : `in ${stamp}`
+const PRIORITY_TONE: Record<TodoPriorityPreview, 'neutral' | 'warn' | 'danger'> = {
+  normal: 'neutral',
+  high: 'warn',
+  urgent: 'danger',
 }
 
-export function TodosTab() {
-  const { items, toggle, setNote } = useMockTodos()
-  const [noteFor, setNoteFor] = useState<string | null>(null)
-  const [noteDraft, setNoteDraft] = useState('')
-  // Mock fixtures pin their own clock so overdue rows stay overdue in
-  // screenshots; real wiring replaces this with Date.now().
-  const now = useMemo(() => Date.now(), [])
-
-  const pending = items.filter((t) => t.status === 'pending')
-  const done = items.filter((t) => t.status === 'done')
-
-  const row = (t: (typeof items)[number]) => {
-    const overdue = t.status === 'pending' && new Date(t.due_at).getTime() < now
-    return (
-      <div key={t.id} className="border-b border-border bg-surface px-4 py-3">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => toggle(t.id)}
-          aria-pressed={t.status === 'done'}
-          aria-label={`Mark "${t.title}" ${t.status === 'done' ? 'not done' : 'done'} (sample, not saved)`}
-          title="Sample control — not saved"
-          className={[
-            'flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-dashed transition-colors',
-            t.status === 'done'
-              ? 'border-transparent bg-accent-subtle text-accent'
-              : 'border-border-strong text-transparent hover:text-fg-subtle',
-          ].join(' ')}
-        >
-          <Check aria-hidden size={13} strokeWidth={2.5} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div
-            className={[
-              'truncate text-sm',
-              t.status === 'done' ? 'text-fg-subtle line-through' : 'text-fg',
-            ].join(' ')}
-          >
-            {t.title}
-          </div>
-          <div className="mt-0.5 flex items-center gap-3">
-            <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
-              {t.assignee}
-            </span>
-            <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
-              {SOURCE_LABEL[t.source]}
-            </span>
-          </div>
-        </div>
-        {t.status === 'pending' && (
-          <span
-            className={['tnum shrink-0 text-sm', overdue ? 'text-danger' : 'text-fg-subtle'].join(' ')}
-            style={monoStyle}
-          >
-            {dueStamp(t.due_at, now)}
-          </span>
-        )}
-        <button
-          onClick={() => {
-            setNoteFor((cur) => (cur === t.id ? null : t.id))
-            setNoteDraft(t.note ?? '')
-          }}
-          aria-label={`Note on "${t.title}"`}
-          title="Add note"
-          className={[
-            'shrink-0 rounded-sm p-1.5 hover:bg-surface-sunk',
-            t.note ? 'text-fg-muted' : 'text-fg-subtle',
-          ].join(' ')}
-        >
-          <NotebookPen aria-hidden size={14} strokeWidth={1.75} />
-        </button>
+function AssignmentRow({ item, onToggle }: { item: TodoAssignmentPreview; onToggle: () => void }) {
+  return (
+    <article className={['rounded-lg border bg-surface p-3 shadow-elev-1', item.overdue && item.status === 'open' ? 'border-[color-mix(in_srgb,var(--danger)_30%,var(--border))]' : 'border-border'].join(' ')}>
+      <div className="flex items-start gap-3">
+        <button onClick={onToggle} aria-label={`Mark ${item.title} ${item.status === 'done' ? 'open' : 'done'} (preview)`} aria-pressed={item.status === 'done'} className={['mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors', item.status === 'done' ? 'border-success bg-success text-white' : 'border-border-strong text-transparent hover:border-success hover:bg-success-subtle hover:text-success'].join(' ')}><Check aria-hidden size={13} strokeWidth={2.4} /></button>
+        <div className="min-w-0 flex-1"><h4 className={['text-xs font-semibold leading-relaxed', item.status === 'done' ? 'text-fg-subtle line-through' : 'text-fg'].join(' ')}>{item.title}</h4><div className="mt-2 flex flex-wrap items-center gap-1.5"><Chip tone={PRIORITY_TONE[item.priority]}>{item.priority}</Chip><span className={['text-2xs font-semibold', item.overdue && item.status === 'open' ? 'text-danger' : 'text-fg-muted'].join(' ')}>{item.overdue && item.status === 'open' ? 'Overdue · ' : ''}{item.dueLabel}</span></div></div>
       </div>
+      {item.link && <button className="mt-3 flex min-h-9 w-full items-center gap-2 rounded-md border border-border bg-surface-sunk px-3 text-left text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg" title="Preview — link is not wired"><Link2 aria-hidden size={13} /><span className="min-w-0 flex-1 truncate">{item.link.label}</span><ChevronRight aria-hidden size={13} /></button>}
+      <div className="mt-2"><NextAction compact label={item.status === 'done' ? 'No action — completed' : item.overdue ? 'Complete or reassign now' : `Complete by ${item.dueLabel}`} /></div>
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5"><span className="flex -space-x-1.5">{item.assignees.map((name) => <span key={name} className="rounded-[11px] border-2 border-surface"><Avatar name={name} size="sm" /></span>)}</span><span className="text-2xs text-fg-subtle">from {item.createdBy}</span></div>
+    </article>
+  )
+}
 
-      {t.note && noteFor !== t.id && (
-        <p className="mt-1.5 pl-8 text-xs text-fg-muted">{t.note}</p>
-      )}
-      {noteFor === t.id && (
-        <div className="mt-2 flex items-center gap-2 pl-8">
-          <input
-            value={noteDraft}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setNote(t.id, noteDraft.trim())
-                setNoteFor(null)
-              }
-            }}
-            placeholder="How did it go / what's blocking"
-            aria-label="Todo note"
-            autoFocus
-            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 text-xs text-fg placeholder:text-fg-subtle hover:border-border-strong"
-          />
-          <button
-            onClick={() => {
-              setNote(t.id, noteDraft.trim())
-              setNoteFor(null)
-            }}
-            className="rounded-md border border-border px-2.5 py-1.5 text-2xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"
-          >
-            Save
-          </button>
-        </div>
-      )}
-      </div>
-    )
+function ComposeSheet({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (item: TodoAssignmentPreview) => void }) {
+  const [title, setTitle] = useState('')
+  const [assignees, setAssignees] = useState<string[]>(['Asha Thomas'])
+  const [due, setDue] = useState<'Today' | 'Tomorrow' | 'Pick'>('Today')
+  const [date, setDate] = useState('2026-08-04')
+  const [priority, setPriority] = useState<TodoPriorityPreview>('normal')
+  const [link, setLink] = useState('')
+
+  const create = () => {
+    if (!title.trim() || !assignees.length) return
+    const dueDate = due === 'Today' ? '2026-08-02' : due === 'Tomorrow' ? '2026-08-03' : date
+    onCreate({ id: `todo-local-${Date.now()}`, title: title.trim(), assignees, dueLabel: due === 'Pick' ? `${date} · 5:00 pm` : `${due} · 5:00 pm`, dueAt: `${dueDate}T17:00:00+05:30`, overdue: false, priority, status: 'open', createdBy: 'You', link: link ? { kind: link.startsWith('conv') ? 'conversation' : 'lead', id: link, label: link === 'lead-anjali' ? 'Anjali Ramesh' : 'Rahul Das' } : undefined, sample: true })
+    setTitle('')
+    onClose()
   }
 
   return (
+    <Sheet open={open} onClose={onClose} title="Assign a todo">
+      <label className="block"><span className="label-caps">Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) create() }} autoFocus placeholder="What needs to happen?" className="mt-2 h-11 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-fg placeholder:text-fg-subtle" /></label>
+      <fieldset className="mt-5"><legend className="label-caps">Assign to</legend><div className="mt-2 grid grid-cols-2 gap-2">{TODO_REPS.map((rep) => { const selected = assignees.includes(rep.name); return <button type="button" key={rep.id} onClick={() => setAssignees((all) => selected ? all.filter((name) => name !== rep.name) : [...all, rep.name])} aria-pressed={selected} className={['flex min-h-12 items-center gap-2 rounded-md border px-2.5 text-left', selected ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'].join(' ')}><Avatar name={rep.name} size="sm" /><span className="min-w-0 flex-1 truncate text-xs font-semibold text-fg">{rep.name}</span>{selected && <Check aria-hidden size={13} className="text-accent" />}</button> })}</div></fieldset>
+      <fieldset className="mt-5"><legend className="label-caps">Due</legend><div className="mt-2 grid grid-cols-3 gap-1 rounded-md border border-border bg-surface-sunk p-1">{(['Today', 'Tomorrow', 'Pick'] as const).map((item) => <button type="button" key={item} onClick={() => setDue(item)} aria-pressed={due === item} className={['min-h-9 rounded-sm text-xs font-semibold', due === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted'].join(' ')}>{item}</button>)}</div>{due === 'Pick' && <input type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Todo due date" className="mt-2 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg" />}</fieldset>
+      <fieldset className="mt-5"><legend className="label-caps">Priority</legend><div className="mt-2 flex gap-2">{(['normal', 'high', 'urgent'] as const).map((item) => <button type="button" key={item} onClick={() => setPriority(item)} aria-pressed={priority === item} className={['min-h-9 flex-1 rounded-md border text-xs font-semibold capitalize', priority === item ? item === 'urgent' ? 'border-danger bg-danger-subtle text-danger' : item === 'high' ? 'border-warn bg-warn-subtle text-warn' : 'border-accent bg-accent-subtle text-accent' : 'border-border text-fg-muted'].join(' ')}>{item}</button>)}</div></fieldset>
+      <label className="mt-5 block"><span className="label-caps">Link (optional)</span><select value={link} onChange={(event) => setLink(event.target.value)} className="mt-2 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg"><option value="">No linked record</option><option value="lead-anjali">Lead · Anjali Ramesh</option><option value="conv-rahul">Conversation · Rahul Das</option></select></label>
+      <Button size="lg" className="mt-6 w-full" onClick={create} disabled={!title.trim() || !assignees.length}><Send aria-hidden size={15} /> Assign to {assignees.length || 0}</Button>
+      <p className="mt-2 text-center text-2xs text-fg-subtle">⌘ Enter to assign · Preview — not wired</p>
+    </Sheet>
+  )
+}
+
+export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 'loading' | 'empty' | 'error' }) {
+  const { activeClient } = useClient()
+  const manager = activeClient?.role === 'manager' || activeClient?.role === 'client_admin' || activeClient?.role === 'super_admin'
+  const [items, setItems] = useState(TODO_PREVIEW_ITEMS)
+  const [composeOpen, setComposeOpen] = useState(false)
+  const [quickTitle, setQuickTitle] = useState('')
+  const [quickAssignee, setQuickAssignee] = useState(TODO_REPS[0].name)
+
+  const toggle = (id: string) => setItems((all) => all.map((item) => item.id === id ? { ...item, status: item.status === 'done' ? 'open' : 'done' } : item))
+  const createQuick = () => {
+    if (!quickTitle.trim()) return
+    setItems((all) => [{ id: `todo-quick-${Date.now()}`, title: quickTitle.trim(), assignees: [quickAssignee], dueLabel: 'Today · 5:00 pm', dueAt: '2026-08-02T17:00:00+05:30', overdue: false, priority: 'normal', status: 'open', createdBy: 'You', sample: true }, ...all])
+    setQuickTitle('')
+  }
+
+  const summaries = useMemo(() => TODO_REPS.map((rep) => { const assigned = items.filter((item) => item.assignees.includes(rep.name)); return { ...rep, open: assigned.filter((item) => item.status === 'open').length, done: assigned.filter((item) => item.status === 'done').length, overdue: assigned.filter((item) => item.status === 'open' && item.overdue).length } }), [items])
+
+  if (previewState === 'loading') return <div className="space-y-3 p-4"><Skeleton className="h-16" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
+  if (previewState === 'empty') return <EmptyState icon={ListTodo} title="No todos assigned." body={manager ? 'Create the first assignment from the quick bar.' : 'New manager assignments will land here and on Today.'} />
+  if (previewState === 'error') return <ErrorState title="Couldn’t load todos" body="Check the connection and retry." onRetry={() => undefined} />
+
+  return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SampleBanner>Sample data — employee todos are a proposed concept, not a table yet</SampleBanner>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {pending.map(row)}
-        {done.length > 0 && (
-          <>
-            <h2
-              className="border-b border-border bg-surface-sunk px-4 py-1.5 text-2xs text-fg-subtle uppercase"
-              style={capsStyle}
-            >
-              Done
-            </h2>
-            {done.map(row)}
-          </>
-        )}
+      <SampleBanner>Preview — manager assignments and todo updates are not wired</SampleBanner>
+      <div className="min-h-0 flex-1 overflow-y-auto bg-canvas">
+        <div className="page-frame max-w-[1400px] space-y-5">
+          <header className="flex flex-wrap items-end justify-between gap-3"><div><p className="label-caps text-accent">{manager ? 'Manager assignment desk' : 'Assigned to you'}</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-fg">{manager ? 'Push the next action, not another message.' : 'Clear what your manager sent.'}</h2><p className="mt-1 text-xs text-fg-muted">{manager ? 'Create in one line, add context only when it matters.' : 'Done and snooze stay consistent with your Today stack.'}</p></div>{manager && <Button onClick={() => setComposeOpen(true)}><Plus aria-hidden size={15} /> Full assignment</Button>}</header>
+
+          {manager && <section className="rounded-xl border border-border bg-surface p-3 shadow-elev-2"><div className="flex flex-col gap-2 sm:flex-row"><div className="relative min-w-0 flex-1"><ListTodo aria-hidden size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><input value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && createQuick()} placeholder="Assign a todo…" aria-label="Quick todo title" className="h-11 w-full rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg placeholder:text-fg-subtle" /></div><select value={quickAssignee} onChange={(event) => setQuickAssignee(event.target.value)} aria-label="Quick todo assignee" className="h-11 rounded-md border border-border bg-surface px-3 text-sm text-fg">{TODO_REPS.map((rep) => <option key={rep.id}>{rep.name}</option>)}</select><button className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg" title="Due today"><CalendarDays aria-hidden size={14} /> Today</button><Button size="lg" onClick={createQuick} disabled={!quickTitle.trim()}>Assign</Button></div><p className="mt-2 px-1 text-2xs text-fg-subtle">Enter to assign · Defaults to today and normal priority</p></section>}
+
+          {manager && <section><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-fg">Team load</h3><span className="label-caps">Open / done / overdue</span></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{summaries.map((rep) => <article key={rep.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 shadow-elev-1"><Avatar name={rep.name} size="md" /><div className="min-w-0 flex-1"><h4 className="truncate text-xs font-semibold text-fg">{rep.name}</h4><p className="mt-1 text-2xs text-fg-muted"><strong className="tnum text-fg">{rep.open}</strong> open · {rep.done} done</p></div>{rep.overdue > 0 ? <span className="flex items-center gap-1 text-2xs font-semibold text-danger"><CircleAlert aria-hidden size={12} /> {rep.overdue}</span> : <Check aria-hidden size={15} className="text-success" />}</article>)}</div></section>}
+
+          {manager ? <section><div className="mb-3 flex items-center gap-2"><Users aria-hidden size={15} className="text-accent" /><h3 className="text-sm font-semibold text-fg">Todos by rep</h3></div><div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">{TODO_REPS.map((rep) => { const assigned = items.filter((item) => item.assignees.includes(rep.name)); return <section key={rep.id} className="min-w-0 rounded-xl border border-border bg-surface-sunk p-2"><header className="flex items-center gap-2 px-2 py-2"><Avatar name={rep.name} size="sm" /><div className="min-w-0 flex-1"><h4 className="truncate text-xs font-semibold text-fg">{rep.name}</h4><p className="text-2xs text-fg-subtle">{assigned.filter((item) => item.status === 'open').length} open</p></div></header><div className="space-y-2">{assigned.length ? assigned.map((item) => <AssignmentRow key={item.id} item={item} onToggle={() => toggle(item.id)} />) : <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-fg-subtle">Nothing assigned.</p>}</div></section> })}</div></section> : <section className="mx-auto max-w-2xl space-y-3">{items.filter((item) => item.assignees.includes('Asha Thomas')).map((item) => <AssignmentRow key={item.id} item={item} onToggle={() => toggle(item.id)} />)}</section>}
+        </div>
       </div>
+      <ComposeSheet open={composeOpen} onClose={() => setComposeOpen(false)} onCreate={(item) => setItems((all) => [item, ...all])} />
     </div>
   )
 }

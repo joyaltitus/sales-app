@@ -10,18 +10,18 @@ type Props = HTMLAttributes<HTMLSpanElement> & {
 // Status pill — the ONLY place pills are allowed (§C). Weight-shift + tint,
 // never a color flood.
 const tones: Record<Tone, string> = {
-  neutral: 'bg-surface-sunk text-fg-muted',
-  accent: 'bg-accent-subtle text-accent',
-  success: 'bg-accent-subtle text-success',
-  warn: 'bg-[color-mix(in_srgb,var(--warn)_14%,transparent)] text-warn',
-  danger: 'bg-danger-subtle text-danger',
+  neutral: 'border-border bg-surface-sunk text-fg-muted',
+  accent: 'border-[color-mix(in_srgb,var(--accent)_18%,transparent)] bg-accent-subtle text-accent',
+  success: 'border-[color-mix(in_srgb,var(--success)_20%,transparent)] bg-success-subtle text-success',
+  warn: 'border-[color-mix(in_srgb,var(--warn)_20%,transparent)] bg-warn-subtle text-warn',
+  danger: 'border-[color-mix(in_srgb,var(--danger)_20%,transparent)] bg-danger-subtle text-danger',
 }
 
 export function Chip({ tone = 'neutral', className = '', children, ...rest }: Props) {
   return (
     <span
       className={[
-        'inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-2xs font-semibold',
+        'inline-flex min-h-5 items-center gap-1 rounded-pill border px-2 py-0.5 text-2xs leading-none font-semibold',
         tones[tone],
         className,
       ].join(' ')}

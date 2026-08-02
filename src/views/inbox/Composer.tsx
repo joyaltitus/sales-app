@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Zap, Trash2 } from 'lucide-react'
+import { SendHorizontal, Sparkles, Trash2, Zap } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
 import { loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
+import { VoiceButton } from '../../ui/agent/VoiceButton'
+import { ObjectionCapture } from '../objections/ObjectionCapture'
 
 // SA-06 quick replies — the retype-killer. Device-local (localStorage) until a
 // templates table exists; the marker in the picker says so. Saved from the
@@ -160,16 +162,27 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-border bg-surface">
+    <div className="border-t border-border bg-surface-glass backdrop-blur-xl">
       {state.kind === 'error' && (
         <div className="border-b border-border bg-danger-subtle px-4 py-2 text-xs text-danger">
           {state.message}
         </div>
       )}
 
+      <ObjectionCapture
+        contactId={conversationId}
+        source="chat"
+        detected="price"
+        compact
+        onInsertScript={(script) => {
+          setText(script)
+          setState({ kind: 'idle' })
+        }}
+      />
+
       {/* Quick replies — tap to insert; save the current draft for next time. */}
       {repliesOpen && (
-        <div className="max-h-48 space-y-1 overflow-y-auto border-b border-border px-4 py-2.5">
+        <div className="max-h-48 space-y-1 overflow-y-auto border-b border-border bg-surface px-4 py-2.5">
           <div className="flex items-baseline justify-between">
             <span className="label-caps text-fg-subtle">Quick replies</span>
             <span className="text-2xs text-fg-subtle">Saved on this device</span>
@@ -218,14 +231,19 @@ export function Composer({
         </div>
       )}
 
-      <div className="flex items-center gap-2 px-4 py-3">
+      {seed && text === seed.text && (
+        <div className="flex items-center gap-2 border-b border-border bg-accent-subtle px-4 py-2 text-2xs text-fg-muted">
+          <Sparkles aria-hidden size={13} className="text-accent" /> AI draft added — review before sending.
+        </div>
+      )}
+      <div className="flex items-end gap-2 px-3 py-3 sm:px-4">
         <button
           onClick={() => setRepliesOpen((o) => !o)}
           aria-label="Quick replies"
           aria-expanded={repliesOpen}
           title="Quick replies"
           className={[
-            'shrink-0 rounded-md border p-2 transition-colors',
+            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border transition-colors',
             repliesOpen
               ? 'border-transparent bg-accent-subtle text-accent'
               : 'border-border text-fg-muted hover:border-border-strong hover:text-fg',
@@ -233,25 +251,32 @@ export function Composer({
         >
           <Zap aria-hidden size={15} strokeWidth={1.75} />
         </button>
-        <Input
-          aria-label="Type a reply"
-          placeholder="Type a reply"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value)
-            if (state.kind !== 'idle') setState({ kind: 'idle' })
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              void send()
-            }
-          }}
-        />
+        <div className="min-w-0 flex-1 rounded-lg border border-border bg-surface-raised p-1 shadow-[var(--inset-highlight)] focus-within:border-accent">
+          <textarea
+            aria-label="Type a reply"
+            placeholder="Message customer…"
+            rows={1}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value)
+              if (state.kind !== 'idle') setState({ kind: 'idle' })
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void send()
+              }
+            }}
+            className="max-h-28 min-h-9 w-full resize-none bg-transparent px-2 py-2 text-sm text-fg outline-none placeholder:text-fg-subtle"
+          />
+        </div>
+        <div className="shrink-0">
+          <VoiceButton onTranscript={setText} compact />
+        </div>
         {/* The accent is reserved for exactly one thing per screen: the next
             action (§1.7). On this screen that is Send, and nothing else. */}
-        <Button onClick={() => void send()} disabled={!text.trim() || state.kind === 'sending'}>
-          {state.kind === 'sending' ? 'Sending' : state.kind === 'sent' ? 'Sent' : 'Send'}
+        <Button size="icon" onClick={() => void send()} disabled={!text.trim() || state.kind === 'sending'} aria-label="Send message">
+          {state.kind === 'sending' ? <span className="h-4 w-4 animate-spin rounded-pill border-2 border-current border-t-transparent" /> : <SendHorizontal aria-hidden size={17} />}
         </Button>
       </div>
     </div>
