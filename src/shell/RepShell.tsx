@@ -39,31 +39,60 @@ export function RepShell() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
-      <main className="min-h-0 flex-1 overflow-y-auto pb-24">
-        <Suspense
-          fallback={
-            <div className="space-y-2 p-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          }
-        >
-          <Routes>
-            <Route index element={<Today />} />
-            <Route path="inbox" element={<RepInbox />} />
-            <Route path="leads" element={<CrmScreen />} />
-            <Route path="more" element={<More productAi={productAi} />} />
-            <Route path="agent" element={<AgentScreen />} />
-            <Route path="docs" element={<DocsStudio />} />
-            {/* Flag-gated door: only mounts when the flag is on. */}
-            {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </main>
+      <div className="flex min-h-0 flex-1">
+        <aside className="hidden w-[216px] shrink-0 flex-col border-r border-border bg-surface px-3 py-4 lg:flex">
+          <div className="px-3 pb-4">
+            <p className="label-caps text-accent">My workspace</p>
+            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Targets, customers and promises due today.</p>
+          </div>
+          <nav className="space-y-1" aria-label="Rep workspace">
+            {TABS.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                end={tab.end}
+                className={({ isActive }) => [
+                  'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors',
+                  isActive ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:bg-surface-sunk hover:text-fg',
+                ].join(' ')}
+              >
+                <tab.icon aria-hidden size={18} strokeWidth={1.8} />
+                {tab.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="mt-auto rounded-lg border border-border bg-surface-sunk p-3">
+            <p className="text-xs font-semibold text-fg">Laptop view</p>
+            <p className="mt-1 text-2xs leading-relaxed text-fg-muted">Use Inbox and CRM side by side without losing Today.</p>
+          </div>
+        </aside>
+
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
+          <Suspense
+            fallback={
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            }
+          >
+            <Routes>
+              <Route index element={<Today />} />
+              <Route path="inbox" element={<RepInbox />} />
+              <Route path="leads" element={<CrmScreen />} />
+              <Route path="more" element={<More productAi={productAi} />} />
+              <Route path="agent" element={<AgentScreen />} />
+              <Route path="docs" element={<DocsStudio />} />
+              {/* Flag-gated door: only mounts when the flag is on. */}
+              {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </main>
+      </div>
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 overflow-hidden rounded-xl border border-border bg-surface-glass px-1 pb-[env(safe-area-inset-bottom)] shadow-elev-3 backdrop-blur-xl sm:inset-x-auto sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2"
+        className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 overflow-hidden rounded-xl border border-border bg-surface-glass px-1 pb-[env(safe-area-inset-bottom)] shadow-elev-3 backdrop-blur-xl sm:inset-x-auto sm:left-1/2 sm:w-[440px] sm:-translate-x-1/2 lg:hidden"
         aria-label="Primary"
       >
         {TABS.map((t) => (

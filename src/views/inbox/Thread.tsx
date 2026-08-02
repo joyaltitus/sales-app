@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Bot, Check, CheckCheck } from 'lucide-react'
+import { Bot, Check, CheckCheck, MessageCircle } from 'lucide-react'
 import type { Message } from '../../lib/inbox-data'
 import { resolveMarks, type SeamMark, type Trace } from '../../lib/seam'
 import { clockTime } from '../../lib/wait'
+import { EmptyState } from '../../ui/EmptyState'
 
 // The thread is a conversation, not a board (§1.4). Rounded, warm,
 // WhatsApp-legible, generous. The seam is the ONLY board-like element that
@@ -133,6 +134,10 @@ export function Thread({ messages, traces }: { messages: Message[]; traces: Trac
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
+
+  if (messages.length === 0) {
+    return <EmptyState icon={MessageCircle} title="No messages here yet." body="This conversation is ready. Send the first message below or return to the queue." />
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-4 py-6 sm:px-6">

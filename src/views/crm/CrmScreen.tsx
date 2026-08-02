@@ -13,7 +13,8 @@ import { TodosTab } from './TodosTab'
 // REAL vs SAMPLE:
 //   Pipeline   → REAL (board + drawer, RLS-gated writes; only the row-level
 //                assignment/objection selects remain SAMPLE)
-//   Follow-ups → REAL reads; actions still deferred
+//   Follow-ups → REAL reads/actions, with marked local preview fixtures when a
+//                demo workspace has no rows
 //   Contacts   → REAL (SA-05)
 //   Bookings   → REAL (SA-05)
 //   Todos      → SAMPLE (employee_todos is not a table yet — Wave 1)

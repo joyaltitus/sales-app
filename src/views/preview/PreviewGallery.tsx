@@ -1,16 +1,12 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  ArrowRight,
   Bot,
   Check,
   Clock3,
-  Flame,
-  MessageCircle,
   Moon,
-  Phone,
   ListTodo,
   Search,
-  Sparkles,
   Sun,
   Trophy,
 } from 'lucide-react'
@@ -41,6 +37,9 @@ import CompetitionConsole from '../momentum/CompetitionConsole'
 import { MomentumCard } from '../momentum/RepMomentum'
 import { AuthExperiencePreview } from '../../auth/LoginPage'
 import OwnerBusinessReport from '../reports/OwnerBusinessReport'
+import { Today } from '../rep/Today'
+import { FollowUpsTab } from '../crm/FollowUpsTab'
+import { TodosTab } from '../crm/TodosTab'
 
 function Section({ number, title, note, children }: { number: string; title: string; note: string; children: ReactNode }) {
   return (
@@ -68,38 +67,19 @@ function PhoneFrame({ children }: { children: ReactNode }) {
 
 function TodayPreview() {
   return (
-    <PhoneFrame>
-      <div className="px-4 pt-5 pb-6">
-        <div className="flex items-start justify-between">
-          <div><p className="text-xs font-semibold text-accent">Your day is ready</p><h3 className="mt-1 text-2xl font-semibold tracking-[-0.04em]">Good morning.</h3></div>
-          <Chip tone="accent"><Flame aria-hidden size={11} /> 4 days</Chip>
-        </div>
-        <div className="relative mt-4 overflow-hidden rounded-xl border border-accent/20 bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
-          <p className="label-caps text-accent">Do this now</p>
-          <h4 className="mt-3 text-xl font-semibold tracking-[-0.03em]">Reply to Anjali</h4>
-          <p className="mt-2 text-sm leading-relaxed text-fg-muted">“Can I pay the fee in two parts?”</p>
-          <Button size="lg" className="mt-5 w-full"><MessageCircle aria-hidden size={16} /> Reply now <ArrowRight aria-hidden size={14} /></Button>
-        </div>
-        <div className="mt-4 flex items-center gap-4 rounded-xl border border-border bg-surface p-4 shadow-elev-1">
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-pill border-[7px] border-accent"><strong className="tnum text-md">71%</strong></div>
-          <div><p className="label-caps">Daily momentum</p><p className="mt-1 text-sm font-semibold">5 of 7 follow-ups done</p><p className="mt-1 text-xs text-fg-muted">Two more keeps your streak alive.</p></div>
-        </div>
-        <div className="mt-5"><p className="label-caps">Then keep moving</p><h4 className="mt-1 text-lg font-semibold">Your priority stack</h4></div>
-        <div className="mt-3 space-y-2">
-          {[
-            [Phone, 'Overdue follow-up', 'Call Vishnu before the promise slips'],
-            [Sparkles, 'Going cold · 6 days', 'Draft a relevant re-engagement'],
-            [Check, 'Manager todo', 'Confirm Saturday’s campus visit'],
-          ].map(([Icon, meta, title]) => (
-            <div key={String(meta)} className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 shadow-elev-1">
-              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-subtle text-accent"><Icon aria-hidden size={16} /></span>
-              <span className="min-w-0 flex-1"><span className="label-caps block">{meta as string}</span><span className="mt-1 block truncate text-sm font-semibold">{title as string}</span></span>
-              <ArrowRight aria-hidden size={15} className="text-fg-subtle" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </PhoneFrame>
+    <div className="max-h-[900px] overflow-y-auto rounded-xl border border-border bg-canvas shadow-elev-2"><Today /></div>
+  )
+}
+
+function InboxPreview() {
+  const [selectedId, setSelectedId] = useState(MOCK_QUEUE[0].item.id)
+  const selected = MOCK_QUEUE.find(({ item }) => item.id === selectedId) ?? MOCK_QUEUE[0]
+  const selectedName = selected.item.contact?.profile_name ?? selected.item.contact?.external_id ?? 'Conversation'
+  return (
+    <div className="grid overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2 lg:grid-cols-[360px_1fr]" data-testid="inbox-preview">
+      <div className="border-r border-border"><div className="space-y-3 border-b border-border p-4"><h3 className="text-lg font-semibold">Inbox</h3><div className="relative"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><Input className="pl-9" placeholder="Search conversations" /></div></div>{MOCK_QUEUE.map(({ item, preview, assignee }) => <QueueRow key={item.id} item={item} preview={preview} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)} assigneeLabel={assignee} />)}</div>
+      <div className="app-grid min-h-[560px] overflow-hidden"><div className="border-b border-border bg-surface px-4 py-3"><p className="font-semibold" data-testid="open-chat-name">{selectedName}</p><p className="text-2xs text-success">● Conversation opened</p></div><Thread messages={MOCK_MESSAGES} traces={MOCK_TRACES} /></div>
+    </div>
   )
 }
 
@@ -154,13 +134,10 @@ export default function PreviewGallery() {
           <div className="grid grid-cols-5 gap-2 rounded-xl border border-border bg-surface p-4 shadow-elev-2">{['#146b4a', '#8dddaf', '#f2f4f1', '#fafbf9', '#17201c'].map((color, index) => <div key={color}><div className="aspect-square rounded-lg border border-border" style={{ background: color }} /><p className="tnum mt-2 text-center text-2xs text-fg-muted">{index < 2 ? 'signal' : index === 2 ? 'canvas' : index === 3 ? 'surface' : 'ink'}</p></div>)}</div>
         </section>
 
-        <Section number="01" title="Rep Today" note="One live next action, daily momentum, then at most three priorities. Every object can be acted on."><TodayPreview /></Section>
+        <Section number="01" title="Rep Today — mobile and laptop" note="The day opens with targets, completed work, pending follow-ups and assigned tasks. Customer actions follow the overview, with a two-column laptop layout."><TodayPreview /></Section>
         <Section number="02" title="Manager Floor" note="Exceptions and decisions appear before pipeline data. Healthy activity stays quiet."><FloorPreview /></Section>
         <Section number="03" title="Inbox" note="Customer, AI and human handling are distinguishable without turning the conversation into an audit log.">
-          <div className="grid overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2 lg:grid-cols-[360px_1fr]">
-            <div className="border-r border-border"><div className="space-y-3 border-b border-border p-4"><h3 className="text-lg font-semibold">Inbox</h3><div className="relative"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><Input className="pl-9" placeholder="Search conversations" /></div></div>{MOCK_QUEUE.map(({ item, preview, assignee }) => <QueueRow key={item.id} item={item} preview={preview} selected={item.id === MOCK_QUEUE[0].item.id} onSelect={() => {}} assigneeLabel={assignee} />)}</div>
-            <div className="app-grid min-h-[560px] overflow-hidden"><div className="border-b border-border bg-surface px-4 py-3"><p className="font-semibold">Anjali Ramesh</p><p className="text-2xs text-success">● AI monitoring</p></div><Thread messages={MOCK_MESSAGES} traces={MOCK_TRACES} /></div>
-          </div>
+          <InboxPreview />
         </Section>
         <Section number="04" title="AI sales copilot" note="Typed tool actions, explicit autonomy, recognition and approvals make the system feel capable without asking for blind trust."><div className="mx-auto h-[640px] max-w-lg overflow-hidden rounded-xl border border-border bg-surface shadow-elev-3"><AgentPanel /></div></Section>
         <Section number="05" title="Capture → counter-script" note="A detected objection is confirmed in one tap; the company’s standard answer appears immediately as the reward.">
@@ -184,6 +161,7 @@ export default function PreviewGallery() {
         <Section number="14" title="Manager Momentum console" note="Rules, challenge design, both leagues, rookie ramp and care signals live under one manager-controlled policy with a rep preview beside every consequential setting."><CompetitionConsole /></Section>
         <Section number="15" title="First impressions and auth edges" note="A mature product promise frames sign-in, while invite acceptance, recovery, failure and session-expiry states protect context and explain exactly what happens next."><AuthExperiencePreview /></Section>
         <Section number="16" title="Owner business report" note="Revenue, coverage, execution, bookings and buyer objections resolve into a one-page renewal artifact built for a 30-second read and a clean A4 handoff."><OwnerBusinessReport /></Section>
+        <Section number="17" title="Rep follow-ups and task details" note="Rows now open full context instead of exposing only quick actions: who, due promise, stage, deal value, last contact, next action and a clearly labeled local preview state."><div className="grid gap-6"><div data-testid="follow-ups-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><FollowUpsTab /></div><div data-testid="todos-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><TodosTab /></div></div></Section>
       </main>
     </div>
   )

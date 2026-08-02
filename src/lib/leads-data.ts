@@ -130,27 +130,40 @@ export function useLeads(clientId: string | null) {
 
 export function useFollowUps(clientId: string | null) {
   const [items, setItems] = useState<FollowUpItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!clientId) {
       setItems([])
+      setError(null)
+      setLoading(false)
       return
     }
-    const { data } = await supabase
+    setLoading(true)
+    const { data, error: readError } = await supabase
       .from('follow_ups')
       .select('id, lead_id, contact_id, due_at, status, note')
       .eq('client_id', clientId)
       .in('status', ['pending', 'snoozed'])
       .order('due_at', { ascending: true })
       .limit(FOLLOW_UP_LIMIT)
+    if (readError) {
+      setItems([])
+      setError(readError.message)
+      setLoading(false)
+      return
+    }
+    setError(null)
     setItems((data ?? []) as FollowUpItem[])
+    setLoading(false)
   }, [clientId])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  return { items, reload: load }
+  return { items, loading, error, reload: load }
 }
 
 /**

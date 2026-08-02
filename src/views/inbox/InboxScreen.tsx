@@ -15,6 +15,7 @@ import { ContextRail } from './ContextRail'
 import { Sheet } from '../../ui/Sheet'
 import { EmailQueueRow } from '../email/EmailQueueRow'
 import { CallButton } from '../calls/CallButton'
+import { ErrorState } from '../../ui/ErrorState'
 
 const EmailConversation = lazy(() => import('../email/EmailConversation'))
 
@@ -143,6 +144,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     messages,
     traces,
     loading: threadLoading,
+    error: threadError,
     reload: reloadThread,
   } = useThread(clientId, selectedId)
 
@@ -369,7 +371,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     </div>
   )
 
-  const thread = selected && (
+  const thread = selectedId && (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface-glass px-4 backdrop-blur-xl">
         {/* Phone: the thread replaces the queue, so it needs a way back. The
@@ -390,7 +392,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           {!channelLive && (
             <span className="text-2xs text-fg-subtle">Checking for updates</span>
           )}
-          <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" />
+          {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" />}
           {/* Rail toggle — the third pane below xl, where it renders as a sheet. */}
           <button
             onClick={() => setRailOpen(true)}
@@ -407,17 +409,23 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <Skeleton className="h-12 w-2/3" />
             <Skeleton className="ml-auto h-12 w-1/2" />
           </div>
+        ) : threadError ? (
+          <ErrorState title="Couldn’t open this conversation" body="The queue is still available. Check the connection and try this chat again." onRetry={() => void reloadThread()} />
+        ) : !selected && messages.length === 0 ? (
+          <EmptyState icon={MessageCircle} title="Conversation unavailable" body="It may have moved outside your current access or been removed. Return to the queue and choose another chat." />
         ) : (
           <Thread messages={messages} traces={traces} />
         )}
       </div>
 
-      <Composer
-        conversationId={selected.id}
-        canSend={canSend}
-        onSent={refreshAll}
-        seed={draftSeed}
-      />
+      {!threadError && (selected || messages.length > 0) && (
+        <Composer
+          conversationId={selectedId}
+          canSend={canSend}
+          onSent={refreshAll}
+          seed={draftSeed}
+        />
+      )}
     </div>
   )
 

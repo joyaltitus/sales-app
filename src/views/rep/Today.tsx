@@ -2,13 +2,16 @@ import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  CalendarCheck2,
   Check,
   ChevronRight,
+  CircleAlert,
   Clock3,
   Flame,
   MessageCircle,
   Phone,
   Sunrise,
+  Target,
   TimerReset,
   Trophy,
 } from 'lucide-react'
@@ -22,6 +25,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Chip } from '../../ui/Chip'
 import { Avatar } from '../../ui/Avatar'
 import { TODO_PREVIEW_ITEMS } from '../crm/todoMocks'
+import { FOLLOW_UP_PREVIEW_ITEMS } from '../crm/followUpMocks'
 import { CallButton } from '../calls/CallButton'
 import { DealProbability } from '../revenue/DealProbability'
 
@@ -76,6 +80,39 @@ function ProgressRing({ value }: { value: number }) {
         <span className="mt-1 text-2xs font-semibold text-fg-muted">today</span>
       </span>
     </div>
+  )
+}
+
+function OverviewMetric({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = 'neutral',
+}: {
+  icon: typeof Clock3
+  label: string
+  value: number
+  detail: string
+  tone?: 'neutral' | 'danger' | 'success' | 'accent'
+}) {
+  const toneClass = tone === 'danger'
+    ? 'bg-danger-subtle text-danger'
+    : tone === 'success'
+      ? 'bg-success-subtle text-success'
+      : tone === 'accent'
+        ? 'bg-accent-subtle text-accent'
+        : 'bg-surface-sunk text-fg-muted'
+
+  return (
+    <article className="min-w-0 rounded-lg border border-border bg-surface-raised p-3 shadow-elev-1">
+      <div className={['flex h-8 w-8 items-center justify-center rounded-md', toneClass].join(' ')}>
+        <Icon aria-hidden size={15} />
+      </div>
+      <p className="tnum mt-3 text-2xl font-semibold tracking-[-0.04em] text-fg">{value}</p>
+      <p className="mt-0.5 text-xs font-semibold text-fg">{label}</p>
+      <p className="mt-1 text-2xs leading-relaxed text-fg-muted">{detail}</p>
+    </article>
   )
 }
 
@@ -163,7 +200,10 @@ export function Today() {
   const clientId = activeClient?.id ?? null
   const { items, loading, error } = useQueue(clientId)
   const { previews } = usePreviews(clientId)
-  const { items: followUps } = useFollowUps(clientId)
+  const { items: liveFollowUps, loading: followUpsLoading, error: followUpsError } = useFollowUps(clientId)
+
+  const usingSampleFollowUps = !followUpsLoading && liveFollowUps.length === 0
+  const followUps = usingSampleFollowUps ? FOLLOW_UP_PREVIEW_ITEMS : liveFollowUps
 
   const waiting = useMemo(() => waitingLongest(items), [items])
   const oldest = waiting[0] ?? null
@@ -175,18 +215,17 @@ export function Today() {
   const [local, setLocal] = useState<Record<string, LocalState>>({})
   const [showAll, setShowAll] = useState(false)
 
-  if (loading) {
+  if (loading || followUpsLoading) {
     return (
-      <div className="mx-auto max-w-xl space-y-4 p-4">
+      <div className="mx-auto max-w-6xl space-y-4 p-4 lg:p-6">
         <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-56 w-full" />
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <div className="grid gap-4 lg:grid-cols-2"><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /></div>
       </div>
     )
   }
 
-  if (error) {
+  if (error || followUpsError) {
     return (
       <div className="p-6">
         <EmptyState title="Couldn't load your day" body="Check your connection and try again." />
@@ -198,77 +237,51 @@ export function Today() {
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestPreview = oldest ? previews.get(oldest.id) ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
+  const openTodos = TODO_PREVIEW_ITEMS.filter((todo) => todo.status === 'open' && todo.assignees.includes('Asha Thomas')).length
+  const pendingCount = followUps.filter((item) => !local[item.id]).length
+  const workLeft = pendingCount + openTodos
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 pt-5 pb-4 sm:pt-7">
+    <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-6 sm:pt-7 lg:px-6 lg:pb-10">
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-semibold text-accent">
             <Sunrise aria-hidden size={14} /> Your day is ready
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-fg">Good morning.</h1>
-          <p className="mt-1 text-sm text-fg-muted">Start with the customer who needs you most.</p>
+          <p className="mt-1 text-sm text-fg-muted">See the target, clear the promises, then work the queue.</p>
         </div>
         <Chip tone="accent"><Flame aria-hidden size={12} /> {MOCK_PROGRESS.streakDays} days</Chip>
       </header>
 
-      {oldest ? (
-        <section className="relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
-          <span aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-signal opacity-20 blur-3xl" />
-          <div className="relative">
-            <div className="flex items-center justify-between gap-3">
-              <p className="label-caps text-accent">Do this now</p>
-              <span className="tnum inline-flex items-center gap-1 text-2xs font-semibold text-danger">
-                <Clock3 aria-hidden size={12} /> Waiting longest
-              </span>
-            </div>
-            <h2 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">Reply to {oldestName}</h2>
-            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestPreview}”</p>
-            <div className="mt-3 flex items-center gap-2"><strong className="tnum text-lg text-fg">₹60,000</strong><span className="text-2xs text-fg-muted">open deal</span><DealProbability probability={68} person={oldestName} /></div>
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-              <Link
-                to={`/inbox?c=${encodeURIComponent(oldest.id)}`}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-accent bg-accent px-5 text-sm font-semibold text-accent-fg shadow-[0_10px_28px_-16px_var(--accent)] transition-[background-color,transform] hover:-translate-y-px hover:bg-accent-hover active:translate-y-0"
-              >
-                <MessageCircle aria-hidden size={17} /> Reply now <ArrowRight aria-hidden size={15} />
-              </Link>
-              <CallButton person={oldestName} phone={oldest?.contact?.external_id} dealValue={60000} label="Call" />
+      <section className="overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-elev-2 sm:p-5">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+          <div className="flex min-w-0 items-center gap-4 xl:w-[340px] xl:shrink-0">
+            <ProgressRing value={progressPct} />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2"><p className="label-caps text-accent">Today overview</p><span className="text-2xs text-fg-subtle">Targets are preview data</span></div>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em] text-fg">{MOCK_PROGRESS.followUpsDone} of {MOCK_PROGRESS.followUpsPlanned} follow-ups done</h2>
+              <p className="mt-1 text-xs leading-relaxed text-fg-muted">{workLeft} actions remain across assigned tasks and scheduled follow-ups.</p>
             </div>
           </div>
-        </section>
-      ) : (
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-elev-1">
-          <EmptyState icon={Trophy} title="Inbox clear. Nicely done." body="Use the breathing room to rescue a lead that has gone quiet." />
-        </section>
-      )}
-
-      <Suspense fallback={<Skeleton className="mt-4 h-40 w-full" />}><TodayIntelligence /></Suspense>
-
-      <section className="mt-4 flex items-center gap-5 rounded-xl border border-border bg-surface p-4 shadow-elev-1">
-        <ProgressRing value={progressPct} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="label-caps">Daily momentum</p>
-            <span className="text-2xs text-fg-subtle">Preview</span>
-          </div>
-          <h2 className="mt-1.5 text-md font-semibold tracking-[-0.02em] text-fg">
-            {MOCK_PROGRESS.followUpsDone} of {MOCK_PROGRESS.followUpsPlanned} follow-ups done
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-fg-muted">Two more keeps your {MOCK_PROGRESS.streakDays}-day streak alive.</p>
-          <div className="mt-3 flex gap-4 text-2xs font-medium text-fg-muted">
-            <span><strong className="tnum text-fg">{MOCK_PROGRESS.repliesToday}</strong> replies</span>
-            <span><strong className="tnum text-success">9m</strong> median</span>
+          <div className="grid flex-1 grid-cols-2 gap-2 lg:grid-cols-4">
+            <OverviewMetric icon={Target} label="Need to do" value={workLeft} detail="Tasks + promises" tone="accent" />
+            <OverviewMetric icon={CalendarCheck2} label="Done today" value={MOCK_PROGRESS.followUpsDone} detail="Against daily target" tone="success" />
+            <OverviewMetric icon={CircleAlert} label="Follow-ups" value={pendingCount} detail={`${overdue.length} overdue`} tone={overdue.length ? 'danger' : 'neutral'} />
+            <OverviewMetric icon={MessageCircle} label="Waiting replies" value={waiting.length} detail="Inbox customers" />
           </div>
         </div>
+        {usingSampleFollowUps && <p className="mt-4 rounded-md border border-dashed border-border bg-surface-sunk px-3 py-2 text-2xs text-fg-muted">Preview test data — no live follow-ups were returned for this workspace.</p>}
       </section>
 
-      <section className="mt-6">
+      <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="min-w-0">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
-            <p className="label-caps">Then keep moving</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">Your priority stack</h2>
+            <p className="label-caps">Pending today</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">Follow-ups and assigned work</h2>
           </div>
-          <span className="text-2xs text-fg-muted">Swipe affordances are preview-only</span>
+          <Link to="/leads?tab=followups" className="text-xs font-semibold text-accent hover:underline">View all</Link>
         </div>
 
         <div className="space-y-3">
@@ -294,7 +307,7 @@ export function Today() {
               detail="A promise is waiting. Open the lead, call, and capture the outcome."
               tone="danger"
               action={
-                <Link to="/leads?tab=followups" className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open follow-up">
+                <Link to={`/leads?tab=followups&f=${encodeURIComponent(followUp.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open follow-up details">
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
@@ -310,7 +323,7 @@ export function Today() {
               title={pendingTodo.title}
               detail={<span className="flex flex-wrap items-center gap-2"><Avatar name={pendingTodo.createdBy} size="sm" /><span>From {pendingTodo.createdBy} · {pendingTodo.dueLabel}</span>{pendingTodo.link && <span className="font-semibold text-accent">· {pendingTodo.link.label}</span>}</span>}
               action={
-                <Link to={pendingTodo.link ? '/crm?tab=pipeline' : '/crm?tab=todos'} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo">
+                <Link to={`/leads?tab=todos&t=${encodeURIComponent(pendingTodo.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo details">
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
@@ -325,7 +338,26 @@ export function Today() {
             {showAll ? 'Show less' : `${overdue.length + Math.max(0, waiting.length - 1)} more items`} <ChevronRight aria-hidden size={14} className={showAll ? '-rotate-90' : 'rotate-90'} />
           </button>
         )}
-      </section>
+        </section>
+
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-5">
+          {oldest ? (
+            <section className="relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
+              <span aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-signal opacity-20 blur-3xl" />
+              <div className="relative">
+                <div className="flex items-center justify-between gap-3"><p className="label-caps text-accent">Customer waiting</p><span className="tnum inline-flex items-center gap-1 text-2xs font-semibold text-danger"><Clock3 aria-hidden size={12} /> Longest</span></div>
+                <h2 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">Reply to {oldestName}</h2>
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestPreview}”</p>
+                <div className="mt-3 flex items-center gap-2"><strong className="tnum text-lg text-fg">₹60,000</strong><span className="text-2xs text-fg-muted">open deal</span><DealProbability probability={68} person={oldestName} /></div>
+                <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3"><Link to={`/inbox?c=${encodeURIComponent(oldest.id)}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link><CallButton person={oldestName} phone={oldest?.contact?.external_id} dealValue={60000} label="Call" /></div>
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-border bg-surface p-5 shadow-elev-1"><EmptyState icon={Trophy} title="Inbox clear. Nicely done." body="Use the breathing room to rescue a lead that has gone quiet." /></section>
+          )}
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}><TodayIntelligence /></Suspense>
+        </aside>
+      </div>
 
       {Object.values(local).some((state) => state === 'done') && (
         <div className="relative mt-5 flex items-center gap-3 overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--success)_25%,var(--border))] bg-success-subtle p-4 text-success" role="status">

@@ -94,6 +94,7 @@ export function useQueue(clientId: string | null) {
       setLoading(false)
       return
     }
+    setLoading(true)
     setError(null)
     setItems(
       (data ?? []).map((r) => {
@@ -175,13 +176,17 @@ export function useThread(clientId: string | null, conversationId: string | null
   const [messages, setMessages] = useState<Message[]>([])
   const [traces, setTraces] = useState<Trace[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!clientId || !conversationId) {
       setMessages([])
       setTraces([])
+      setError(null)
+      setLoading(false)
       return
     }
+    setError(null)
     // Two independent reads, issued together — neither depends on the other.
     const [msgRes, traceRes] = await Promise.all([
       supabase
@@ -203,6 +208,14 @@ export function useThread(clientId: string | null, conversationId: string | null
         .limit(TRACE_LIMIT),
     ])
 
+    if (msgRes.error) {
+      setMessages([])
+      setTraces([])
+      setError(msgRes.error.message)
+      setLoading(false)
+      return
+    }
+
     setMessages((msgRes.data ?? []) as Message[])
     // TRACE-ATTRIBUTION-F (STATE.md, open): 24 rows carry NULL conversation_id /
     // client_id since 07-26 and are therefore invisible under RLS. A thread whose
@@ -218,7 +231,7 @@ export function useThread(clientId: string | null, conversationId: string | null
     void load()
   }, [load, conversationId])
 
-  return { messages, traces, loading, reload: load, setMessages }
+  return { messages, traces, loading, error, reload: load, setMessages }
 }
 
 /**
