@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
 import { useLeads, useLeadStages, useFollowUps } from '../../lib/leads-data'
@@ -8,7 +8,7 @@ import { DASH } from '../../lib/mock-data'
 import { inrCompact } from '../crm/PipelineStrip'
 import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
 import { Skeleton } from '../../ui/Skeleton'
-import { ArrowDownRight, ArrowUpRight, Clock3, MessageSquareText, Target, Trophy } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, FileText, MessageSquareText, Target, Users } from 'lucide-react'
 import { ObjectionsReview } from './ObjectionsReview'
 import { ForecastWidget } from '../revenue/ForecastWidget'
 
@@ -23,6 +23,13 @@ const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
 // cheap channel/day rollup and no rep attribution browser-side).
 
 const D = 24 * 3_600_000
+type DashboardView = 'operate' | 'revenue' | 'coach' | 'report'
+const DASHBOARD_VIEWS: { key: DashboardView; label: string; icon: typeof Activity }[] = [
+  { key: 'operate', label: 'Operate', icon: Activity },
+  { key: 'revenue', label: 'Revenue', icon: BarChart3 },
+  { key: 'coach', label: 'Coach', icon: Users },
+  { key: 'report', label: 'Business report', icon: FileText },
+]
 
 function MiniSpark({ values }: { values: number[] }) {
   const max = Math.max(...values, 1)
@@ -76,6 +83,16 @@ export function DashboardScreen() {
   const { stages } = useLeadStages(clientId)
   const { items: followUps } = useFollowUps(clientId)
   const { items: bookings } = useBookings(clientId)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedView = searchParams.get('view')
+  const view: DashboardView = DASHBOARD_VIEWS.some((item) => item.key === requestedView) ? requestedView as DashboardView : 'operate'
+
+  const setView = (next: DashboardView) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'operate') params.delete('view')
+    else params.set('view', next)
+    setSearchParams(params, { replace: true })
+  }
 
   const now = Date.now()
 
@@ -123,191 +140,76 @@ export function DashboardScreen() {
   const totalVolume = DASH.volume.reduce((sum, day) => sum + day.whatsapp + day.instagram, 0)
   const bestRep = [...DASH.reps].sort((a, b) => b.won - a.won)[0]
 
+  const viewCopy: Record<DashboardView, { eyebrow: string; title: string; detail: string }> = {
+    operate: { eyebrow: 'Today', title: 'Run the floor without chasing updates.', detail: 'Live exceptions first; healthy work stays quiet.' },
+    revenue: { eyebrow: 'Revenue', title: 'Know what can close and where it is stuck.', detail: 'Live pipeline with a clearly labelled preview forecast.' },
+    coach: { eyebrow: 'Coaching', title: 'Coach the behavior that moves revenue.', detail: 'Personal progress and customer objections, kept separate from urgent work.' },
+    report: { eyebrow: 'Owner view', title: 'The business, ready to forward.', detail: 'A clean weekly or monthly summary for leadership.' },
+  }
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="page-frame max-w-6xl space-y-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="label-caps text-accent">Team intelligence</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">See the signal, skip the spreadsheet.</h1>
-            <p className="mt-1 text-sm text-fg-muted">Live operating data and clearly marked preview analytics.</p>
-          </div>
-          <div className="flex rounded-md border border-border bg-surface-sunk p-0.5" role="group" aria-label="Dashboard period preview">
-            {['7 days', '30 days', 'Quarter'].map((period, index) => (
-              <button key={period} className={['rounded-sm px-3 py-1.5 text-xs font-semibold', index === 1 ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')} aria-pressed={index === 1} title="Period selector preview — not wired">{period}</button>
-            ))}
-          </div>
+        <header>
+          <p className="label-caps text-accent">{viewCopy[view].eyebrow}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">{viewCopy[view].title}</h1>
+          <p className="mt-1 text-sm text-fg-muted">{viewCopy[view].detail}</p>
         </header>
 
-        <Suspense fallback={<Skeleton className="h-[820px]" />}>
-          <OwnerBusinessReport />
-        </Suspense>
+        <nav className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunk p-1" aria-label="Dashboard views">
+          {DASHBOARD_VIEWS.map((item) => <button key={item.key} onClick={() => setView(item.key)} aria-current={view === item.key ? 'page' : undefined} className={['flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold sm:flex-1', view === item.key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}><item.icon aria-hidden size={15} />{item.label}</button>)}
+        </nav>
 
-        <section aria-labelledby="analytics-snapshot">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 id="analytics-snapshot" className="text-md font-semibold text-fg">Operating snapshot</h2>
-            <span className="label-caps rounded-pill border border-dashed border-border-strong px-2 py-1">Preview rollups</span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <AnalyticsKpi icon={Clock3} label="First response" value={`${DASH.responseMins.at(-1)}m`} delta="3m faster" values={DASH.responseMins} />
-            <AnalyticsKpi icon={MessageSquareText} label="Inbound volume" value={String(totalVolume)} delta="12% vs prior" values={DASH.volume.map((day) => day.whatsapp + day.instagram)} />
-            <AnalyticsKpi icon={Target} label="Follow-up compliance" value={`${Math.round((DASH.followUps.done / (DASH.followUps.done + DASH.followUps.dueToday + DASH.followUps.overdue)) * 100)}%`} delta="6 pts" values={[68, 74, 72, 79, 83, 86, 88]} />
-            <AnalyticsKpi icon={Trophy} label="Personal-best pace" value={bestRep?.name ?? '—'} delta={`${bestRep?.won ?? 0} wins`} values={DASH.reps.map((rep) => rep.won)} />
-          </div>
-        </section>
-
-        {/* The one number first (UI-DESIGN-01, audit A5): pipeline value leads
-            as a hero band; the rest are REAL tiles that defer to it. */}
-        <HeroStat
-          label="Open pipeline"
-          value={`₹${inrCompact(real.pipelineValue)}`}
-          sub={
-            real.winRate == null
-              ? 'Estimated value across open leads'
-              : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`
-          }
-        />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatTile label="Open conversations" value={String(real.open)} />
-          <StatTile
-            label="Needs human"
-            value={String(real.needsHuman)}
-            tone={real.needsHuman > 0 ? 'danger' : 'neutral'}
-            sub="waiting for a person"
-          />
-          <StatTile label="Bookings (7 days)" value={String(real.bookingsWeek)} />
-        </div>
-
-        {/* Follow-up pressure — REAL; links straight to the work. */}
-        {(real.overdue > 0 || real.dueToday > 0) && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-border bg-surface px-4 py-2.5 text-xs">
-            {real.overdue > 0 && (
-              <Link to="/crm?tab=followups" className="font-medium text-danger hover:underline">
-                {real.overdue} follow-up{real.overdue === 1 ? '' : 's'} overdue
-              </Link>
-            )}
-            {real.dueToday > 0 && (
-              <Link to="/crm?tab=followups" className="text-fg-muted hover:text-fg hover:underline">
-                {real.dueToday} due today
-              </Link>
-            )}
-            {real.needsHuman > 0 && (
-              <Link to="/inbox" className="text-fg-muted hover:text-fg hover:underline">
-                {real.needsHuman} thread{real.needsHuman === 1 ? '' : 's'} need a human
-              </Link>
-            )}
-          </div>
-        )}
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Panel title="Pipeline by stage" caption="Live count of leads sitting in each stage.">
-            <Funnel stages={real.funnel} />
-          </Panel>
-
-          <Panel
-            title="First response time"
-            sample
-            caption="Median minutes to first human reply — needs server-side aggregation, wiring session pending."
-          >
-            <TrendLine
-              points={DASH.responseMins}
-              unit="m"
-              ariaLabel="Sample response time trend"
-            />
-          </Panel>
-
-          <Panel
-            title="Inbound volume by channel"
-            sample
-            caption="Messages per day — needs a server-side rollup, wiring session pending."
-          >
-            <div className="space-y-3">
-              <DayBars label="WA" values={DASH.volume.map((d) => d.whatsapp)} days={days} max={volumeMax} />
-              <DayBars label="IG" values={DASH.volume.map((d) => d.instagram)} days={days} max={volumeMax} />
+        {view === 'operate' && <section className="space-y-6" aria-labelledby="manager-today">
+          <article className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-4 sm:px-5">
+              <div><p className="label-caps text-accent">Live priorities</p><h2 id="manager-today" className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">What needs attention today</h2></div>
+              <Link to="/" className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Open live floor <ArrowRight aria-hidden size={14} /></Link>
+            </header>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: 'Overdue follow-ups', value: real.overdue, detail: 'Promises already missed', to: '/crm?tab=followups', icon: Clock3, danger: real.overdue > 0 },
+                { label: 'Needs a human', value: real.needsHuman, detail: 'Bot handovers unclaimed', to: '/inbox', icon: MessageSquareText, danger: real.needsHuman > 0 },
+                { label: 'Due later today', value: real.dueToday, detail: 'Planned customer follow-ups', to: '/crm?tab=followups', icon: Target, danger: false },
+                { label: 'Bookings this week', value: real.bookingsWeek, detail: 'Visits and meetings created', to: '/crm?tab=bookings', icon: BriefcaseBusiness, danger: false },
+              ].map((item) => <Link key={item.label} to={item.to} className="group flex min-h-36 flex-col border-b border-border p-4 last:border-b-0 hover:bg-surface-sunk sm:border-r sm:[&:nth-child(2)]:border-r-0 lg:border-b-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0"><span className={['flex h-9 w-9 items-center justify-center rounded-md', item.danger ? 'bg-danger-subtle text-danger' : 'bg-surface-sunk text-fg-muted'].join(' ')}><item.icon aria-hidden size={16} /></span><strong className={['tnum mt-4 text-2xl tracking-[-0.04em]', item.danger ? 'text-danger' : 'text-fg'].join(' ')}>{item.value}</strong><span className="mt-1 text-xs font-semibold text-fg">{item.label}</span><span className="mt-1 text-2xs text-fg-muted">{item.detail}</span></Link>)}
             </div>
+          </article>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatTile label="Open conversations" value={String(real.open)} />
+            <StatTile label="Needs human" value={String(real.needsHuman)} tone={real.needsHuman > 0 ? 'danger' : 'neutral'} sub="waiting for a person" />
+            <StatTile label="Bookings (7 days)" value={String(real.bookingsWeek)} />
+          </div>
+
+          <section aria-labelledby="analytics-snapshot">
+            <div className="mb-3 flex items-center justify-between"><h2 id="analytics-snapshot" className="text-md font-semibold text-fg">Operating trend</h2><span className="label-caps rounded-pill border border-dashed border-border-strong px-2 py-1">Preview rollups</span></div>
+            <div className="grid gap-3 sm:grid-cols-3"><AnalyticsKpi icon={Clock3} label="First response" value={`${DASH.responseMins.at(-1)}m`} delta="3m faster" values={DASH.responseMins} /><AnalyticsKpi icon={MessageSquareText} label="Inbound volume" value={String(totalVolume)} delta="12% vs prior" values={DASH.volume.map((day) => day.whatsapp + day.instagram)} /><AnalyticsKpi icon={Target} label="Follow-up compliance" value={`${Math.round((DASH.followUps.done / (DASH.followUps.done + DASH.followUps.dueToday + DASH.followUps.overdue)) * 100)}%`} delta="6 pts" values={[68, 74, 72, 79, 83, 86, 88]} /></div>
+          </section>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Panel title="First response time" sample caption="Median minutes to first human reply — needs server-side aggregation."><TrendLine points={DASH.responseMins} unit="m" ariaLabel="Sample response time trend" /></Panel>
+            <Panel title="Inbound volume by channel" sample caption="Messages per day — needs a server-side rollup."><div className="space-y-3"><DayBars label="WA" values={DASH.volume.map((d) => d.whatsapp)} days={days} max={volumeMax} /><DayBars label="IG" values={DASH.volume.map((d) => d.instagram)} days={days} max={volumeMax} /></div></Panel>
+            <Panel title="Follow-up compliance" sample caption="Overdue and due-today counts above are live; completion history is preview."><ComplianceBar done={DASH.followUps.done} dueToday={real.dueToday} overdue={real.overdue} /></Panel>
+          </div>
+        </section>}
+
+        {view === 'revenue' && <section className="space-y-6" aria-label="Revenue dashboard">
+          <HeroStat label="Open pipeline" value={`₹${inrCompact(real.pipelineValue)}`} sub={real.winRate == null ? 'Estimated value across open leads' : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`} />
+          <div className="grid grid-cols-3 gap-3"><StatTile label="Won" value={String(real.won)} /><StatTile label="Lost" value={String(real.lost)} /><StatTile label="Win rate" value={real.winRate == null ? '—' : `${real.winRate}%`} /></div>
+          <Panel title="Pipeline by stage" caption="Live count of leads sitting in each stage."><Funnel stages={real.funnel} /></Panel>
+          <ForecastWidget />
+        </section>}
+
+        {view === 'coach' && <section className="space-y-6" aria-label="Coaching dashboard">
+          <Suspense fallback={<Skeleton className="h-[520px]" />}><CompetitionConsole /></Suspense>
+          <Panel title="Personal bests" sample caption="Framed around each rep's pace and improvement. Per-rep attribution is preview until wired.">
+            <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{DASH.reps.map((rep) => { const maxReplies = Math.max(...DASH.reps.map((item) => item.replies), 1); return <tr key={rep.name} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.name === bestRep?.name && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.medianReplyMin}m</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>
           </Panel>
-
-          <Panel
-            title="Follow-up compliance"
-            sample
-            caption="Handled-on-time rate needs completed-follow-up history; the overdue and due-today counts above are live."
-          >
-            <ComplianceBar
-              done={DASH.followUps.done}
-              dueToday={real.dueToday}
-              overdue={real.overdue}
-            />
-          </Panel>
-        </div>
-
-        <ForecastWidget />
-
-        <div className="border-t border-border pt-6"><Suspense fallback={<Skeleton className="h-[520px]" />}><CompetitionConsole /></Suspense></div>
-
-        <Panel
-          title="Personal bests"
-          sample
-          caption="Framed around each rep's pace and improvement. Per-rep attribution is sample until the wiring session."
-        >
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {['Rep', 'Replies', 'Median reply', 'Won'].map((h, i) => (
-                  <th
-                    key={h}
-                    scope="col"
-                    className={[
-                      'py-1.5 text-2xs text-fg-subtle uppercase',
-                      i === 0 ? 'text-left' : 'text-right',
-                    ].join(' ')}
-                    style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {DASH.reps.map((r) => {
-                const maxReplies = Math.max(...DASH.reps.map((x) => x.replies), 1)
-                return (
-                  <tr key={r.name} className="border-b border-border last:border-0">
-                    <td className="py-3 text-fg">
-                      <span className="font-medium">{r.name}</span>
-                      {r.name === bestRep?.name && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}
-                    </td>
-                    <td className="py-2">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk">
-                          <div
-                            className="h-full rounded-pill bg-fg-subtle"
-                            style={{ width: `${(r.replies / maxReplies) * 100}%` }}
-                          />
-                        </div>
-                        <span
-                          className="tnum w-10 text-right text-fg"
-                          style={{ fontFamily: 'var(--font-mono)' }}
-                        >
-                          {r.replies}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="tnum py-2 text-right text-fg" style={{ fontFamily: 'var(--font-mono)' }}>
-                      {r.medianReplyMin}m
-                    </td>
-                    <td className="tnum py-2 text-right text-fg" style={{ fontFamily: 'var(--font-mono)' }}>
-                      {r.won}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </Panel>
-
-        <div className="border-t border-border pt-6">
           <ObjectionsReview />
-        </div>
+        </section>}
+
+        {view === 'report' && <Suspense fallback={<Skeleton className="h-[820px]" />}><OwnerBusinessReport /></Suspense>}
       </div>
     </div>
   )

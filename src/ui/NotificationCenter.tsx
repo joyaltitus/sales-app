@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 type NotificationKind = 'lead' | 'follow_up' | 'approval' | 'booking' | 'todo' | 'deal_won' | 'challenge' | 'badge' | 'streak'
+type NotificationFilter = 'action' | 'updates' | 'all'
 
 export type ProductNotificationPreview = {
   id: string
@@ -165,7 +166,11 @@ const META = {
 export function NotificationCenter() {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState(PREVIEW_NOTIFICATIONS)
+  const [filter, setFilter] = useState<NotificationFilter>('action')
   const unread = useMemo(() => items.filter((item) => item.unread).length, [items])
+  const actionableKinds = useMemo(() => new Set<NotificationKind>(['lead', 'follow_up', 'approval', 'booking', 'todo']), [])
+  const actionableUnread = useMemo(() => items.filter((item) => item.unread && actionableKinds.has(item.kind)).length, [items, actionableKinds])
+  const visibleItems = useMemo(() => items.filter((item) => filter === 'all' || (filter === 'action' ? actionableKinds.has(item.kind) : !actionableKinds.has(item.kind))), [items, filter, actionableKinds])
 
   useEffect(() => {
     if (!open) return
@@ -174,7 +179,10 @@ export function NotificationCenter() {
     return () => window.removeEventListener('keydown', close)
   }, [open])
 
-  const markAllRead = () => setItems((all) => all.map((item) => ({ ...item, unread: false })))
+  const markVisibleRead = () => {
+    const visibleIds = new Set(visibleItems.map((item) => item.id))
+    setItems((all) => all.map((item) => visibleIds.has(item.id) ? { ...item, unread: false } : item))
+  }
   const react = (id: string, emoji: '👏' | '🔥' | '🎯') => setItems((all) => all.map((item) => {
     if (item.id !== id || item.reacted?.includes(emoji)) return item
     return { ...item, reacted: [...(item.reacted ?? []), emoji], reactions: item.reactions?.map((reaction) => reaction.emoji === emoji ? { ...reaction, count: reaction.count + 1 } : reaction) }
@@ -184,11 +192,11 @@ export function NotificationCenter() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:border-border hover:bg-surface-sunk hover:text-fg"
-        aria-label={`${unread} unread notifications`}
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-transparent text-fg-muted transition-colors hover:border-border hover:bg-surface-sunk hover:text-fg"
+        aria-label={`${actionableUnread} unread notifications needing action, ${unread} unread total`}
       >
         <Bell aria-hidden size={17} strokeWidth={1.8} />
-        {unread > 0 && (
+        {actionableUnread > 0 && (
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-pill border-2 border-surface bg-danger" />
         )}
       </button>
@@ -211,24 +219,32 @@ export function NotificationCenter() {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-fg-muted hover:bg-surface-sunk hover:text-fg"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md text-fg-muted hover:bg-surface-sunk hover:text-fg"
                 aria-label="Close"
               >
                 <X aria-hidden size={18} />
               </button>
             </header>
 
+            <div className="grid grid-cols-3 gap-1 border-b border-border bg-surface px-4 py-2" role="tablist" aria-label="Notification type">
+              {([
+                { key: 'action', label: 'Needs action' },
+                { key: 'updates', label: 'Updates' },
+                { key: 'all', label: 'All' },
+              ] as { key: NotificationFilter; label: string }[]).map((item) => <button key={item.key} role="tab" aria-selected={filter === item.key} onClick={() => setFilter(item.key)} className={['min-h-10 rounded-md px-2 text-2xs font-semibold', filter === item.key ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:bg-surface-sunk hover:text-fg'].join(' ')}>{item.label}</button>)}
+            </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto">
               {(['Today', 'Yesterday'] as const).map((day) => {
-                const group = items.filter((item) => item.day === day)
+                const group = visibleItems.filter((item) => item.day === day)
                 if (!group.length) return null
                 return (
                   <section key={day} aria-labelledby={`notification-${day}`}>
                     <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface-glass px-5 py-2.5 backdrop-blur-xl">
                       <h3 id={`notification-${day}`} className="label-caps">{day}</h3>
-                      {day === 'Today' && unread > 0 && (
-                        <button onClick={markAllRead} className="text-2xs font-semibold text-accent hover:text-accent-hover">
-                          Mark all read
+                      {day === 'Today' && group.some((item) => item.unread) && (
+                        <button onClick={markVisibleRead} className="min-h-9 text-2xs font-semibold text-accent hover:text-accent-hover">
+                          Mark visible read
                         </button>
                       )}
                     </div>
@@ -270,11 +286,12 @@ export function NotificationCenter() {
                   </section>
                 )
               })}
+              {visibleItems.length === 0 && <div className="p-8 text-center"><Check aria-hidden size={22} className="mx-auto text-success" /><p className="mt-3 text-sm font-semibold text-fg">Nothing needs attention.</p><p className="mt-1 text-xs text-fg-muted">Updates stay available in their own tab.</p></div>}
             </div>
 
             <footer className="flex shrink-0 items-center gap-2 border-t border-border bg-surface-sunk px-5 py-3 text-2xs text-fg-muted">
               <Check aria-hidden size={13} className="text-success" />
-              Read state is local to this preview session.
+              {filter === 'action' ? 'Customer work stays separate from recognition updates.' : 'Read state is local to this preview session.'}
             </footer>
           </aside>
         </div>

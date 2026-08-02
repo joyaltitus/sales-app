@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Check,
   CheckCircle2,
@@ -30,12 +31,20 @@ function parsePrice(price: string) {
 export function DocsStudio() {
   const { activeClient } = useClient()
   const canManage = activeClient?.role === 'manager' || activeClient?.role === 'client_admin' || activeClient?.role === 'super_admin'
-  const [workspace, setWorkspace] = useState<'documents' | 'playbook'>('documents')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const workspace: 'documents' | 'playbook' = searchParams.get('workspace') === 'playbook' ? 'playbook' : 'documents'
   const [template, setTemplate] = useState(DOC_TEMPLATES[0])
   const [picked, setPicked] = useState<string[]>(['m1'])
   const [discount, setDiscount] = useState(0)
   const [approval, setApproval] = useState<'draft' | 'pending' | 'approved'>('draft')
   const [templatesOpen, setTemplatesOpen] = useState(false)
+
+  const setWorkspace = (next: 'documents' | 'playbook') => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'playbook') params.set('workspace', 'playbook')
+    else params.delete('workspace')
+    setSearchParams(params, { replace: true })
+  }
 
   const subtotal = useMemo(
     () => MOCK_MATCHES.filter((item) => picked.includes(item.id)).reduce((sum, item) => sum + parsePrice(item.price), 0),

@@ -74,7 +74,7 @@ function ExceptionRow({
         </div>
         <p className="mt-1 text-xs leading-relaxed text-fg-muted">{detail}</p>
       </div>
-      <span className="flex items-center gap-1"><button onClick={onAsk} className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><Sparkles aria-hidden size={12} /> Why?</button><Link to={to} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Resolve <ArrowRight aria-hidden size={14} /></Link></span>
+      <span className="flex items-center gap-1"><button onClick={onAsk} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><Sparkles aria-hidden size={12} /> Why?</button><Link to={to} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Resolve <ArrowRight aria-hidden size={14} /></Link></span>
     </article>
   )
 }
@@ -121,8 +121,11 @@ export function Floor() {
   }
 
   const oldest = waiting[0]
+  const firstHandover = unpicked[0]
+  const combinedLiveException = !!oldest && oldest.id === firstHandover?.id
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestPreview = oldest ? previews.get(oldest.id) ?? 'Waiting for a reply' : ''
+  const openDecisionCount = 1 + (firstHandover ? 1 : 0) + (oldest && !combinedLiveException ? 1 : 0)
 
   return (
     <div className="page-frame space-y-6">
@@ -155,7 +158,7 @@ export function Floor() {
             <p className="label-caps text-danger">Needs your decision</p>
             <h2 id="manager-decisions" className="mt-1 text-md font-semibold tracking-[-0.02em] text-fg">Clear these blockers first</h2>
           </div>
-          <span className="tnum rounded-pill bg-danger-subtle px-2.5 py-1 text-2xs font-semibold text-danger">{unpicked.length + (oldest ? 1 : 0) + 1} open</span>
+          <span className="tnum rounded-pill bg-danger-subtle px-2.5 py-1 text-2xs font-semibold text-danger">{openDecisionCount} open</span>
         </div>
 
         <ExceptionRow
@@ -166,18 +169,18 @@ export function Floor() {
           to="/docs"
           onAsk={() => setCopilotAsk('Anjali’s quote is blocked only by approval. The price matches the approved plan, and sending before 2 pm protects today’s promised follow-up.')}
         />
-        {unpicked[0] && (
+        {firstHandover && (
           <ExceptionRow
             icon={MessageSquareWarning}
-            title={`${unpicked[0].contact?.profile_name ?? 'Customer'} needs a human owner`}
-            detail="The bot handed this conversation over and stopped. Nobody has picked it up yet."
-            meta="Live"
-            to={`/inbox?c=${encodeURIComponent(unpicked[0].id)}`}
+            title={`${firstHandover.contact?.profile_name ?? 'Customer'} needs a human owner`}
+            detail={combinedLiveException ? `This is also the longest-waiting customer: “${oldestPreview}” Assign one owner and reply now.` : 'The bot handed this conversation over and stopped. Nobody has picked it up yet.'}
+            meta={combinedLiveException ? 'Live · longest wait' : 'Live'}
+            to={`/inbox?c=${encodeURIComponent(firstHandover.id)}`}
             danger
             onAsk={() => setCopilotAsk('The customer asked a decision question after the bot paused. No rep has taken ownership, so every extra minute now reduces the chance of a same-day response.')}
           />
         )}
-        {oldest && (
+        {oldest && !combinedLiveException && (
           <ExceptionRow
             icon={Clock3}
             title={`${oldestName} is waiting longest`}
@@ -218,7 +221,7 @@ export function Floor() {
                   </div>
                   <p className="mt-0.5 text-xs text-fg-muted">{person.note}</p>
                 </div>
-                <button onClick={() => setCopilotAsk(`${person.name} is ${person.state}. ${person.note}. Ask about the current deal mix before changing their queue.`)} className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><MessageCircleQuestion aria-hidden size={13} /> Ask copilot</button>
+                <button onClick={() => setCopilotAsk(`${person.name} is ${person.state}. ${person.note}. Ask about the current deal mix before changing their queue.`)} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><MessageCircleQuestion aria-hidden size={13} /> Ask copilot</button>
                 <span className="text-2xs text-fg-subtle">{person.state}</span>
               </div>
             ))}

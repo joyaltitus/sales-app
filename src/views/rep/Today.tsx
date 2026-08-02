@@ -27,7 +27,6 @@ import { Avatar } from '../../ui/Avatar'
 import { TODO_PREVIEW_ITEMS } from '../crm/todoMocks'
 import { FOLLOW_UP_PREVIEW_ITEMS } from '../crm/followUpMocks'
 import { CallButton } from '../calls/CallButton'
-import { DealProbability } from '../revenue/DealProbability'
 
 const TodayIntelligence = lazy(() => import('./TodayIntelligence'))
 
@@ -237,9 +236,12 @@ export function Today() {
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestPreview = oldest ? previews.get(oldest.id) ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
-  const openTodos = TODO_PREVIEW_ITEMS.filter((todo) => todo.status === 'open' && todo.assignees.includes('Asha Thomas')).length
-  const pendingCount = followUps.filter((item) => !local[item.id]).length
+  const openTodos = TODO_PREVIEW_ITEMS.filter((todo) => todo.status === 'open' && todo.assignees.includes('Asha Thomas') && !local[todo.id]).length
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  const pendingCount = followUps.filter((item) => !local[item.id] && new Date(item.due_at).getTime() <= endOfToday.getTime()).length
   const workLeft = pendingCount + openTodos
+  const callbackAlreadyScheduled = usingSampleFollowUps && FOLLOW_UP_PREVIEW_ITEMS.some((item) => item.person === CALLBACK_PREVIEW.person)
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-6 sm:pt-7 lg:px-6 lg:pb-10">
@@ -285,7 +287,7 @@ export function Today() {
         </div>
 
         <div className="space-y-3">
-          {!local[CALLBACK_PREVIEW.id] && (
+          {!callbackAlreadyScheduled && !local[CALLBACK_PREVIEW.id] && (
             <PriorityCard
               icon={Phone}
               eyebrow={`Callback · ${CALLBACK_PREVIEW.dueLabel} · Preview`}
@@ -348,7 +350,7 @@ export function Today() {
                 <div className="flex items-center justify-between gap-3"><p className="label-caps text-accent">Customer waiting</p><span className="tnum inline-flex items-center gap-1 text-2xs font-semibold text-danger"><Clock3 aria-hidden size={12} /> Longest</span></div>
                 <h2 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">Reply to {oldestName}</h2>
                 <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestPreview}”</p>
-                <div className="mt-3 flex items-center gap-2"><strong className="tnum text-lg text-fg">₹60,000</strong><span className="text-2xs text-fg-muted">open deal</span><DealProbability probability={68} person={oldestName} /></div>
+                <div className="mt-3 flex items-center gap-2"><strong className="tnum text-lg text-fg">₹60,000</strong><span className="text-2xs text-fg-muted">open deal · customer is waiting</span></div>
                 <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3"><Link to={`/inbox?c=${encodeURIComponent(oldest.id)}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link><CallButton person={oldestName} phone={oldest?.contact?.external_id} dealValue={60000} label="Call" /></div>
               </div>
             </section>

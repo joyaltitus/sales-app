@@ -8,7 +8,7 @@ import { inrCompact } from './PipelineStrip'
 import { waitStamp } from '../../lib/wait'
 import { Flame, MoreHorizontal, Sun, Snowflake, Pin } from 'lucide-react'
 import { CallButton } from '../calls/CallButton'
-import { DealProbability } from '../revenue/DealProbability'
+import { DealProbability, estimateDealProbability } from '../revenue/DealProbability'
 import { LeadQuickActions } from '../leads/LeadQuickActions'
 
 // SA-05 pipeline board — the Workbench kanban rebuilt in the Board language:
@@ -206,7 +206,7 @@ export function BoardView({
                       </div>
                       <div className="mt-1.5 flex items-center gap-2.5">
                         <TempBadge temp={temp} overridden={overridden} />
-                        <DealProbability probability={68} person={name} />
+                        <DealProbability probability={estimateDealProbability(lead, stages)} person={name} />
                         {lead.est_value != null && (
                           <span className="tnum text-2xs text-fg-subtle" style={monoStyle}>
                             ₹{inrCompact(Number(lead.est_value))}

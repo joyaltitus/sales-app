@@ -50,8 +50,8 @@ export function More({ productAi }: { productAi: boolean }) {
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
         {/* UI-BUILD-02 (Joyal ruling): reps get the Documents studio too. */}
         <Door label="Documents" detail="Quotes and proposals" to="/docs" icon={FileText} />
-        <Door label="Objections" detail="Approved talk tracks" to="#" icon={BookOpenText} />
-        <Door label="Fees" detail="Current plans and discounts" to="#" icon={ReceiptText} />
+        <Door label="Objections" detail="Approved talk tracks" to="/docs?workspace=playbook" icon={BookOpenText} />
+        <Door label="Fees" detail="Current plans and discounts" to="/docs" icon={ReceiptText} />
         {productAi ? (
           <Door label="Product AI" detail="Ask the knowledge base" to="/more/product-ai" icon={Bot} />
         ) : (

@@ -7,7 +7,7 @@ import { ChevronRight, MessageCircle, MoreHorizontal } from 'lucide-react'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { CallButton } from '../calls/CallButton'
-import { DealProbability } from '../revenue/DealProbability'
+import { DealProbability, estimateDealProbability } from '../revenue/DealProbability'
 import { NextAction } from '../../ui/NextAction'
 import { LeadQuickActions } from './LeadQuickActions'
 
@@ -130,7 +130,7 @@ export function LeadRow({
           <span className="sm:hidden"><Avatar name={name} size="sm" /></span>
           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{name}</span>
           <ChannelIcon channel={lead.contact?.channel ?? null} size={13} />
-          <DealProbability probability={68} person={name} />
+          <DealProbability probability={estimateDealProbability(lead, stages)} person={name} />
           <button onClick={(event) => { event.stopPropagation(); setQuickOpen(true) }} aria-label={`Quick actions for ${name}`} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-sunk hover:text-fg"><MoreHorizontal aria-hidden size={15} /></button>
           {/* Phone-only inline stamp — the gutter's job at 4px. */}
           <span
