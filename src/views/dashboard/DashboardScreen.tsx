@@ -5,7 +5,7 @@ import { useQueue } from '../../lib/inbox-data'
 import { useLeads, useLeadStages, useFollowUps } from '../../lib/leads-data'
 import { useBookings } from '../../lib/crm-data'
 import { DASH } from '../../lib/mock-data'
-import { inrCompact } from '../crm/PipelineStrip'
+import { formatINRCompact } from '../../ui/formatMoney'
 import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
 import { Skeleton } from '../../ui/Skeleton'
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, FileText, MessageSquareText, Target, Users } from 'lucide-react'
@@ -195,7 +195,7 @@ export function DashboardScreen() {
         </section>}
 
         {view === 'revenue' && <section className="space-y-6" aria-label="Revenue dashboard">
-          <HeroStat label="Open pipeline" value={`₹${inrCompact(real.pipelineValue)}`} sub={real.winRate == null ? 'Estimated value across open leads' : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`} />
+          <HeroStat label="Open pipeline" value={formatINRCompact(real.pipelineValue)} sub={real.winRate == null ? 'Estimated value across open leads' : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`} />
           <div className="grid grid-cols-3 gap-3"><StatTile label="Won" value={String(real.won)} /><StatTile label="Lost" value={String(real.lost)} /><StatTile label="Win rate" value={real.winRate == null ? '—' : `${real.winRate}%`} /></div>
           <Panel title="Pipeline by stage" caption="Live count of leads sitting in each stage."><Funnel stages={real.funnel} /></Panel>
           <ForecastWidget />

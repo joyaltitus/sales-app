@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Chip } from '../../ui/Chip'
+import { formatINR } from '../../ui/formatMoney'
 import { DocumentCard } from '../../ui/agent/DocumentCard'
 import { SampleTag } from '../../ui/agent/primitives'
 import { DOC_TEMPLATES, MOCK_DOCS, MOCK_MATCHES } from '../../lib/mock-wave3'
@@ -128,7 +129,7 @@ export function DocsStudio() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-subtle text-sm font-bold text-accent">A</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-fg">Anjali Ramesh</span>
-                  <span className="mt-0.5 block text-xs text-fg-muted">NEET repeater · Qualified · ₹60,000 budget</span>
+                  <span className="mt-0.5 block text-xs text-fg-muted">NEET repeater · Qualified · {formatINR(60000)} budget</span>
                 </span>
                 <ChevronDown aria-hidden size={16} className="text-fg-subtle" />
               </button>
@@ -174,7 +175,7 @@ export function DocsStudio() {
                 <textarea id="quotation-note" rows={4} defaultValue="Anjali, as discussed — the evening batch with the two-instalment plan." className="w-full resize-none rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-sm leading-relaxed text-fg shadow-[var(--inset-highlight)]" />
               </div>
               <div className="rounded-lg border border-border bg-surface-sunk p-4">
-                <div className="flex items-center justify-between text-xs text-fg-muted"><span>Subtotal</span><span className="tnum">₹{subtotal.toLocaleString('en-IN')}</span></div>
+                <div className="flex items-center justify-between text-xs text-fg-muted"><span>Subtotal</span><span className="tnum">{formatINR(subtotal)}</span></div>
                 <div className="mt-3 flex items-center justify-between gap-3 text-xs text-fg-muted">
                   <label htmlFor="discount">Discount</label>
                   <div className="flex items-center rounded-md border border-border bg-surface">
@@ -183,8 +184,8 @@ export function DocsStudio() {
                     <button onClick={() => setDiscount((value) => value + 1000)} className="p-2 text-fg-muted hover:text-fg" aria-label="Increase discount"><Plus aria-hidden size={12} /></button>
                   </div>
                 </div>
-                <div className="mt-4 flex items-end justify-between border-t border-border pt-4"><span className="text-xs font-semibold text-fg">Total</span><strong className="tnum text-xl tracking-[-0.03em] text-fg">₹{total.toLocaleString('en-IN')}</strong></div>
-                <p className="mt-2 text-right text-2xs text-fg-muted">2 × ₹{Math.round(total / 2).toLocaleString('en-IN')}</p>
+                <div className="mt-4 flex items-end justify-between border-t border-border pt-4"><span className="text-xs font-semibold text-fg">Total</span><strong className="tnum text-xl tracking-[-0.03em] text-fg">{formatINR(total)}</strong></div>
+                <p className="mt-2 text-right text-2xs text-fg-muted">2 × {formatINR(Math.round(total / 2))}</p>
               </div>
             </section>
           </div>
@@ -215,7 +216,7 @@ export function DocsStudio() {
                 <div className="mt-5 border-y border-neutral-200 py-3">
                   {MOCK_MATCHES.filter((item) => picked.includes(item.id)).map((item) => <div key={item.id} className="flex justify-between gap-4"><span>{item.name}</span><strong>{item.price}</strong></div>)}
                 </div>
-                <div className="mt-4 flex justify-between text-[11px]"><strong>Total</strong><strong>₹{total.toLocaleString('en-IN')}</strong></div>
+                <div className="mt-4 flex justify-between text-[11px]"><strong>Total</strong><strong>{formatINR(total)}</strong></div>
                 <p className="mt-5">Two equal instalments are available. Terms and refund policy follow the academy agreement.</p>
                 <p className="mt-10 text-neutral-400">GST 32ABCDE1234F · authorised signature</p>
               </div>

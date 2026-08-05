@@ -9,6 +9,7 @@ import { ChannelIcon } from '../../ui/ChannelIcon'
 import { CallButton } from '../calls/CallButton'
 import { DealProbability, estimateDealProbability } from '../revenue/DealProbability'
 import { NextAction } from '../../ui/NextAction'
+import { formatINR } from '../../ui/formatMoney'
 import { LeadQuickActions } from './LeadQuickActions'
 
 // A lead row is the SAME departure-board aesthetic as QueueRow (amendment
@@ -183,7 +184,7 @@ export function LeadRow({
 
           {lead.est_value != null && (
             <span className="tnum text-2xs text-fg-subtle">
-              ₹{Number(lead.est_value).toLocaleString('en-IN')}
+              {formatINR(Number(lead.est_value))}
             </span>
           )}
 

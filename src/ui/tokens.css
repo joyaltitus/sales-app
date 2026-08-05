@@ -8,7 +8,7 @@
 
 :root {
   /* Typography — Geist is bundled locally; no runtime font request. */
-  --font-sans: 'Geist Variable', 'Avenir Next', system-ui, sans-serif;
+  --font-sans: 'Geist Variable', 'Noto Sans Devanagari', 'Noto Sans Malayalam', 'Kohinoor Devanagari', 'Noto Sans', 'Avenir Next', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --font-feature-tnum: 'tnum' 1, 'ss01' 1, 'cv02' 1, 'cv03' 1;
 

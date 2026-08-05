@@ -63,7 +63,7 @@ function Bubble({ message }: { message: Message }) {
       )}
       <div
         className={[
-          'max-w-[86%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed break-words shadow-elev-1 sm:max-w-[70%]',
+          'mixed-script max-w-[86%] rounded-lg px-3.5 py-2.5 text-sm break-words shadow-elev-1 sm:max-w-[70%]',
           inbound
             ? 'rounded-bl-xs border border-border bg-surface-raised text-fg'
             : fromHuman

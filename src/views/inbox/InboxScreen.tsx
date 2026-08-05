@@ -441,7 +441,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     />
   )
 
-  const emailThread = emailOpen && <Suspense fallback={<div className="flex flex-1 flex-col gap-3 p-4"><Skeleton className="h-20" /><Skeleton className="h-48" /><Skeleton className="h-40" /></div>}><EmailConversation canSend={canSend} onBack={() => setEmailOpen(false)} /></Suspense>
+  const emailThread = emailOpen ? <Suspense fallback={<div className="flex flex-1 flex-col gap-3 p-4"><Skeleton className="h-20" /><Skeleton className="h-48" /><Skeleton className="h-40" /></div>}><EmailConversation canSend={canSend} onBack={() => setEmailOpen(false)} /></Suspense> : null
   const activeThread = emailThread ?? thread
   const hasSelection = emailOpen || !!selectedId
 

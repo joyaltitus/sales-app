@@ -17,16 +17,12 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ErrorState } from '../../ui/ErrorState'
 import { ProductMark } from '../../ui/ProductMark'
 import { Skeleton } from '../../ui/Skeleton'
+import { formatINRCompact } from '../../ui/formatMoney'
 import { OWNER_REPORTS } from './ownerReportMocks'
 import type { OwnerReportPeriod, OwnerReportPreview } from './ownerReportMocks'
 
 type PreviewState = 'ready' | 'loading' | 'empty' | 'error'
 type DeltaTone = 'positive' | 'negative' | 'neutral'
-
-function lakh(value: number) {
-  if (value >= 100000) return `₹${(value / 100000).toFixed(value % 100000 === 0 ? 0 : 1)}L`
-  return `₹${Math.round(value / 1000)}K`
-}
 
 function percentDelta(current: number, prior: number) {
   return prior === 0 ? 0 : Math.round(((current - prior) / prior) * 100)
@@ -74,7 +70,7 @@ function PipelineChart({ report }: { report: OwnerReportPreview }) {
   const max = Math.max(...report.pipeline.stages.map((stage) => stage.value), 1)
   return (
     <div className="space-y-4 pt-2">
-      {report.pipeline.stages.map((stage, index) => <div key={stage.label}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-medium text-fg">{stage.label}</span><strong className="tnum text-fg">{lakh(stage.value)}</strong></div><div className="h-3 overflow-hidden rounded-sm bg-surface-sunk"><div className="h-full rounded-sm" style={{ width: `${(stage.value / max) * 100}%`, background: index === report.pipeline.stages.length - 1 ? 'var(--signal)' : 'var(--chart-ink)' }} /></div></div>)}
+      {report.pipeline.stages.map((stage, index) => <div key={stage.label}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-medium text-fg">{stage.label}</span><strong className="tnum text-fg">{formatINRCompact(stage.value)}</strong></div><div className="h-3 overflow-hidden rounded-sm bg-surface-sunk"><div className="h-full rounded-sm" style={{ width: `${(stage.value / max) * 100}%`, background: index === report.pipeline.stages.length - 1 ? 'var(--signal)' : 'var(--chart-ink)' }} /></div></div>)}
     </div>
   )
 }
@@ -98,14 +94,14 @@ function ReportContent({ report }: { report: OwnerReportPreview }) {
       </section>
 
       <section className="owner-report-metrics grid overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4" aria-label="Business summary metrics">
-        <ExecutiveMetric icon={IndianRupee} label="Revenue closed" value={lakh(report.revenue.closed)} detail={`${revenueProgress}% of ${lakh(report.revenue.target)} target`} delta={revenueDelta} />
-        <ExecutiveMetric icon={Target} label="Pipeline" value={lakh(report.pipeline.value)} detail={`${report.pipeline.coverage.toFixed(1)}× target coverage`} delta={Math.round((report.pipeline.coverage - report.pipeline.priorCoverage) * 10) / 10} deltaSuffix="×" />
+        <ExecutiveMetric icon={IndianRupee} label="Revenue closed" value={formatINRCompact(report.revenue.closed)} detail={`${revenueProgress}% of ${formatINRCompact(report.revenue.target)} target`} delta={revenueDelta} />
+        <ExecutiveMetric icon={Target} label="Pipeline" value={formatINRCompact(report.pipeline.value)} detail={`${report.pipeline.coverage.toFixed(1)}× target coverage`} delta={Math.round((report.pipeline.coverage - report.pipeline.priorCoverage) * 10) / 10} deltaSuffix="×" />
         <ExecutiveMetric icon={MessageSquareText} label="Conversations" value={String(report.activity.conversationsHandled)} detail={`${report.activity.onTimePct}% follow-ups on time`} delta={activityDelta} />
         <ExecutiveMetric icon={CalendarCheck} label="Bookings" value={String(report.bookings.total)} detail={`${report.bookings.attendedPct}% attended`} delta={bookingDelta} />
       </section>
 
       <section className="owner-report-charts grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <article className="rounded-lg border border-border bg-surface p-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="label-caps">Revenue pace</p><h3 className="mt-1 text-md font-semibold text-fg">{lakh(report.revenue.closed)} closed</h3></div><span className="tnum text-xs font-semibold text-fg-muted">Target {lakh(report.revenue.target)}</span></div><RevenuePaceChart report={report} /></article>
+        <article className="rounded-lg border border-border bg-surface p-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="label-caps">Revenue pace</p><h3 className="mt-1 text-md font-semibold text-fg">{formatINRCompact(report.revenue.closed)} closed</h3></div><span className="tnum text-xs font-semibold text-fg-muted">Target {formatINRCompact(report.revenue.target)}</span></div><RevenuePaceChart report={report} /></article>
         <article className="rounded-lg border border-border bg-surface p-4"><div><p className="label-caps">Pipeline by stage</p><h3 className="mt-1 text-md font-semibold text-fg">{report.pipeline.coverage.toFixed(1)}× coverage</h3><p className="mt-1 text-2xs text-fg-muted">Current open value, not weighted.</p></div><PipelineChart report={report} /></article>
       </section>
 

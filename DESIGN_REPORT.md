@@ -1292,3 +1292,56 @@ Aggregation/export requirements:
   - `npm run check:no-service-role` — passed: no service-role markers in `src/`.
   - `npm run build` — passed: TypeScript, Vite, 1,952 transformed modules, PWA manifest/service worker/icons, and 157.2 KB gzip true first-load JavaScript against the 200 KB budget.
   - `npm run check:tokens` — expected failure only: recorded `c778238…`, live `098f7e1…`. The checksum guard remains intact and deliberately reports the intentional visual-system rewrite.
+
+## Audit-findings-fixed
+
+Final production gate, 2 August 2026:
+
+- Rep Inbox — no UI fix was applied in this round. The deployed WhatsApp thread failure met the explicit stop condition before the broader rep/manager/admin polish sweep could begin.
+- Repository fence — `src/lib/` and `src/auth/` were not modified. The only repository change in this stopped round is this evidence report.
+
+## Inbox-bug-verification
+
+Environment and steps:
+
+- Deployed URL: `https://sales-app-joyal.zeabur.app/inbox`.
+- Account: demo rep in `Vidya Sagar Academy (Demo)`.
+- Viewport/theme at reproduction: 1440×1000, light.
+- Inbox scope `All` selected; channel `All` selected; status `Open` selected.
+- The queue rendered `10 conversations in view`: seven WhatsApp rows and three Instagram rows. Email remained the marked preview row.
+- Selected the live WhatsApp row `Anjali Nair` (`a0de0002-0000-4000-8000-000000000001`). The selected row painted, but the complete conversation pane remained visually blank. Evidence screenshot: `live-rep-inbox-thread.png` in the Codex task outputs.
+
+Browser evidence:
+
+- Console errors: none.
+- Console warnings: none attributable to the app.
+- The accessibility snapshot briefly contained the selected contact/context rail, then the live screen returned to the queue with no thread timeline. No designed loading, empty or error state explained the blank pane.
+
+Production API evidence, using `.env.production` public Supabase configuration and the authorized demo-rep session:
+
+- Auth request: HTTP `200`.
+- Conversations request: HTTP `200`; response body is an array of `10` rows, including Anjali Nair/WhatsApp, Rahul Krishnan/WhatsApp, fathima.beevi/Instagram, Arjun Menon/WhatsApp, sneha.pillai_/Instagram, Mohammed Rafi/WhatsApp, Divya Raj/WhatsApp, vishnu.prasad.94/Instagram, Aiswarya Thomas/WhatsApp and Nithin Varghese/WhatsApp.
+- Messages request for Anjali: HTTP `200`; response body is an array of `7` rows:
+  1. inbound/customer — `Hello, is the NEET repeater batch for 2027 still open`
+  2. outbound/bot — `Namaskaram Anjali. Yes, our NEET Repeater 2027 batch has seats open. Classes begin on 12 August at our Kaloor campus.`
+  3. inbound/customer — `What is the fee and is hostel available`
+  4. outbound/bot — `Full year fee is 45000 rupees including study material. Hostel is separate at 6500 per month, girls and boys blocks both available.`
+  5. inbound/customer — `My daughter scored 480 in the last attempt. Will she get a scholarship`
+  6. outbound/agent — `Hi, this is Athira from admissions. With 480 she qualifies for our 20 percent merit waiver. Shall I hold a seat for two days`
+  7. inbound/customer — `Yes please hold it. I will visit on Saturday`
+
+Conclusion:
+
+- This is not missing seed data, RLS denial or a failed messages response. The production service returns the complete queue and message timeline with HTTP 200, while the deployed UI does not render the timeline.
+- Local `.env` currently points at `local.invalid`; `.env.production` contains the working public production configuration. This local mismatch does not explain the deployed blank pane and was not changed after the production failure triggered the stop gate.
+- `src/lib/inbox-data.ts` still contains the redundant `setLoading(true)` in the successful `useQueue` path immediately before `setError(null)`/`setItems(...)`. It was deliberately not removed because `src/lib/` is read-only in this round.
+
+## India-formatting
+
+- Not executed in this stopped round. The requested single UI formatter, repository-wide ₹ audit, mixed-script preview proofs and call-prominence changes remain pending because the production inbox gate failed before code changes were authorized to begin.
+
+## Still-open
+
+- Blocker — a deployed WhatsApp/Instagram selection can leave the conversation pane blank even though the production messages response is HTTP 200 with rows. This needs owner-approved frontend debugging outside the current stop fence; no `src/lib/` workaround was attempted.
+- The requested rep/manager/admin sweep across light/dark and 390/1440 viewports remains pending after the inbox blocker is resolved or the stop gate is explicitly lifted.
+- The India currency formatter, mixed Devanagari/Malayalam/Hinglish proof cases, call-first hierarchy, impossible-to-miss follow-up stack and five-second manager Floor refinement remain pending for the same reason.

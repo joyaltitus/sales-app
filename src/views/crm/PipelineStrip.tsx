@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { LeadItem, LeadStage } from '../../lib/leads-data'
+import { formatINRCompact } from '../../ui/formatMoney'
 
 // The pipeline value strip — the board's own numbers over the REAL leads the
 // screen already fetched. Same type signature as the queue's wait stamps:
@@ -19,14 +20,6 @@ const numStyle = {
   fontWeight: 'var(--weight-num)',
   letterSpacing: 'var(--tracking-tight)',
 } as const
-
-/** ₹ compact: 412000 → "4.1L", 14500 → "14.5k" — board-density formatting. */
-export function inrCompact(v: number): string {
-  if (v >= 10_000_000) return `${(v / 10_000_000).toFixed(1).replace(/\.0$/, '')}Cr`
-  if (v >= 100_000) return `${(v / 100_000).toFixed(1).replace(/\.0$/, '')}L`
-  if (v >= 1_000) return `${(v / 1_000).toFixed(1).replace(/\.0$/, '')}k`
-  return String(v)
-}
 
 export function PipelineStrip({
   stages,
@@ -88,7 +81,7 @@ export function PipelineStrip({
               </span>
               {cell.value > 0 && (
                 <span className="tnum text-2xs text-fg-subtle" style={{ fontFamily: 'var(--font-mono)' }}>
-                  ₹{inrCompact(cell.value)}
+                  {formatINRCompact(cell.value)}
                 </span>
               )}
             </span>

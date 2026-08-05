@@ -4,7 +4,7 @@ import { leadTemperature } from '../../lib/temperature'
 import type { Temperature } from '../../lib/temperature'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
-import { inrCompact } from './PipelineStrip'
+import { formatINRCompact } from '../../ui/formatMoney'
 import { waitStamp } from '../../lib/wait'
 import { Flame, MoreHorizontal, Sun, Snowflake, Pin } from 'lucide-react'
 import { CallButton } from '../calls/CallButton'
@@ -144,7 +144,7 @@ export function BoardView({
               </span>
               {value > 0 && (
                 <span className="tnum ml-auto text-2xs text-fg-subtle" style={monoStyle}>
-                  ₹{inrCompact(value)}
+                  {formatINRCompact(value)}
                 </span>
               )}
             </header>
@@ -209,7 +209,7 @@ export function BoardView({
                         <DealProbability probability={estimateDealProbability(lead, stages)} person={name} />
                         {lead.est_value != null && (
                           <span className="tnum text-2xs text-fg-subtle" style={monoStyle}>
-                            ₹{inrCompact(Number(lead.est_value))}
+                            {formatINRCompact(Number(lead.est_value))}
                           </span>
                         )}
                         <span className="tnum ml-auto text-2xs text-fg-subtle" style={monoStyle}>

@@ -44,11 +44,11 @@ export const MOCK_QUEUE: { item: QueueItem; preview: string; assignee?: string |
   },
   {
     item: q('2', 'Vishnu K', 'whatsapp', 12, 1),
-    preview: 'Is the demo class free on Saturday?',
+    preview: 'शनिवार demo class free है क्या?',
   },
   {
     item: q('3', 'Fathima Noor', 'instagram', 4, 0),
-    preview: 'Sent a voice note',
+    preview: 'ശനി batch-ന് seat available ആണോ?',
     assignee: 'Anil',
   },
   {
@@ -62,7 +62,7 @@ export const MOCK_MESSAGES: Message[] = [
     id: 'm1',
     sender_type: 'contact',
     direction: 'inbound',
-    body: 'Do you have evening batches for NEET repeaters?',
+    body: 'Namaste, NEET repeater fee two parts में pay कर सकते हैं?',
     msg_type: 'text',
     created_at: min(9),
     media: null,
@@ -74,7 +74,7 @@ export const MOCK_MESSAGES: Message[] = [
     id: 'm2',
     sender_type: 'system',
     direction: 'outbound',
-    body: 'Yes — 6pm and 8pm batches, Monday to Saturday. Both are taken by our NEET faculty.',
+    body: 'Yes — 6 pm and 8 pm batches ഉണ്ട്. ശനി batch-ലും seat available ആണ്.',
     msg_type: 'text',
     created_at: min(8),
     media: null,

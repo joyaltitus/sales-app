@@ -15,6 +15,7 @@ import { MOCK_FACTS } from '../../lib/mock-wave3'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
+import { formatINR } from '../../ui/formatMoney'
 
 // SA-05 context rail — the Workbench Inbox right rail rebuilt in the Board
 // language, for manager AND rep alike (capability differences are RLS's job,
@@ -340,7 +341,7 @@ export function ContextRail({
             <div className="flex items-center gap-2.5">
               {lead.est_value != null && (
                 <span className="tnum text-xs text-fg-muted" style={monoStyle}>
-                  ₹{Number(lead.est_value).toLocaleString('en-IN')}
+                  {formatINR(Number(lead.est_value))}
                 </span>
               )}
               {stageLabel && (

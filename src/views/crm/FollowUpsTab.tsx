@@ -23,6 +23,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ErrorState } from '../../ui/ErrorState'
 import { Sheet } from '../../ui/Sheet'
 import { Skeleton } from '../../ui/Skeleton'
+import { formatINR, formatINRCompact } from '../../ui/formatMoney'
 import { FOLLOW_UP_PREVIEW_ITEMS } from './followUpMocks'
 import type { FollowUpDetailPreview } from './followUpMocks'
 
@@ -62,10 +63,6 @@ function dateTime(iso: string) {
   })
 }
 
-function currency(value: number) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
-}
-
 function toView(item: FollowUpItem, leads: LeadItem[], stageById: Map<string, string>): FollowUpView {
   if (isPreview(item)) return item
   const lead = item.lead_id ? leads.find((candidate) => candidate.id === item.lead_id) : null
@@ -84,7 +81,7 @@ function toView(item: FollowUpItem, leads: LeadItem[], stageById: Map<string, st
   }
 }
 
-function SummaryCard({ icon: Icon, value, label, tone = 'neutral' }: { icon: typeof Clock3; value: number; label: string; tone?: 'neutral' | 'danger' | 'success' | 'accent' }) {
+function SummaryCard({ icon: Icon, value, label, tone = 'neutral' }: { icon: typeof Clock3; value: number | string; label: string; tone?: 'neutral' | 'danger' | 'success' | 'accent' }) {
   const toneClass = tone === 'danger' ? 'text-danger bg-danger-subtle' : tone === 'success' ? 'text-success bg-success-subtle' : tone === 'accent' ? 'text-accent bg-accent-subtle' : 'text-fg-muted bg-surface-sunk'
   return (
     <article className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 shadow-elev-1">
@@ -125,7 +122,7 @@ function FollowUpDetails({
 
       <dl className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-border bg-surface p-3"><dt className="label-caps">Pipeline stage</dt><dd className="mt-2 text-xs font-semibold text-fg">{item.stage}</dd></div>
-        <div className="rounded-lg border border-border bg-surface p-3"><dt className="label-caps">Deal value</dt><dd className="tnum mt-2 text-sm font-semibold text-fg">{item.dealValue ? currency(item.dealValue) : 'Not set'}</dd></div>
+        <div className="rounded-lg border border-border bg-surface p-3"><dt className="label-caps">Deal value</dt><dd className="tnum mt-2 text-sm font-semibold text-fg">{item.dealValue ? formatINR(item.dealValue) : 'Not set'}</dd></div>
       </dl>
 
       <section>
@@ -255,7 +252,7 @@ export function FollowUpsTab() {
             <SummaryCard icon={AlarmClock} value={overdueCount} label="Overdue" tone={overdueCount ? 'danger' : 'neutral'} />
             <SummaryCard icon={Clock3} value={dueTodayCount} label="Due today" tone="accent" />
             <SummaryCard icon={CalendarCheck2} value={buckets[2].items.length} label="Upcoming" />
-            <SummaryCard icon={IndianRupee} value={Math.round(totalValue / 1000)} label="Pipeline value · ₹k" tone="success" />
+            <SummaryCard icon={IndianRupee} value={formatINRCompact(totalValue)} label="Pipeline value" tone="success" />
           </section>
 
           {receipt && <p role="status" className="rounded-md border border-[color-mix(in_srgb,var(--success)_25%,var(--border))] bg-success-subtle px-3 py-2 text-xs font-semibold text-success">{receipt}</p>}
@@ -272,7 +269,7 @@ export function FollowUpsTab() {
                       <article key={item.id} className={['border-b border-border p-4 last:border-b-0', selectedId === item.id ? 'bg-accent-subtle' : 'bg-surface hover:bg-surface-sunk'].join(' ')}>
                         <button onClick={() => openDetail(item.id)} className="flex min-h-12 w-full items-start gap-3 text-left" aria-label={`View follow-up details for ${item.person}`}>
                           <span className={['mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md', bucket.label === 'Overdue' ? 'bg-danger-subtle text-danger' : 'bg-accent-subtle text-accent'].join(' ')}><Phone aria-hidden size={16} /></span>
-                          <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-fg">{item.person}</strong>{item.status === 'snoozed' && <span className="text-2xs font-semibold text-warn">Snoozed</span>}</span><span className="mt-1 line-clamp-2 text-xs leading-relaxed text-fg-muted">{item.note}</span><span className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-fg-subtle"><span>{item.stage}</span>{item.dealValue > 0 && <span className="tnum font-semibold text-fg">{currency(item.dealValue)}</span>}</span></span>
+                          <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-fg">{item.person}</strong>{item.status === 'snoozed' && <span className="text-2xs font-semibold text-warn">Snoozed</span>}</span><span className="mt-1 line-clamp-2 text-xs leading-relaxed text-fg-muted">{item.note}</span><span className="mt-2 flex flex-wrap items-center gap-2 text-2xs text-fg-subtle"><span>{item.stage}</span>{item.dealValue > 0 && <span className="tnum font-semibold text-fg">{formatINR(item.dealValue)}</span>}</span></span>
                           <span className="shrink-0 text-right"><span className={['tnum block text-xs font-semibold', bucket.label === 'Overdue' ? 'text-danger' : 'text-fg-muted'].join(' ')}>{dueStamp(item.due_at, Date.now())}</span><ChevronRight aria-hidden size={16} className="ml-auto mt-2 text-fg-subtle" /></span>
                         </button>
                       </article>

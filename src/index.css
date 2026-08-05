@@ -114,6 +114,14 @@ a {
   font-feature-settings: var(--font-feature-tnum);
 }
 
+/* Indic conjuncts need a little more breathing room than compact Latin UI
+ * labels. Applied to customer-authored text and mixed-script preview proofs. */
+.mixed-script {
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
 /* tiny bold ALL-CAPS metadata label (§C). fg-muted (not fg-subtle) so 12px
  * bold text clears WCAG AA contrast in both themes. */
 .label-caps {
