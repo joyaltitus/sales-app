@@ -94,7 +94,6 @@ export function useQueue(clientId: string | null) {
       setLoading(false)
       return
     }
-    setLoading(true)
     setError(null)
     setItems(
       (data ?? []).map((r) => {

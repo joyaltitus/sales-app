@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { ClientProvider } from './shell/ClientProvider'
 import { ToastProvider } from './ui/Toast'
-import { LoginPage } from './auth/LoginPage'
+import { LoginPage, PasswordRecoveryScreen } from './auth/LoginPage'
 import { RoleRouter } from './shell/RoleRouter'
 import { useTheme } from './shell/theme'
 import { Skeleton } from './ui/Skeleton'
@@ -51,7 +51,7 @@ function AuthedApp() {
 }
 
 function Gate() {
-  const { session, loading } = useAuth()
+  const { session, loading, passwordRecovery } = useAuth()
   if (loading) {
     return (
       <div className="mx-auto max-w-md space-y-3 p-6">
@@ -60,6 +60,10 @@ function Gate() {
       </div>
     )
   }
+  // Checked before `session`: a recovery-link click already gives Supabase a
+  // valid session, so without this a rep landing here would fall straight
+  // through into the app instead of the "choose a new password" screen.
+  if (passwordRecovery) return <PasswordRecoveryScreen />
   if (!session) return <LoginPage />
   return <RoleRouter />
 }

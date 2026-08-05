@@ -12,6 +12,7 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from './AuthProvider'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { ProductMark } from '../ui/ProductMark'
@@ -202,20 +203,35 @@ function InviteFlow({ onBack }: { onBack: () => void }) {
   )
 }
 
-function RecoveryFlow({ onBack }: { onBack: () => void }) {
+function RecoveryFlow({
+  onBack,
+  onRequestReset,
+}: {
+  onBack: () => void
+  /** When provided, this is the real prod flow: submitting calls Supabase for
+   *  real and the confirmation stays neutral regardless of outcome. Preview
+   *  (no prop) keeps the old self-contained mock, including the reset/success
+   *  steps for reviewing those states without a real email round-trip. */
+  onRequestReset?: (email: string) => void
+}) {
   const [step, setStep] = useState<'request' | 'sent' | 'reset' | 'success'>('request')
-  const [email, setEmail] = useState(RECOVERY_PREVIEW.email)
+  const [email, setEmail] = useState(onRequestReset ? '' : RECOVERY_PREVIEW.email)
   const [password, setPassword] = useState('')
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    setStep(step === 'request' ? 'sent' : step === 'reset' ? 'success' : step)
+    if (step === 'request') {
+      onRequestReset?.(email)
+      setStep('sent')
+      return
+    }
+    setStep(step === 'reset' ? 'success' : step)
   }
   if (step === 'sent') return (
     <div className="w-full rounded-xl border border-border bg-surface p-6 shadow-elev-3 sm:p-7">
       <BackButton onClick={onBack} />
-      <CardHeading icon={<Mail aria-hidden size={20} />} eyebrow={<PreviewFlag />} title="Check your inbox." body={`If ${email} belongs to a workspace, a secure reset link is on its way.`} />
+      <CardHeading icon={<Mail aria-hidden size={20} />} eyebrow={!onRequestReset && <PreviewFlag />} title="Check your inbox." body={`If ${email} belongs to a workspace, a secure reset link is on its way.`} />
       <div className="rounded-lg border border-info/25 bg-info-subtle p-4 text-xs leading-relaxed text-info">The link expires in {RECOVERY_PREVIEW.expiresInMinutes} minutes. You can safely close this window.</div>
-      <Button variant="secondary" size="lg" className="mt-5 w-full" onClick={() => setStep('reset')}>Preview opening the email</Button>
+      {!onRequestReset && <Button variant="secondary" size="lg" className="mt-5 w-full" onClick={() => setStep('reset')}>Preview opening the email</Button>}
       <button type="button" onClick={() => setStep('request')} className="mt-4 w-full text-center text-xs font-semibold text-fg-muted hover:text-fg">Use a different email</button>
     </div>
   )
@@ -228,10 +244,51 @@ function RecoveryFlow({ onBack }: { onBack: () => void }) {
   return (
     <form onSubmit={submit} className="w-full rounded-xl border border-border bg-surface p-6 shadow-elev-3 sm:p-7">
       <BackButton onClick={onBack} />
-      <CardHeading icon={step === 'request' ? <Mail aria-hidden size={20} /> : <KeyRound aria-hidden size={20} />} eyebrow={<PreviewFlag />} title={step === 'request' ? 'Reset your password.' : 'Choose a new password.'} body={step === 'request' ? 'Enter your work email. We’ll send a time-limited reset link if it matches a workspace.' : 'This reset link is valid. Create a password you haven’t used here before.'} />
+      <CardHeading icon={step === 'request' ? <Mail aria-hidden size={20} /> : <KeyRound aria-hidden size={20} />} eyebrow={!onRequestReset && <PreviewFlag />} title={step === 'request' ? 'Reset your password.' : 'Choose a new password.'} body={step === 'request' ? 'Enter your work email. We’ll send a time-limited reset link if it matches a workspace.' : 'This reset link is valid. Create a password you haven’t used here before.'} />
       {step === 'request' ? <><label htmlFor="recovery-email" className="label-caps mb-1.5 block">Work email</label><Input id="recovery-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></> : <><label htmlFor="reset-password" className="label-caps mb-1.5 block">New password</label><Input id="reset-password" type="password" autoComplete="new-password" minLength={10} value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="10+ characters" /><p className="mt-2 text-2xs text-fg-muted">Use 10 or more characters. Password managers and browser autofill are supported.</p></>}
       <Button type="submit" size="lg" className="mt-5 w-full" disabled={step === 'reset' && password.length < 10}>{step === 'request' ? 'Send secure link' : 'Update password'} <ArrowRight aria-hidden size={15} /></Button>
     </form>
+  )
+}
+
+/** The real reset landing: Supabase's redirect brings the rep back here with
+ *  a recovery session already established (PASSWORD_RECOVERY event, caught
+ *  by AuthProvider's existing listener). This is not reachable by navigating
+ *  the app — Gate renders it whenever that flag is set, regardless of path. */
+export function PasswordRecoveryScreen() {
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { clearPasswordRecovery } = useAuth()
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setBusy(true)
+    setError(null)
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      setError(error.message)
+      setBusy(false)
+      return
+    }
+    // Recovery sessions authenticate like any other — sign back out so the
+    // rep re-enters with their new password rather than staying silently
+    // logged in on whatever device opened the email link.
+    await supabase.auth.signOut()
+    clearPasswordRecovery()
+  }
+
+  return (
+    <AuthShell>
+      <form onSubmit={submit} className="w-full rounded-xl border border-border bg-surface p-6 shadow-elev-3 sm:p-7">
+        <CardHeading icon={<KeyRound aria-hidden size={20} />} title="Choose a new password." body="This reset link is valid. Create a password you haven’t used here before." />
+        {error && <AuthNotice kind={inferFailure(error)} />}
+        <label htmlFor="recovery-new-password" className="label-caps mb-1.5 block">New password</label>
+        <Input id="recovery-new-password" type="password" autoComplete="new-password" minLength={10} value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="10+ characters" />
+        <p className="mt-2 text-2xs text-fg-muted">Use 10 or more characters. Password managers and browser autofill are supported.</p>
+        <Button type="submit" size="lg" loading={busy} className="mt-5 w-full" disabled={password.length < 10}>Update password <ArrowRight aria-hidden size={15} /></Button>
+      </form>
+    </AuthShell>
   )
 }
 
@@ -336,11 +393,19 @@ export function LoginPage() {
     setBusy(false)
   }
 
+  // Invite has no infra behind it yet (Joyal ruling) — the prod card never
+  // gets an onInvite handler, so "view" can never become 'invite' here.
+  // InviteFlow itself stays exported for /preview only.
+  const requestReset = (targetEmail: string) => {
+    void supabase.auth.resetPasswordForEmail(targetEmail, {
+      redirectTo: window.location.origin,
+    })
+  }
+
   return (
     <AuthShell>
-      {view === 'login' && <LoginCard email={email} password={password} error={error} busy={busy} onEmail={setEmail} onPassword={setPassword} onSubmit={submit} onForgot={() => setView('recovery')} onInvite={() => setView('invite')} />}
-      {view === 'invite' && <InviteFlow onBack={() => setView('login')} />}
-      {view === 'recovery' && <RecoveryFlow onBack={() => setView('login')} />}
+      {view === 'login' && <LoginCard email={email} password={password} error={error} busy={busy} onEmail={setEmail} onPassword={setPassword} onSubmit={submit} onForgot={() => setView('recovery')} />}
+      {view === 'recovery' && <RecoveryFlow onBack={() => setView('login')} onRequestReset={requestReset} />}
     </AuthShell>
   )
 }

@@ -1345,3 +1345,20 @@ Conclusion:
 - Blocker — a deployed WhatsApp/Instagram selection can leave the conversation pane blank even though the production messages response is HTTP 200 with rows. This needs owner-approved frontend debugging outside the current stop fence; no `src/lib/` workaround was attempted.
 - The requested rep/manager/admin sweep across light/dark and 390/1440 viewports remains pending after the inbox blocker is resolved or the stop gate is explicitly lifted.
 - The India currency formatter, mixed Devanagari/Malayalam/Hinglish proof cases, call-first hierarchy, impossible-to-miss follow-up stack and five-second manager Floor refinement remain pending for the same reason.
+
+## WIRE-B0 — thread pane closed, auth recovery wired, CI/deploy hardening
+
+Live re-verification, demo rep in `Vidya Sagar Academy (Demo)`, deployed `https://sales-app-joyal.zeabur.app`:
+
+- Thread pane no longer blank: opened the same `Anjali Nair` WhatsApp conversation live, all 7 message bubbles rendered plus the context rail and CRM panel. Whatever produced the Inbox-bug-verification blank pane is no longer reproducing against current `main` — the two styling-only commits since that evidence (`02ac1c6` → `a874df4`) did not touch the render path, so this reads as already-resolved rather than newly fixed here. Screenshot evidence in Codex task outputs.
+- The one confirmed defect from that round, the redundant `setLoading(true)` in `useQueue`'s success path (`src/lib/inbox-data.ts`), is removed.
+- Added a Thread render regression test (`src/views/inbox/Thread.test.tsx`) mounting real message bubbles, alongside the existing empty-state test.
+- Only console signal on the live check: a realtime WebSocket handshake 502 (`wss://…/realtime/v1/websocket`) — unrelated to the pane, has a polling fallback per the existing live-refresh code.
+- Auth: `Forgot password?` now calls `supabase.auth.resetPasswordForEmail` for real with a neutral "check your inbox" confirmation regardless of account existence. `AuthProvider`'s existing `onAuthStateChange` listener catches the `PASSWORD_RECOVERY` event; `Gate` (`src/App.tsx`) checks that flag before checking `session`, so a recovery-link click lands on a dedicated "choose a new password" screen instead of falling straight into the app on the session Supabase already grants. Submitting calls `updateUser({ password })`, then signs out and clears the flag so the rep re-enters with the new password rather than staying silently logged in.
+- Invite is no longer reachable from prod `/login` — the real `LoginPage` never passes `onInvite` to `LoginCard`, so the "Accept an invitation" link and the `view === 'invite'` branch are both gone from that path. `InviteFlow` and the preview-only error/expiry toggles still exist and render, but only inside `AuthExperiencePreview` on `/preview`.
+- Session-expiry sheet left untouched, as scoped — stays local/preview-only.
+- CI: added a `gitleaks` job and a `promote` job (fast-forwards a `production` branch, gated on every other check passing) to `.github/workflows/ci.yml`. The Zeabur watch-branch flip from `main` to `production` is a human task, not done here — the job is inert until that flip happens.
+- Removed the false Workbench byte-parity claim from `scripts/check-tokens-checksum.mjs`'s header comment; the sha256 guard logic itself is unchanged.
+- No `git add -A` was found anywhere in checked-in docs/scripts (`git grep -n "git add -A" -- ':!node_modules'` was already empty).
+
+Not done: the Zeabur branch-watch flip (needs Joyal, ~2 min, in the Zeabur dashboard) and confirming a real recovery email actually lands in an inbox (needs a live send against a demo account with Joyal watching).

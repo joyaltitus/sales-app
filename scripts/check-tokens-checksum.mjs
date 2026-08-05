@@ -1,7 +1,7 @@
-// tokens.css is the shared design contract (MASTER-PLAN §A) — byte-copied into
-// Workbench and checksum-guarded. This asserts the live file still matches the
-// recorded sha256; any intended token change must update tokens.css.sha256 in
-// the SAME commit (law-9-style discipline). Workbench's CI guards the same hash.
+// tokens.css is the shared design contract (MASTER-PLAN §A) and is
+// checksum-guarded. This asserts the live file still matches the recorded
+// sha256; any intended token change must update tokens.css.sha256 in the
+// SAME commit (law-9-style discipline).
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 
