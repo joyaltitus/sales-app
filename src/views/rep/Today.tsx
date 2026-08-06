@@ -15,16 +15,18 @@ import {
   TimerReset,
   Trophy,
 } from 'lucide-react'
+import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews } from '../../lib/inbox-data'
 import { useFollowUps } from '../../lib/leads-data'
 import { waitingLongest, isOverdue } from '../../lib/landing-data'
-import { MOCK_PROGRESS } from '../../lib/mock-wave3'
+import { useTodos, toggleTodo } from '../../lib/todos-data'
+import { useRepDailyStats } from '../../lib/stats-data'
+import { firstOfMonth, useTarget } from '../../lib/targets-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Chip } from '../../ui/Chip'
 import { Avatar } from '../../ui/Avatar'
-import { TODO_PREVIEW_ITEMS } from '../crm/todoMocks'
 import { FOLLOW_UP_PREVIEW_ITEMS } from '../crm/followUpMocks'
 import { CallButton } from '../calls/CallButton'
 
@@ -195,11 +197,16 @@ function PriorityCard({
 }
 
 export function Today() {
+  const { session } = useAuth()
+  const userId = session?.user.id ?? null
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
   const { items, loading, error } = useQueue(clientId)
   const { previews } = usePreviews(clientId)
   const { items: liveFollowUps, loading: followUpsLoading, error: followUpsError } = useFollowUps(clientId)
+  const { items: todos } = useTodos(clientId)
+  const { stats } = useRepDailyStats(clientId, userId)
+  const { item: target } = useTarget(clientId, userId, firstOfMonth())
 
   const usingSampleFollowUps = !followUpsLoading && liveFollowUps.length === 0
   const followUps = usingSampleFollowUps ? FOLLOW_UP_PREVIEW_ITEMS : liveFollowUps
@@ -210,7 +217,11 @@ export function Today() {
     () => followUps.filter((item) => isOverdue(item.due_at)).slice(0, 2),
     [followUps],
   )
-  const pendingTodo = TODO_PREVIEW_ITEMS.find((todo) => todo.status === 'open' && todo.assignees.includes('Asha Thomas')) ?? null
+  const myOpenTodos = useMemo(
+    () => todos.filter((t) => t.assignee === userId && t.status === 'pending'),
+    [todos, userId],
+  )
+  const pendingTodo = myOpenTodos[0] ?? null
   const [local, setLocal] = useState<Record<string, LocalState>>({})
   const [showAll, setShowAll] = useState(false)
 
@@ -232,11 +243,11 @@ export function Today() {
     )
   }
 
-  const progressPct = Math.round((MOCK_PROGRESS.followUpsDone / MOCK_PROGRESS.followUpsPlanned) * 100)
+  const progressPct = stats.followUpsPlanned > 0 ? Math.round((stats.followUpsDone / stats.followUpsPlanned) * 100) : 0
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestPreview = oldest ? previews.get(oldest.id) ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
-  const openTodos = TODO_PREVIEW_ITEMS.filter((todo) => todo.status === 'open' && todo.assignees.includes('Asha Thomas') && !local[todo.id]).length
+  const openTodos = myOpenTodos.filter((todo) => !local[todo.id]).length
   const endOfToday = new Date()
   endOfToday.setHours(23, 59, 59, 999)
   const pendingCount = followUps.filter((item) => !local[item.id] && new Date(item.due_at).getTime() <= endOfToday.getTime()).length
@@ -253,7 +264,7 @@ export function Today() {
           <h1 className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-fg">Good morning.</h1>
           <p className="mt-1 text-sm text-fg-muted">See the target, clear the promises, then work the queue.</p>
         </div>
-        <Chip tone="accent"><Flame aria-hidden size={12} /> {MOCK_PROGRESS.streakDays} days</Chip>
+        <Chip tone="accent"><Flame aria-hidden size={12} /> {stats.streakDays} days</Chip>
       </header>
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-elev-2 sm:p-5">
@@ -261,19 +272,20 @@ export function Today() {
           <div className="flex min-w-0 items-center gap-4 xl:w-[340px] xl:shrink-0">
             <ProgressRing value={progressPct} />
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2"><p className="label-caps text-accent">Today overview</p><span className="text-2xs text-fg-subtle">Targets are preview data</span></div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em] text-fg">{MOCK_PROGRESS.followUpsDone} of {MOCK_PROGRESS.followUpsPlanned} follow-ups done</h2>
+              <div className="flex flex-wrap items-center gap-2"><p className="label-caps text-accent">Today overview</p><span className="text-2xs text-fg-subtle">{target ? `Target ₹${target.target_value.toLocaleString('en-IN')} this month` : 'No target set for you this month'}</span></div>
+              <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em] text-fg">{stats.followUpsDone} of {stats.followUpsPlanned} follow-ups done</h2>
               <p className="mt-1 text-xs leading-relaxed text-fg-muted">{workLeft} actions remain across assigned tasks and scheduled follow-ups.</p>
             </div>
           </div>
           <div className="grid flex-1 grid-cols-2 gap-2 lg:grid-cols-4">
             <OverviewMetric icon={Target} label="Need to do" value={workLeft} detail="Tasks + promises" tone="accent" />
-            <OverviewMetric icon={CalendarCheck2} label="Done today" value={MOCK_PROGRESS.followUpsDone} detail="Against daily target" tone="success" />
+            <OverviewMetric icon={CalendarCheck2} label="Done today" value={stats.followUpsDone} detail="Against daily target" tone="success" />
             <OverviewMetric icon={CircleAlert} label="Follow-ups" value={pendingCount} detail={`${overdue.length} overdue`} tone={overdue.length ? 'danger' : 'neutral'} />
             <OverviewMetric icon={MessageCircle} label="Waiting replies" value={waiting.length} detail="Inbox customers" />
           </div>
         </div>
-        {usingSampleFollowUps && <p className="mt-4 rounded-md border border-dashed border-border bg-surface-sunk px-3 py-2 text-2xs text-fg-muted">Preview test data — no live follow-ups were returned for this workspace.</p>}
+        <p className="mt-4 text-2xs text-fg-muted">{stats.repliesToday} repl{stats.repliesToday === 1 ? 'y' : 'ies'} sent today{stats.responseTrend ? ` · ${stats.responseTrend}` : ''}</p>
+        {usingSampleFollowUps && <p className="mt-2 rounded-md border border-dashed border-border bg-surface-sunk px-3 py-2 text-2xs text-fg-muted">Preview test data — no live follow-ups were returned for this workspace.</p>}
       </section>
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -321,15 +333,28 @@ export function Today() {
           {pendingTodo && !local[pendingTodo.id] && (
             <PriorityCard
               icon={Check}
-              eyebrow={`${pendingTodo.priority} manager todo · Preview`}
+              eyebrow="Manager todo"
               title={pendingTodo.title}
-              detail={<span className="flex flex-wrap items-center gap-2"><Avatar name={pendingTodo.createdBy} size="sm" /><span>From {pendingTodo.createdBy} · {pendingTodo.dueLabel}</span>{pendingTodo.link && <span className="font-semibold text-accent">· {pendingTodo.link.label}</span>}</span>}
+              detail={
+                <span className="flex flex-wrap items-center gap-2">
+                  <Avatar name={pendingTodo.createdByName ?? 'Manager'} size="sm" />
+                  <span>
+                    From {pendingTodo.createdByName ?? 'Manager'}
+                    {pendingTodo.due_at
+                      ? ` · due ${new Date(pendingTodo.due_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                      : ''}
+                  </span>
+                </span>
+              }
               action={
-                <Link to={`/leads?tab=todos&t=${encodeURIComponent(pendingTodo.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo details">
+                <Link to={`/crm?tab=todos&t=${encodeURIComponent(pendingTodo.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo details">
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
-              onDone={() => setLocal((state) => ({ ...state, [pendingTodo.id]: 'done' }))}
+              onDone={() => {
+                setLocal((state) => ({ ...state, [pendingTodo.id]: 'done' }))
+                if (clientId) void toggleTodo(clientId, pendingTodo.id, 'done')
+              }}
               onSnooze={() => setLocal((state) => ({ ...state, [pendingTodo.id]: 'snoozed' }))}
             />
           )}
