@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
@@ -124,6 +124,17 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   // not be "used twice").
   const [railOpen, setRailOpen] = useState(false)
   const [draftSeed, setDraftSeed] = useState<{ n: number; text: string } | null>(null)
+
+  // S11: a notification tap arrives with the AI draft in router state (prose,
+  // not an address — it does not belong in the query string). Seed the composer
+  // once, then clear the state so a refresh or a Back does not re-insert it.
+  const { state: navState } = useLocation()
+  const handedDraft = (navState as { draft?: string } | null)?.draft ?? null
+  useEffect(() => {
+    if (!handedDraft) return
+    setDraftSeed((prev) => ({ n: (prev?.n ?? 0) + 1, text: handedDraft }))
+    window.history.replaceState({}, '')
+  }, [handedDraft])
 
   // Seeding on mount alone is not enough. React Router keeps this component
   // mounted when only the query string changes, so a second hand-off to a

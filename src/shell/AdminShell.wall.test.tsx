@@ -31,7 +31,10 @@ const AGENT_USER = '11111111-1111-4111-8111-111111111111'
 // `llm_usage_logs` are ops tables and are deliberately absent: §S5 rules that
 // wanting one is a separate src/api/ session with its own auth review, never a
 // widened grant here.
-const READABLE = new Set(['conversations', 'contacts', 'turn_traces', 'leads', 'lead_stages', 'follow_ups', 'messages'])
+// `notifications` joined the list with S11 (#93): the TopBar rail reads it, and
+// its RLS policy is `user_id = auth.uid()` — narrower than the tenant-scoped
+// rows above, so a forced role still sees only its own.
+const READABLE = new Set(['conversations', 'contacts', 'turn_traces', 'leads', 'lead_stages', 'follow_ups', 'messages', 'notifications'])
 
 type Recorded = { table: string; ops: { fn: string; args: unknown[] }[] }
 

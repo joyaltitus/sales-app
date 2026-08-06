@@ -190,3 +190,50 @@ export async function moveLeadStage(
   if (!data || data.length === 0) return { ok: false, reason: 'denied' }
   return { ok: true }
 }
+
+// ── S11 SA-AUTO-01: Today's priority-stack actions ──────────────────────────
+// The done/snooze affordances on a Today card were local-only state (the card
+// vanished, the row never moved). These are the persisted versions; both mirror
+// toggleTodo's contract — an empty result means RLS filtered the row, not an
+// error. `follow_ups` UPDATE is granted to agent/manager/client_admin, so a rep
+// can settle their own promise.
+const SNOOZE_HOURS = 3
+
+/** Settle a promise. */
+export async function completeFollowUp(
+  clientId: string,
+  id: string,
+): Promise<{ ok: true } | { ok: false; reason: 'denied' | 'error'; message?: string }> {
+  const { data, error } = await supabase
+    .from('follow_ups')
+    .update({ status: 'done', completed_at: new Date().toISOString() })
+    .eq('client_id', clientId)
+    .eq('id', id)
+    .select('id')
+  if (error) return { ok: false, reason: 'error', message: error.message }
+  if (!data || data.length === 0) return { ok: false, reason: 'denied' }
+  return { ok: true }
+}
+
+/**
+ * Push a promise out by SNOOZE_HOURS. `due_at` moves with `snoozed_until` on
+ * purpose: due_at is what every ranking and the S11 nudge engine read, so a
+ * snooze that only set snoozed_until would leave the card at the top of the
+ * stack and the row permanently "due".
+ */
+export async function snoozeFollowUp(
+  clientId: string,
+  id: string,
+  hours = SNOOZE_HOURS,
+): Promise<{ ok: true; until: string } | { ok: false; reason: 'denied' | 'error'; message?: string }> {
+  const until = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('follow_ups')
+    .update({ status: 'snoozed', snoozed_until: until, due_at: until })
+    .eq('client_id', clientId)
+    .eq('id', id)
+    .select('id')
+  if (error) return { ok: false, reason: 'error', message: error.message }
+  if (!data || data.length === 0) return { ok: false, reason: 'denied' }
+  return { ok: true, until }
+}
