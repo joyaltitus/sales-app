@@ -124,11 +124,13 @@ function explain(kind: string): string {
 
 export function Composer({
   conversationId,
+  contactId,
   canSend,
   onSent,
   seed,
 }: {
   conversationId: string
+  contactId: string
   canSend: boolean
   onSent: () => void
   /** SA-05: AI draft from the context rail. Counter-keyed so the same draft
@@ -222,7 +224,8 @@ export function Composer({
       )}
 
       <ObjectionCapture
-        contactId={conversationId}
+        contactId={contactId}
+        conversationId={conversationId}
         source="chat"
         detected="price"
         compact

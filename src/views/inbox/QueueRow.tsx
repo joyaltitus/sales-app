@@ -1,7 +1,14 @@
-import type { QueueItem } from '../../lib/inbox-data'
+import { FileText, Image as ImageIcon, Mic } from 'lucide-react'
+import type { PreviewKind, QueueItem } from '../../lib/inbox-data'
 import { waitStamp, urgency } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
+
+const PREVIEW_ICON: Partial<Record<PreviewKind, typeof ImageIcon>> = {
+  image: ImageIcon,
+  audio: Mic,
+  document: FileText,
+}
 
 // A queue row, SA-06 shape — Joyal's direct spec (2026-07-30, supersedes the
 // §1.5 wait-time-largest inversion): the CUSTOMER (name or number) is the
@@ -29,18 +36,22 @@ const capsStyle = {
 export function QueueRow({
   item,
   preview,
+  previewKind = 'text',
   selected,
   onSelect,
   assigneeLabel,
 }: {
   item: QueueItem
   preview: string
+  /** Media-only inbound rows get a glyph instead of relying on text alone. */
+  previewKind?: PreviewKind
   selected: boolean
   onSelect: () => void
   /** SA-06: who this chat is labeled under — "You", a teammate's name, or
    *  null for unlabeled. Resolved by the parent (it owns the roster). */
   assigneeLabel?: string | null
 }) {
+  const PreviewIcon = PREVIEW_ICON[previewKind]
   const level = urgency(item.last_customer_message_at)
   const stamp = waitStamp(item.last_customer_message_at)
   const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
@@ -89,11 +100,12 @@ export function QueueRow({
           <div className="mt-0.5 flex items-center gap-2">
             <span
               className={[
-                'min-w-0 flex-1 truncate text-xs',
+                'flex min-w-0 flex-1 items-center gap-1 truncate text-xs',
                 item.unread_count > 0 ? 'font-medium text-fg-muted' : 'text-fg-subtle',
               ].join(' ')}
             >
-              {preview}
+              {PreviewIcon && <PreviewIcon aria-hidden size={12} className="shrink-0" />}
+              <span className="truncate">{preview}</span>
             </span>
             {/* Right-edge metadata is capped at TWO chips (audit A16): paused
                 state > assignee > unread count. Three stacked chips collided

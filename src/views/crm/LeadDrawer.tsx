@@ -239,7 +239,7 @@ export function LeadDrawer({
           </label>
         </div>
 
-        <ObjectionCapture contactId={lead.contact_id} source="crm" detected={null} />
+        <ObjectionCapture contactId={lead.contact_id} leadId={lead.id} source="crm" detected={null} />
 
         <label className="block">
           <Label>Current objection note (live field)</Label>

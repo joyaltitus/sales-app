@@ -208,7 +208,7 @@ export function LeadRow({
               hold state for the session and write nowhere. */}
           {crm && (
             <span className="ml-auto flex shrink-0 items-center gap-2">
-              <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" />
+              <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
               <AssignSelect leadName={name} />
             </span>
           )}
@@ -224,7 +224,7 @@ export function LeadRow({
               <MessageCircle aria-hidden size={14} /> Message
             </Link>
           ) : <span />}
-          <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} />
+          <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
           {canEditStage && stages.findIndex((item) => item.id === lead.stage_id) < stages.length - 1 && (
             <button
               onClick={(e) => {
