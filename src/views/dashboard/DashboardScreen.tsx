@@ -4,6 +4,7 @@ import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
 import { useLeads, useLeadStages, useFollowUps } from '../../lib/leads-data'
 import { useBookings } from '../../lib/crm-data'
+import { useTeamWinsThisMonth } from '../../lib/stats-data'
 import { DASH } from '../../lib/mock-data'
 import { formatINRCompact } from '../../ui/formatMoney'
 import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
@@ -17,10 +18,11 @@ const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
 
 // SA-05 company dashboard — manager/client_admin. REAL wherever the browser
 // already holds the data under RLS (conversations, leads, stages, follow_ups,
-// bookings — the same bounded reads the other screens issue); SAMPLE-tagged
-// where the honest number needs server-side aggregation that doesn't exist
-// yet (response time, per-day volume, rep leaderboard — messages carry no
-// cheap channel/day rollup and no rep attribution browser-side).
+// bookings, won-per-rep via useTeamWinsThisMonth — the same bounded reads the
+// other screens issue); SAMPLE-tagged where the honest number needs
+// server-side aggregation that doesn't exist yet (response time, per-day
+// volume, reply count/median-reply-time per rep — messages carry no cheap
+// channel/day rollup and no rep attribution browser-side).
 
 const D = 24 * 3_600_000
 type DashboardView = 'operate' | 'revenue' | 'coach' | 'report'
@@ -83,6 +85,7 @@ export function DashboardScreen() {
   const { stages } = useLeadStages(clientId)
   const { items: followUps } = useFollowUps(clientId)
   const { items: bookings } = useBookings(clientId)
+  const { rows: teamWins } = useTeamWinsThisMonth(clientId)
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedView = searchParams.get('view')
   const view: DashboardView = DASHBOARD_VIEWS.some((item) => item.key === requestedView) ? requestedView as DashboardView : 'operate'
@@ -138,7 +141,13 @@ export function DashboardScreen() {
   const volumeMax = Math.max(...DASH.volume.map((d) => Math.max(d.whatsapp, d.instagram)), 1)
   const days = DASH.volume.map((d) => d.day)
   const totalVolume = DASH.volume.reduce((sum, day) => sum + day.whatsapp + day.instagram, 0)
-  const bestRep = [...DASH.reps].sort((a, b) => b.won - a.won)[0]
+  // WIRE session: won leads this month per rep is real (useTeamWinsThisMonth,
+  // conversations.assigned_to -> profiles join, same law as real.won above).
+  // Replies/median-reply-time stay DASH.reps mock — no per-rep message
+  // attribution exists yet (Panel below is honestly labeled `sample`).
+  const wonByName = new Map(teamWins.map((row) => [row.name, row.won]))
+  const repsWithRealWon = DASH.reps.map((rep) => ({ ...rep, won: wonByName.get(rep.name) ?? 0 }))
+  const bestRep = [...repsWithRealWon].sort((a, b) => b.won - a.won)[0]
 
   const viewCopy: Record<DashboardView, { eyebrow: string; title: string; detail: string }> = {
     operate: { eyebrow: 'Today', title: 'Run the floor without chasing updates.', detail: 'Live exceptions first; healthy work stays quiet.' },
@@ -204,7 +213,7 @@ export function DashboardScreen() {
         {view === 'coach' && <section className="space-y-6" aria-label="Coaching dashboard">
           <Suspense fallback={<Skeleton className="h-[520px]" />}><CompetitionConsole /></Suspense>
           <Panel title="Personal bests" sample caption="Framed around each rep's pace and improvement. Per-rep attribution is preview until wired.">
-            <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{DASH.reps.map((rep) => { const maxReplies = Math.max(...DASH.reps.map((item) => item.replies), 1); return <tr key={rep.name} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.name === bestRep?.name && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.medianReplyMin}m</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>
+            <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{repsWithRealWon.map((rep) => { const maxReplies = Math.max(...repsWithRealWon.map((item) => item.replies), 1); return <tr key={rep.name} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.name === bestRep?.name && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.medianReplyMin}m</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>
           </Panel>
           <ObjectionsReview />
         </section>}

@@ -8,28 +8,16 @@
 // each hook with a Supabase read and deletes the fixtures; callers should not
 // need to change.
 //
-// `employee_todos` is NOT a real table yet (sales-ecosystem-brainstorm-seed.md
-// Wave 1) — its shape here is the UI's proposal, clearly marked.
+// employee_todos / employee_targets are REAL tables now — their mock
+// counterparts (MockTodo, useMockTodos, TODOS, REP_PLAN) were wired in the
+// WIRE session and removed from here; see src/lib/todos-data.ts and
+// src/lib/targets-data.ts.
 //
 // Objection types come from the Wave-1 backlog (`leads.objection_type` enum —
 // column exists, enum values proposed here).
 
-import { useState } from 'react'
-
 // ---------------------------------------------------------------------------
 // Types — real-table shapes first
-
-/** NOT a real table. UI proposal for Wave-1 `employee_todos`. */
-export type MockTodo = {
-  id: string
-  title: string
-  assignee: string
-  due_at: string
-  status: 'pending' | 'done'
-  source: 'follow_up' | 'escalation' | 'manual'
-  /** SA-06: employee's note on the todo (how it went / what's blocking). */
-  note: string | null
-}
 
 /** Assignable reps for the conversation-assignment mock (`conversations.assigned_to`). */
 export type MockRep = { id: string; name: string }
@@ -53,20 +41,11 @@ const D = 24 * H
 /** Anchored at module load — a frozen calendar date would drift into the
  *  future/past of the viewer's clock and render nonsense wait stamps. */
 const NOW = Date.now()
-const iso = (msAgo: number) => new Date(NOW - msAgo).toISOString()
 
 export const MOCK_REPS: MockRep[] = [
   { id: 'rep-1', name: 'Priya' },
   { id: 'rep-2', name: 'Arjun' },
   { id: 'rep-3', name: 'Sana' },
-]
-
-const TODOS: MockTodo[] = [
-  { id: 'td-01', title: 'Call Ravi Menon back with weekend rate', assignee: 'Priya', due_at: iso(-2 * H), status: 'pending', source: 'follow_up', note: null },
-  { id: 'td-02', title: 'Send corporate quote to Joseph K', assignee: 'Arjun', due_at: iso(3 * H), status: 'pending', source: 'manual', note: null },
-  { id: 'td-03', title: 'Pick up escalated thread — Meera Pillai', assignee: 'Sana', due_at: iso(1 * H), status: 'pending', source: 'escalation', note: null },
-  { id: 'td-04', title: 'Confirm advance payment — Tanvi Bhatt', assignee: 'Priya', due_at: iso(-26 * H), status: 'pending', source: 'follow_up', note: null },
-  { id: 'td-05', title: 'Update room photos in catalog', assignee: 'Arjun', due_at: iso(-3 * D), status: 'done', source: 'manual', note: 'Uploaded 14 photos' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -105,37 +84,6 @@ export const DASH = {
     bookingsWeek: 11,
     pipelineValue: 412000,
   },
-}
-
-// ---------------------------------------------------------------------------
-// Employee plan — SAMPLE (Joyal's SA-05 ask: target / sold / pending /
-// incentives per employee). No table holds targets or incentive rules yet;
-// this is the UI's proposal for it. Sold/won are computed from REAL leads by
-// the caller — only the plan numbers here are sample.
-
-export const REP_PLAN = {
-  monthlyTargetValue: 300_000, // ₹ won-lead value per month
-  incentivePerWon: 2_000, // ₹ per won lead
-  bonusAtTarget: 10_000, // ₹ on hitting the monthly target
-}
-
-// ---------------------------------------------------------------------------
-// Hooks — same call shape as the real layer, so wiring is a body swap.
-
-/** Local-state-only todos: tick + note work in the session, write nowhere.
- *  Manager and employee see the SAME list (the real table scopes by assignee
- *  later; the mock doesn't pretend to). */
-export function useMockTodos() {
-  const [items, setItems] = useState(TODOS)
-  const toggle = (id: string) =>
-    setItems((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t,
-      ),
-    )
-  const setNote = (id: string, note: string) =>
-    setItems((prev) => prev.map((t) => (t.id === id ? { ...t, note: note || null } : t)))
-  return { items, loading: false as const, toggle, setNote }
 }
 
 export const mockNow = () => NOW

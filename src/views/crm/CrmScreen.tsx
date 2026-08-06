@@ -17,7 +17,7 @@ import { TodosTab } from './TodosTab'
 //                demo workspace has no rows
 //   Contacts   → REAL (SA-05)
 //   Bookings   → REAL (SA-05)
-//   Todos      → SAMPLE (employee_todos is not a table yet — Wave 1)
+//   Todos      → REAL (employee_todos, wired in the WIRE session)
 //
 // The tab is URL-backed (`?tab=`) so a filtered view survives refresh, same
 // convention as the Inbox channel tabs.

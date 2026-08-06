@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { SendHorizontal, Sparkles, Trash2, Zap } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
@@ -6,25 +6,71 @@ import { sendAgentMessage } from '../../lib/api'
 import { loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
 import { VoiceButton } from '../../ui/agent/VoiceButton'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
+import { useAuth } from '../../auth/AuthProvider'
+import { useClient } from '../../shell/ClientProvider'
+import { supabase } from '../../lib/supabase'
 
-// SA-06 quick replies — the retype-killer. Device-local (localStorage) until a
-// templates table exists; the marker in the picker says so. Saved from the
-// current draft, inserted into the input (the human still edits + sends —
-// nothing auto-sends).
-const QR_KEY = 'sales-app.quick-replies'
+// SA-06 quick replies — the retype-killer. Wired to the `quick_replies` table
+// (client_id, title, body, scope 'personal'|'team', created_by, active).
+// Saved from the current draft, inserted into the input (the human still
+// edits + sends — nothing auto-sends). `title` isn't captured by this UI, so
+// the body doubles as the title (truncated) — the picker only ever shows the
+// body text anyway. No migration of prior localStorage values: the old
+// `sales-app.quick-replies` key is simply no longer read.
+const QUICK_REPLY_LIMIT = 30
 
-function loadReplies(): string[] {
-  try {
-    const raw = localStorage.getItem(QR_KEY)
-    const arr = raw ? (JSON.parse(raw) as unknown) : []
-    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : []
-  } catch {
-    return []
+type QuickReply = { id: string; body: string; scope: 'personal' | 'team' }
+
+function useQuickReplies(clientId: string | null, userId: string | null) {
+  const [items, setItems] = useState<QuickReply[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!clientId) {
+      setItems([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const { data } = await supabase
+      .from('quick_replies')
+      .select('id, body, scope')
+      .eq('client_id', clientId)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(QUICK_REPLY_LIMIT)
+    setItems((data ?? []) as QuickReply[])
+    setLoading(false)
+  }, [clientId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const save = async (body: string): Promise<{ ok: true } | { ok: false; message: string }> => {
+    if (!clientId || !userId) return { ok: false, message: 'No active workspace.' }
+    const title = body.length > 60 ? `${body.slice(0, 57)}...` : body
+    const { error } = await supabase.from('quick_replies').insert({
+      client_id: clientId,
+      title,
+      body,
+      scope: 'personal',
+      created_by: userId,
+    })
+    if (error) return { ok: false, message: error.message }
+    void load()
+    return { ok: true }
   }
-}
 
-function saveReplies(items: string[]) {
-  localStorage.setItem(QR_KEY, JSON.stringify(items.slice(0, 30)))
+  const remove = async (id: string): Promise<{ ok: true } | { ok: false; message: string }> => {
+    if (!clientId) return { ok: false, message: 'No active workspace.' }
+    const { error } = await supabase.from('quick_replies').delete().eq('client_id', clientId).eq('id', id)
+    if (error) return { ok: false, message: error.message }
+    void load()
+    return { ok: true }
+  }
+
+  return { items, loading, save, remove }
 }
 
 // The composer. `messages` INSERT policies are empty, so the browser CANNOT
@@ -89,6 +135,8 @@ export function Composer({
    *  can be pushed twice; it seeds the input, the human still edits + sends. */
   seed?: { n: number; text: string } | null
 }) {
+  const { session } = useAuth()
+  const { activeClient } = useClient()
   const [text, setText] = useState('')
   const [state, setState] = useState<SendState>({ kind: 'idle' })
   useEffect(() => {
@@ -96,8 +144,12 @@ export function Composer({
   }, [seed])
   const [needsKey, setNeedsKey] = useState(!loadGatewayKey())
   const [keyDraft, setKeyDraft] = useState('')
-  const [replies, setReplies] = useState<string[]>(() => loadReplies())
+  const { items: replies, save: saveReply, remove: removeReply } = useQuickReplies(
+    activeClient?.id ?? null,
+    session?.user.id ?? null,
+  )
   const [repliesOpen, setRepliesOpen] = useState(false)
+  const [replyError, setReplyError] = useState<string | null>(null)
 
   if (!canSend) return <ReadOnlyNotice />
 
@@ -185,29 +237,29 @@ export function Composer({
         <div className="max-h-48 space-y-1 overflow-y-auto border-b border-border bg-surface px-4 py-2.5">
           <div className="flex items-baseline justify-between">
             <span className="label-caps text-fg-subtle">Quick replies</span>
-            <span className="text-2xs text-fg-subtle">Saved on this device</span>
+            <span className="text-2xs text-fg-subtle">Personal + team</span>
           </div>
-          {replies.length === 0 && (
+          {replyError && <p className="py-1 text-xs font-semibold text-danger">{replyError}</p>}
+          {replies.length === 0 && !replyError && (
             <p className="py-1 text-xs text-fg-subtle">
               None yet. Type a reply below, then Save as quick reply.
             </p>
           )}
-          {replies.map((r, i) => (
-            <div key={i} className="group flex items-center gap-2">
+          {replies.map((r) => (
+            <div key={r.id} className="group flex items-center gap-2">
               <button
                 onClick={() => {
-                  setText(r)
+                  setText(r.body)
                   setRepliesOpen(false)
                 }}
                 className="min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs text-fg hover:bg-surface-sunk"
               >
-                {r}
+                {r.scope === 'team' && <span className="mr-1 text-2xs text-fg-subtle">Team ·</span>}
+                {r.body}
               </button>
               <button
                 onClick={() => {
-                  const next = replies.filter((_, j) => j !== i)
-                  setReplies(next)
-                  saveReplies(next)
+                  void removeReply(r.id).then((res) => setReplyError(res.ok ? null : res.message))
                 }}
                 aria-label="Delete quick reply"
                 className="shrink-0 rounded-sm p-1 text-fg-subtle opacity-0 group-hover:opacity-100 hover:text-danger"
@@ -216,12 +268,10 @@ export function Composer({
               </button>
             </div>
           ))}
-          {text.trim() && !replies.includes(text.trim()) && (
+          {text.trim() && !replies.some((r) => r.body === text.trim()) && (
             <button
               onClick={() => {
-                const next = [text.trim(), ...replies]
-                setReplies(next)
-                saveReplies(next)
+                void saveReply(text.trim()).then((res) => setReplyError(res.ok ? null : res.message))
               }}
               className="w-full rounded-md border border-dashed border-border-strong px-2 py-1.5 text-left text-xs text-fg-muted hover:text-fg"
             >
