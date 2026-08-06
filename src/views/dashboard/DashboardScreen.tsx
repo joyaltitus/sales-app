@@ -4,12 +4,12 @@ import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
 import { useLeads, useLeadStages, useFollowUps } from '../../lib/leads-data'
 import { useBookings } from '../../lib/crm-data'
-import { useTeamWinsThisMonth } from '../../lib/stats-data'
-import { DASH } from '../../lib/mock-data'
+import { downloadCsv } from '../../lib/crm-data'
+import { useMetrics } from '../../lib/metrics-data'
 import { formatINRCompact } from '../../ui/formatMoney'
 import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
 import { Skeleton } from '../../ui/Skeleton'
-import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, FileText, MessageSquareText, Target, Users } from 'lucide-react'
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, Download, FileText, MessageSquareText, Target, Users } from 'lucide-react'
 import { ObjectionsReview } from './ObjectionsReview'
 import { ForecastWidget } from '../revenue/ForecastWidget'
 
@@ -56,7 +56,9 @@ function AnalyticsKpi({
   icon: typeof Clock3
   label: string
   value: string
-  delta: string
+  /** Period-over-period comparison text. Omitted (not fabricated) when no prior-window
+   *  comparator exists yet — H.5's period comparators land with the owner-report follow-on. */
+  delta?: string
   good?: boolean
   values: number[]
 }) {
@@ -70,7 +72,7 @@ function AnalyticsKpi({
       <p className="label-caps mt-4">{label}</p>
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <strong className="tnum text-2xl leading-none tracking-[-0.04em] text-fg">{value}</strong>
-        <span className={['flex items-center gap-0.5 text-2xs font-semibold', good ? 'text-success' : 'text-danger'].join(' ')}><Delta aria-hidden size={12} />{delta}</span>
+        {delta && <span className={['flex items-center gap-0.5 text-2xs font-semibold', good ? 'text-success' : 'text-danger'].join(' ')}><Delta aria-hidden size={12} />{delta}</span>}
       </div>
     </article>
   )
@@ -85,7 +87,9 @@ export function DashboardScreen() {
   const { stages } = useLeadStages(clientId)
   const { items: followUps } = useFollowUps(clientId)
   const { items: bookings } = useBookings(clientId)
-  const { rows: teamWins } = useTeamWinsThisMonth(clientId)
+  // WIRE-B2/S10: one snapshot from GET /api/metrics, no polling — response-time
+  // series, volume by channel, per-rep replies/median/won, follow-up compliance.
+  const { data: metrics, loading: metricsLoading } = useMetrics('14d')
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedView = searchParams.get('view')
   const view: DashboardView = DASHBOARD_VIEWS.some((item) => item.key === requestedView) ? requestedView as DashboardView : 'operate'
@@ -138,16 +142,38 @@ export function DashboardScreen() {
     )
   }
 
-  const volumeMax = Math.max(...DASH.volume.map((d) => Math.max(d.whatsapp, d.instagram)), 1)
-  const days = DASH.volume.map((d) => d.day)
-  const totalVolume = DASH.volume.reduce((sum, day) => sum + day.whatsapp + day.instagram, 0)
-  // WIRE session: won leads this month per rep is real (useTeamWinsThisMonth,
-  // conversations.assigned_to -> profiles join, same law as real.won above).
-  // Replies/median-reply-time stay DASH.reps mock — no per-rep message
-  // attribution exists yet (Panel below is honestly labeled `sample`).
-  const wonByName = new Map(teamWins.map((row) => [row.name, row.won]))
-  const repsWithRealWon = DASH.reps.map((rep) => ({ ...rep, won: wonByName.get(rep.name) ?? 0 }))
-  const bestRep = [...repsWithRealWon].sort((a, b) => b.won - a.won)[0]
+  // WIRE-B2/S10: response-time, volume-by-channel and per-rep replies/median/won
+  // are now real, all from the one metrics snapshot — DASH is gone from this file.
+  const responseSeries = metrics?.response_time_series ?? []
+  const responseMinsPoints = responseSeries
+    .filter((p) => p.median_minutes != null)
+    .map((p) => Math.round(p.median_minutes as number))
+
+  const volumeSeries = metrics?.volume_by_channel ?? []
+  const volumeMax = Math.max(...volumeSeries.map((d) => Math.max(d.whatsapp, d.instagram)), 1)
+  const days = volumeSeries.map((d) => d.date.slice(5))
+  const totalVolume = volumeSeries.reduce((sum, day) => sum + day.whatsapp + day.instagram, 0)
+
+  const followUpCompliance = metrics?.follow_up_compliance ?? null
+  const followUpDoneTotal = followUpCompliance
+    ? followUpCompliance.done_on_time + followUpCompliance.done_late
+    : 0
+
+  const repStats = metrics?.rep_stats ?? []
+  const bestRep = [...repStats].sort((a, b) => b.won - a.won)[0]
+
+  const isManagerOrAdmin = activeClient?.role !== 'agent'
+
+  const exportDashboardCsv = () => {
+    downloadCsv(
+      `dashboard-metrics-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Date', 'Median first-response (min)', 'WhatsApp inbound', 'Instagram inbound'],
+      volumeSeries.map((day) => {
+        const point = responseSeries.find((p) => p.date === day.date)
+        return [day.date, point?.median_minutes ?? '', day.whatsapp, day.instagram]
+      }),
+    )
+  }
 
   const viewCopy: Record<DashboardView, { eyebrow: string; title: string; detail: string }> = {
     operate: { eyebrow: 'Today', title: 'Run the floor without chasing updates.', detail: 'Live exceptions first; healthy work stays quiet.' },
@@ -192,14 +218,14 @@ export function DashboardScreen() {
           </div>
 
           <section aria-labelledby="analytics-snapshot">
-            <div className="mb-3 flex items-center justify-between"><h2 id="analytics-snapshot" className="text-md font-semibold text-fg">Operating trend</h2><span className="label-caps rounded-pill border border-dashed border-border-strong px-2 py-1">Preview rollups</span></div>
-            <div className="grid gap-3 sm:grid-cols-3"><AnalyticsKpi icon={Clock3} label="First response" value={`${DASH.responseMins.at(-1)}m`} delta="3m faster" values={DASH.responseMins} /><AnalyticsKpi icon={MessageSquareText} label="Inbound volume" value={String(totalVolume)} delta="12% vs prior" values={DASH.volume.map((day) => day.whatsapp + day.instagram)} /><AnalyticsKpi icon={Target} label="Follow-up compliance" value={`${Math.round((DASH.followUps.done / (DASH.followUps.done + DASH.followUps.dueToday + DASH.followUps.overdue)) * 100)}%`} delta="6 pts" values={[68, 74, 72, 79, 83, 86, 88]} /></div>
+            <div className="mb-3 flex items-center justify-between"><h2 id="analytics-snapshot" className="text-md font-semibold text-fg">Operating trend</h2><button onClick={exportDashboardCsv} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-2xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"><Download aria-hidden size={12} strokeWidth={1.75} />Export CSV</button></div>
+            <div className="grid gap-3 sm:grid-cols-3"><AnalyticsKpi icon={Clock3} label="First response" value={responseMinsPoints.length ? `${responseMinsPoints.at(-1)}m` : '—'} values={responseMinsPoints} /><AnalyticsKpi icon={MessageSquareText} label="Inbound volume" value={String(totalVolume)} values={volumeSeries.map((day) => day.whatsapp + day.instagram)} /><AnalyticsKpi icon={Target} label="Follow-up compliance" value={followUpCompliance ? `${Math.round((followUpDoneTotal / Math.max(followUpDoneTotal + real.dueToday + real.overdue, 1)) * 100)}%` : '—'} values={[followUpDoneTotal]} /></div>
           </section>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <Panel title="First response time" sample caption="Median minutes to first human reply — needs server-side aggregation."><TrendLine points={DASH.responseMins} unit="m" ariaLabel="Sample response time trend" /></Panel>
-            <Panel title="Inbound volume by channel" sample caption="Messages per day — needs a server-side rollup."><div className="space-y-3"><DayBars label="WA" values={DASH.volume.map((d) => d.whatsapp)} days={days} max={volumeMax} /><DayBars label="IG" values={DASH.volume.map((d) => d.instagram)} days={days} max={volumeMax} /></div></Panel>
-            <Panel title="Follow-up compliance" sample caption="Overdue and due-today counts above are live; completion history is preview."><ComplianceBar done={DASH.followUps.done} dueToday={real.dueToday} overdue={real.overdue} /></Panel>
+            <Panel title="First response time" caption="Median minutes inbound → first human/bot reply, per day (14d window).">{metricsLoading ? <Skeleton className="h-[72px]" /> : responseMinsPoints.length ? <TrendLine points={responseMinsPoints} unit="m" ariaLabel="Response time trend" /> : <p className="text-xs text-fg-subtle">No inbound messages in this window yet.</p>}</Panel>
+            <Panel title="Inbound volume by channel" caption="Messages per day, last 14 days.">{metricsLoading ? <Skeleton className="h-20" /> : <div className="space-y-3"><DayBars label="WA" values={volumeSeries.map((d) => d.whatsapp)} days={days} max={volumeMax} /><DayBars label="IG" values={volumeSeries.map((d) => d.instagram)} days={days} max={volumeMax} /></div>}</Panel>
+            <Panel title="Follow-up compliance" caption="Overdue and due-today counts are live; completion history is a 14d window.">{metricsLoading ? <Skeleton className="h-16" /> : <ComplianceBar done={followUpDoneTotal} dueToday={real.dueToday} overdue={real.overdue} />}</Panel>
           </div>
         </section>}
 
@@ -207,13 +233,40 @@ export function DashboardScreen() {
           <HeroStat label="Open pipeline" value={formatINRCompact(real.pipelineValue)} sub={real.winRate == null ? 'Estimated value across open leads' : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`} />
           <div className="grid grid-cols-3 gap-3"><StatTile label="Won" value={String(real.won)} /><StatTile label="Lost" value={String(real.lost)} /><StatTile label="Win rate" value={real.winRate == null ? '—' : `${real.winRate}%`} /></div>
           <Panel title="Pipeline by stage" caption="Live count of leads sitting in each stage."><Funnel stages={real.funnel} /></Panel>
-          <ForecastWidget />
+          <ForecastWidget metrics={metrics} loading={metricsLoading} />
+          {isManagerOrAdmin && metrics?.objection_counts && metrics.objection_counts.length > 0 && (
+            <Panel title="Objections by type" caption="Logged objections in the last 14 days, most common first.">
+              <Funnel stages={metrics.objection_counts.map((o) => ({ label: o.label, count: o.count }))} />
+            </Panel>
+          )}
+          {isManagerOrAdmin && metrics?.won_by_source && metrics.won_by_source.length > 0 && (
+            <Panel title="Won by source" caption="Won leads in the last 14 days, by source.">
+              <div className="space-y-2">
+                {(() => {
+                  const maxAmount = Math.max(...metrics.won_by_source.map((s) => s.amount), 1)
+                  return metrics.won_by_source.map((s) => (
+                    <div key={`${s.source}-${s.campaign_id ?? ''}`} className="flex items-center gap-3">
+                      <span className="w-24 shrink-0 truncate text-xs text-fg-muted">{s.campaign_name ?? s.source}</span>
+                      <div className="h-4 min-w-0 flex-1">
+                        <div
+                          className="h-full rounded-[4px] bg-chart-ink"
+                          style={{ width: `${(s.amount / maxAmount) * 100}%`, minWidth: 2 }}
+                          title={`${s.source}: ${formatINRCompact(s.amount)}, ${s.won_count} won`}
+                        />
+                      </div>
+                      <span className="tnum w-16 shrink-0 text-right text-xs text-fg">{formatINRCompact(s.amount)}</span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </Panel>
+          )}
         </section>}
 
         {view === 'coach' && <section className="space-y-6" aria-label="Coaching dashboard">
           <Suspense fallback={<Skeleton className="h-[520px]" />}><CompetitionConsole /></Suspense>
-          <Panel title="Personal bests" sample caption="Framed around each rep's pace and improvement. Per-rep attribution is preview until wired.">
-            <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{repsWithRealWon.map((rep) => { const maxReplies = Math.max(...repsWithRealWon.map((item) => item.replies), 1); return <tr key={rep.name} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.name === bestRep?.name && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.medianReplyMin}m</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>
+          <Panel title="Personal bests" caption="Each rep's replies, median reply time, and won leads over the last 14 days.">
+            {metricsLoading ? <Skeleton className="h-40" /> : <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{repStats.map((rep) => { const maxReplies = Math.max(...repStats.map((item) => item.replies), 1); return <tr key={rep.user_id} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.user_id === bestRep?.user_id && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.median_reply_minutes == null ? '—' : `${Math.round(rep.median_reply_minutes)}m`}</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>}
           </Panel>
           <ObjectionsReview />
         </section>}
