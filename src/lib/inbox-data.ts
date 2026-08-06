@@ -126,8 +126,20 @@ export function useQueue(clientId: string | null) {
  */
 const PREVIEW_LIMIT = 600
 
+export type PreviewKind = 'text' | 'image' | 'audio' | 'document' | 'other'
+
+export type Preview = { text: string; kind: PreviewKind }
+
+function previewKind(msgType: string): PreviewKind {
+  if (msgType === 'image') return 'image'
+  if (msgType === 'audio') return 'audio'
+  if (msgType === 'document') return 'document'
+  if (msgType === 'text') return 'text'
+  return 'other'
+}
+
 export function usePreviews(clientId: string | null) {
-  const [previews, setPreviews] = useState<Map<string, string>>(new Map())
+  const [previews, setPreviews] = useState<Map<string, Preview>>(new Map())
 
   const load = useCallback(async () => {
     if (!clientId) {
@@ -142,7 +154,7 @@ export function usePreviews(clientId: string | null) {
       .order('created_at', { ascending: false })
       .limit(PREVIEW_LIMIT)
 
-    const next = new Map<string, string>()
+    const next = new Map<string, Preview>()
     for (const row of (data ?? []) as {
       conversation_id: string
       body: string | null
@@ -151,15 +163,15 @@ export function usePreviews(clientId: string | null) {
     }[]) {
       // Rows arrive newest-first, so the first hit per conversation wins.
       if (next.has(row.conversation_id)) continue
+      const kind = previewKind(row.msg_type)
+      // A media-only row (no caption body, no transcript) gets a plain label
+      // — the glyph in QueueRow carries the "this is media" signal, so the
+      // text itself doesn't need to fake a caption.
       const text =
         row.body ??
         row.transcription ??
-        (row.msg_type === 'image'
-          ? 'sent a photo'
-          : row.msg_type === 'audio'
-            ? 'sent a voice note'
-            : `sent ${row.msg_type}`)
-      next.set(row.conversation_id, text)
+        (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'document' ? 'Document' : `sent ${row.msg_type}`)
+      next.set(row.conversation_id, { text, kind })
     }
     setPreviews(next)
   }, [clientId])

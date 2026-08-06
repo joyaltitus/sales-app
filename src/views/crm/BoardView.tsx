@@ -201,7 +201,7 @@ export function BoardView({
                           {name}
                         </span>
                         <ChannelIcon channel={lead.contact?.channel ?? null} size={13} />
-                        <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" />
+                        <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
                         <button onClick={(event) => { event.stopPropagation(); setQuickLead(lead) }} aria-label={`Quick actions for ${name}`} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-sunk hover:text-fg"><MoreHorizontal aria-hidden size={14} /></button>
                       </div>
                       <div className="mt-1.5 flex items-center gap-2.5">

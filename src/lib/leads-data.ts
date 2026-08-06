@@ -46,6 +46,7 @@ export type FollowUpItem = {
   due_at: string
   status: string
   note: string
+  source_call_id: string | null
 }
 
 /** Supabase infers a to-one embed as an array; at runtime it is the single
@@ -143,7 +144,7 @@ export function useFollowUps(clientId: string | null) {
     setLoading(true)
     const { data, error: readError } = await supabase
       .from('follow_ups')
-      .select('id, lead_id, contact_id, due_at, status, note')
+      .select('id, lead_id, contact_id, due_at, status, note, source_call_id')
       .eq('client_id', clientId)
       .in('status', ['pending', 'snoozed'])
       .order('due_at', { ascending: true })

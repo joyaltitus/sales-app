@@ -13,6 +13,9 @@ export function CallButton({
   label = 'Call',
   variant = 'secondary',
   onBegin,
+  contactId = null,
+  leadId = null,
+  conversationId = null,
 }: {
   person: string
   phone?: string | null
@@ -21,6 +24,12 @@ export function CallButton({
   label?: string
   variant?: 'primary' | 'secondary' | 'icon'
   onBegin?: () => void
+  /** Real contact id — when present, the call flow does real writes
+   *  (call_sessions/call_logs). Omit to keep a surface preview-only
+   *  (Email/Today-fixture/design-gallery routes — deliberately not wired). */
+  contactId?: string | null
+  leadId?: string | null
+  conversationId?: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
@@ -43,11 +52,33 @@ export function CallButton({
         onClick={(event) => { event.stopPropagation(); onBegin?.(); setOpen(true) }}
         aria-label={variant === 'icon' ? `Call ${person}` : undefined}
         className={['inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border text-xs font-semibold transition-[background-color,border-color,transform] hover:-translate-y-px active:translate-y-0', cls].join(' ')}
-        title={`Preview click-to-call${phone ? ` · ${phone}` : ''}`}
+        title={contactId ? `Call${phone ? ` · ${phone}` : ''}` : `Preview click-to-call${phone ? ` · ${phone}` : ''}`}
       >
         <Phone aria-hidden size={15} />{variant !== 'icon' && label}
       </button>
-      {open && <Suspense fallback={<div className="fixed inset-0 z-[80] flex items-center justify-center bg-[var(--overlay)]" role="status"><span className="rounded-lg bg-surface px-4 py-3 text-xs font-semibold text-fg shadow-elev-3">Preparing call brief…</span></div>}><CallExperience person={person} phone={phone ?? 'Preview number'} dealValue={dealValue} stage={stage} onClose={() => setOpen(false)} onComplete={(outcome: CallOutcomePreview, callbackAt?: string) => { setConfirmation(outcome === 'closed' ? `${person} closed · ${formatINR(dealValue)} · +47 points` : outcome === 'callback' ? `Callback set · ${callbackAt} · +12 points` : outcome === 'objection' ? `${person} · call + objection logged · +17 points` : `${person} · call logged · +12 points`); setOpen(false) }} /></Suspense>}
+      {open && (
+        <Suspense fallback={<div className="fixed inset-0 z-[80] flex items-center justify-center bg-[var(--overlay)]" role="status"><span className="rounded-lg bg-surface px-4 py-3 text-xs font-semibold text-fg shadow-elev-3">Preparing call brief…</span></div>}>
+          <CallExperience
+            person={person}
+            phone={phone ?? 'Preview number'}
+            dealValue={dealValue}
+            stage={stage}
+            contactId={contactId}
+            leadId={leadId}
+            conversationId={conversationId}
+            onClose={() => setOpen(false)}
+            onComplete={(outcome: CallOutcomePreview, callbackAt?: string) => {
+              setConfirmation(
+                outcome === 'closed' ? `${person} closed · ${formatINR(dealValue)}` :
+                outcome === 'callback' ? `Callback set · ${callbackAt}` :
+                outcome === 'objection' ? `${person} · call + objection logged` :
+                `${person} · call logged`,
+              )
+              setOpen(false)
+            }}
+          />
+        </Suspense>
+      )}
       {confirmation && <div className="fixed right-4 bottom-24 z-[90] flex max-w-sm items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--success)_28%,var(--border))] bg-surface-glass px-3 py-2.5 text-xs font-semibold text-success shadow-elev-3 backdrop-blur-xl" role="status"><Check aria-hidden size={15} />{confirmation}</div>}
     </>
   )

@@ -245,7 +245,7 @@ export function Today() {
 
   const progressPct = stats.followUpsPlanned > 0 ? Math.round((stats.followUpsDone / stats.followUpsPlanned) * 100) : 0
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
-  const oldestPreview = oldest ? previews.get(oldest.id) ?? 'A customer is waiting for your reply.' : null
+  const oldestPreview = oldest ? previews.get(oldest.id)?.text ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
   const openTodos = myOpenTodos.filter((todo) => !local[todo.id]).length
   const endOfToday = new Date()

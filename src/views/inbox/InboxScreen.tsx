@@ -360,7 +360,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <QueueRow
               key={item.id}
               item={item}
-              preview={previews.get(item.id) ?? item.contact?.profile_name ?? '—'}
+              preview={previews.get(item.id)?.text ?? item.contact?.profile_name ?? '—'}
+              previewKind={previews.get(item.id)?.kind ?? 'text'}
               selected={item.id === selectedId}
               onSelect={() => { setEmailOpen(false); setSelectedId(item.id) }}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
@@ -392,7 +393,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           {!channelLive && (
             <span className="text-2xs text-fg-subtle">Checking for updates</span>
           )}
-          {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" />}
+          {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" contactId={selected.contact_id} conversationId={selectedId} />}
           {/* Rail toggle — the third pane below xl, where it renders as a sheet. */}
           <button
             onClick={() => setRailOpen(true)}
@@ -421,6 +422,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       {!threadError && (selected || messages.length > 0) && (
         <Composer
           conversationId={selectedId}
+          contactId={selected?.contact_id ?? ''}
           canSend={canSend}
           onSent={refreshAll}
           seed={draftSeed}

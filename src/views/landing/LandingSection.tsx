@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { QueueItem } from '../../lib/inbox-data'
+import type { QueueItem, Preview } from '../../lib/inbox-data'
 import { QueueRow } from '../inbox/QueueRow'
 
 // Shared furniture for the three landings (SA-03). Each landing answers ONE
@@ -60,7 +60,7 @@ export function ThreadList({
   cap = LIST_CAP,
 }: {
   items: QueueItem[]
-  previews: Map<string, string>
+  previews: Map<string, Preview>
   cap?: number
 }) {
   const navigate = useNavigate()
@@ -72,7 +72,8 @@ export function ThreadList({
         <QueueRow
           key={item.id}
           item={item}
-          preview={previews.get(item.id) ?? item.contact?.profile_name ?? '—'}
+          preview={previews.get(item.id)?.text ?? item.contact?.profile_name ?? '—'}
+          previewKind={previews.get(item.id)?.kind ?? 'text'}
           selected={false}
           onSelect={() => navigate(`/inbox?c=${item.id}`)}
         />

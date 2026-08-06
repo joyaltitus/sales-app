@@ -30,6 +30,14 @@ jobs:
 
   gitleaks:
     runs-on: ubuntu-latest
+    # gitleaks-action calls GET /pulls/{n}/commits on a pull_request event; the
+    # repo's default GITHUB_TOKEN permissions don't include that scope (same
+    # reason `promote` below has to declare its own `contents: write`).
+    # Without this the job 500s on the API call before it ever scans anything —
+    # a CI infra failure, not a secret finding.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
