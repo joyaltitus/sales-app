@@ -47,23 +47,27 @@ function useQuickReplies(clientId: string | null, userId: string | null) {
     void load()
   }, [load])
 
-  const save = async (body: string) => {
-    if (!clientId || !userId) return
+  const save = async (body: string): Promise<{ ok: true } | { ok: false; message: string }> => {
+    if (!clientId || !userId) return { ok: false, message: 'No active workspace.' }
     const title = body.length > 60 ? `${body.slice(0, 57)}...` : body
-    await supabase.from('quick_replies').insert({
+    const { error } = await supabase.from('quick_replies').insert({
       client_id: clientId,
       title,
       body,
       scope: 'personal',
       created_by: userId,
     })
+    if (error) return { ok: false, message: error.message }
     void load()
+    return { ok: true }
   }
 
-  const remove = async (id: string) => {
-    if (!clientId) return
-    await supabase.from('quick_replies').delete().eq('client_id', clientId).eq('id', id)
+  const remove = async (id: string): Promise<{ ok: true } | { ok: false; message: string }> => {
+    if (!clientId) return { ok: false, message: 'No active workspace.' }
+    const { error } = await supabase.from('quick_replies').delete().eq('client_id', clientId).eq('id', id)
+    if (error) return { ok: false, message: error.message }
     void load()
+    return { ok: true }
   }
 
   return { items, loading, save, remove }
@@ -145,6 +149,7 @@ export function Composer({
     session?.user.id ?? null,
   )
   const [repliesOpen, setRepliesOpen] = useState(false)
+  const [replyError, setReplyError] = useState<string | null>(null)
 
   if (!canSend) return <ReadOnlyNotice />
 
@@ -234,7 +239,8 @@ export function Composer({
             <span className="label-caps text-fg-subtle">Quick replies</span>
             <span className="text-2xs text-fg-subtle">Personal + team</span>
           </div>
-          {replies.length === 0 && (
+          {replyError && <p className="py-1 text-xs font-semibold text-danger">{replyError}</p>}
+          {replies.length === 0 && !replyError && (
             <p className="py-1 text-xs text-fg-subtle">
               None yet. Type a reply below, then Save as quick reply.
             </p>
@@ -252,7 +258,9 @@ export function Composer({
                 {r.body}
               </button>
               <button
-                onClick={() => void removeReply(r.id)}
+                onClick={() => {
+                  void removeReply(r.id).then((res) => setReplyError(res.ok ? null : res.message))
+                }}
                 aria-label="Delete quick reply"
                 className="shrink-0 rounded-sm p-1 text-fg-subtle opacity-0 group-hover:opacity-100 hover:text-danger"
               >
@@ -262,7 +270,9 @@ export function Composer({
           ))}
           {text.trim() && !replies.some((r) => r.body === text.trim()) && (
             <button
-              onClick={() => void saveReply(text.trim())}
+              onClick={() => {
+                void saveReply(text.trim()).then((res) => setReplyError(res.ok ? null : res.message))
+              }}
               className="w-full rounded-md border border-dashed border-border-strong px-2 py-1.5 text-left text-xs text-fg-muted hover:text-fg"
             >
               Save current draft as quick reply
