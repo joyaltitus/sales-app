@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews } from '../../lib/inbox-data'
-import { useFollowUps } from '../../lib/leads-data'
+import { completeFollowUp, snoozeFollowUp, useFollowUps } from '../../lib/leads-data'
 import { waitingLongest, isOverdue } from '../../lib/landing-data'
 import { useTodos, toggleTodo } from '../../lib/todos-data'
 import { useRepDailyStats } from '../../lib/stats-data'
@@ -203,7 +203,7 @@ export function Today() {
   const clientId = activeClient?.id ?? null
   const { items, loading, error } = useQueue(clientId)
   const { previews } = usePreviews(clientId)
-  const { items: liveFollowUps, loading: followUpsLoading, error: followUpsError } = useFollowUps(clientId)
+  const { items: liveFollowUps, loading: followUpsLoading, error: followUpsError, reload: reloadFollowUps } = useFollowUps(clientId)
   const { items: todos } = useTodos(clientId)
   const { stats } = useRepDailyStats(clientId, userId)
   const { item: target } = useTarget(clientId, userId, firstOfMonth())
@@ -325,8 +325,14 @@ export function Today() {
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
-              onDone={() => setLocal((state) => ({ ...state, [followUp.id]: 'done' }))}
-              onSnooze={() => setLocal((state) => ({ ...state, [followUp.id]: 'snoozed' }))}
+              onDone={() => {
+                setLocal((state) => ({ ...state, [followUp.id]: 'done' }))
+                if (clientId && !usingSampleFollowUps) void completeFollowUp(clientId, followUp.id).then(reloadFollowUps)
+              }}
+              onSnooze={() => {
+                setLocal((state) => ({ ...state, [followUp.id]: 'snoozed' }))
+                if (clientId && !usingSampleFollowUps) void snoozeFollowUp(clientId, followUp.id).then(reloadFollowUps)
+              }}
             />
           ))}
 
@@ -368,6 +374,7 @@ export function Today() {
         </section>
 
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-5">
+          <Suspense fallback={<Skeleton className="h-40 w-full" />}><TodayIntelligence /></Suspense>
           {oldest ? (
             <section className="relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
               <span aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-signal opacity-20 blur-3xl" />
@@ -382,7 +389,6 @@ export function Today() {
           ) : (
             <section className="rounded-xl border border-border bg-surface p-5 shadow-elev-1"><EmptyState icon={Trophy} title="Inbox clear. Nicely done." body="Use the breathing room to rescue a lead that has gone quiet." /></section>
           )}
-          <Suspense fallback={<Skeleton className="h-40 w-full" />}><TodayIntelligence /></Suspense>
         </aside>
       </div>
 

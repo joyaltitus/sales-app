@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Home, Inbox, Kanban, Ellipsis } from 'lucide-react'
+import { Home, Inbox, Kanban, Ellipsis, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useFlags, flagOn } from '../lib/flags'
 import { TopBar } from './TopBar'
@@ -35,37 +35,63 @@ export function RepShell() {
   const { activeClient } = useClient()
   const { flags } = useFlags(activeClient?.id ?? null)
   const productAi = flagOn(flags, 'product_ai')
+  const [collapsed, setCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.localStorage.getItem('sa:rep-sidebar-collapsed') === '1',
+  )
+  const toggleCollapsed = () =>
+    setCollapsed((v) => {
+      const next = !v
+      window.localStorage.setItem('sa:rep-sidebar-collapsed', next ? '1' : '0')
+      return next
+    })
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
       <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-[216px] shrink-0 flex-col border-r border-border bg-surface px-3 py-4 lg:flex">
-          <div className="px-3 pb-4">
-            <p className="label-caps text-accent">My workspace</p>
-            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Targets, customers and promises due today.</p>
-          </div>
-          <nav className="space-y-1" aria-label="Rep workspace">
-            {TABS.map((tab) => (
-              <NavLink
-                key={tab.to}
-                to={tab.to}
-                end={tab.end}
-                className={({ isActive }) => [
-                  'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors',
-                  isActive ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:bg-surface-sunk hover:text-fg',
-                ].join(' ')}
-              >
-                <tab.icon aria-hidden size={18} strokeWidth={1.8} />
-                {tab.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="mt-auto rounded-lg border border-border bg-surface-sunk p-3">
-            <p className="text-xs font-semibold text-fg">Laptop view</p>
-            <p className="mt-1 text-2xs leading-relaxed text-fg-muted">Use Inbox and CRM side by side without losing Today.</p>
-          </div>
-        </aside>
+        <div className="relative hidden lg:block">
+          <aside
+            className={[
+              'flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-surface py-4 transition-[width] duration-150',
+              collapsed ? 'w-0 border-r-0 px-0' : 'w-[216px] px-3',
+            ].join(' ')}
+          >
+            <div className="w-[192px] px-3 pb-4">
+              <p className="label-caps text-accent">My workspace</p>
+              <p className="mt-1 text-xs leading-relaxed text-fg-muted">Targets, customers and promises due today.</p>
+            </div>
+            <nav className="w-[192px] space-y-1" aria-label="Rep workspace">
+              {TABS.map((tab) => (
+                <NavLink
+                  key={tab.to}
+                  to={tab.to}
+                  end={tab.end}
+                  className={({ isActive }) => [
+                    'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors',
+                    isActive ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:bg-surface-sunk hover:text-fg',
+                  ].join(' ')}
+                >
+                  <tab.icon aria-hidden size={18} strokeWidth={1.8} />
+                  {tab.label}
+                </NavLink>
+              ))}
+            </nav>
+            <div className="mt-auto w-[192px] rounded-lg border border-border bg-surface-sunk p-3">
+              <p className="text-xs font-semibold text-fg">Laptop view</p>
+              <p className="mt-1 text-2xs leading-relaxed text-fg-muted">Use Inbox and CRM side by side without losing Today.</p>
+            </div>
+          </aside>
+
+          <button
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+            title={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+            className="absolute top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-surface p-1 text-fg-muted shadow-elev-1 transition-colors hover:text-fg"
+            style={{ left: collapsed ? '8px' : '204px' }}
+          >
+            {collapsed ? <PanelLeftOpen aria-hidden size={14} /> : <PanelLeftClose aria-hidden size={14} />}
+          </button>
+        </div>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
           <Suspense
