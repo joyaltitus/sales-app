@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio } from 'lucide-react'
+import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio, X } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
@@ -122,7 +122,9 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   // SA-05 context rail: its own pane at xl+, a sheet below that. The AI draft
   // seeds the composer through this counter-keyed value (a bare string could
   // not be "used twice").
-  const [railOpen, setRailOpen] = useState(false)
+  // Inline pane defaults open at xl+ (old always-on behavior), closed as a
+  // sheet below xl — but now toggleable either way, matching the button.
+  const [railOpen, setRailOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280)
   const [draftSeed, setDraftSeed] = useState<{ n: number; text: string } | null>(null)
 
   // S11: a notification tap arrives with the AI draft in router state (prose,
@@ -405,13 +407,18 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <span className="text-2xs text-fg-subtle">Checking for updates</span>
           )}
           {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" contactId={selected.contact_id} conversationId={selectedId} />}
-          {/* Rail toggle — the third pane below xl, where it renders as a sheet. */}
-          <button
-            onClick={() => setRailOpen(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg xl:hidden"
-          >
-            <PanelRight aria-hidden size={15} /> Details
-          </button>
+          {/* Rail toggle — sheet below xl, inline pane at xl+. Same button
+              drives both so the xl+ pane is always closable (was stuck open,
+              button used to vanish exactly at xl via `xl:hidden`). */}
+          {selected && clientId && (
+            <button
+              onClick={() => setRailOpen((v) => !v)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg"
+            >
+              {railOpen ? <X aria-hidden size={15} /> : <PanelRight aria-hidden size={15} />}
+              {railOpen ? 'Close' : 'Details'}
+            </button>
+          )}
         </span>
       </div>
 
@@ -484,7 +491,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       </div>
 
       {/* SA-05 context rail: its own pane at xl+ … */}
-      {rail && (
+      {rail && railOpen && (
         <div className="hidden w-80 shrink-0 overflow-hidden rounded-r-xl border-y border-r border-border bg-surface shadow-elev-1 xl:block">
           {rail}
         </div>
