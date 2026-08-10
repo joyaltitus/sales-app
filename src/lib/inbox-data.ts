@@ -69,6 +69,72 @@ function oneOf<T>(v: T | T[] | null): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v
 }
 
+/**
+ * S1 (issue #15, AT-01..AT-08): an outbound message the browser sent but
+ * hub-service has not yet persisted (the authoritative row is written only
+ * after the send worker succeeds — see sendAgentMessage in lib/api.ts). The
+ * `optimistic:` id prefix makes it collision-safe against real Postgres
+ * UUIDs by construction, not by comparison.
+ */
+export type OptimisticBubble = {
+  tempId: string
+  body: string
+  status: 'pending' | 'failed'
+  createdAt: string
+}
+
+export function newOptimisticId(): string {
+  return `optimistic:${crypto.randomUUID()}`
+}
+
+/**
+ * Merge authoritative outbound messages with still-unreconciled optimistic
+ * bubbles. Pure and recomputed every call — no "already claimed" state to
+ * fall out of sync — so a refetch that lands before hub-service persists the
+ * row just leaves the bubble unmatched (visible, pending) rather than
+ * flickering it away.
+ *
+ * Matching is positional per body, not "any row with this body": the Nth
+ * authoritative row with a given body claims the Nth still-pending bubble
+ * with that body. That is what keeps two sequential identical-text sends
+ * from collapsing into one bubble.
+ */
+export function mergeOutbound(authoritative: Message[], optimistic: OptimisticBubble[]): Message[] {
+  const authByBody = new Map<string, Message[]>()
+  for (const m of authoritative) {
+    if (m.direction !== 'outbound') continue
+    const key = m.body ?? ''
+    const list = authByBody.get(key) ?? []
+    list.push(m)
+    authByBody.set(key, list)
+  }
+  const cursor = new Map<string, number>()
+  const unmatched: Message[] = []
+  for (const b of optimistic) {
+    if (b.status === 'pending') {
+      const list = authByBody.get(b.body) ?? []
+      const idx = cursor.get(b.body) ?? 0
+      if (idx < list.length) {
+        cursor.set(b.body, idx + 1)
+        continue
+      }
+    }
+    unmatched.push({
+      id: b.tempId,
+      sender_type: 'agent',
+      direction: 'outbound',
+      body: b.body,
+      msg_type: 'text',
+      created_at: b.createdAt,
+      media: null,
+      delivery_status: b.status,
+      failure_reason: b.status === 'failed' ? "Didn't send" : null,
+      transcription: null,
+    })
+  }
+  return [...authoritative, ...unmatched]
+}
+
 export function useQueue(clientId: string | null) {
   const [items, setItems] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -256,9 +322,20 @@ export function useThread(clientId: string | null, conversationId: string | null
  * events AND on window focus AND on a slow interval, so a silently-dead channel
  * degrades to polling instead of to a frozen screen.
  */
-export function useLiveRefresh(clientId: string | null, onChange: () => void) {
+export function useLiveRefresh(
+  clientId: string | null,
+  onChange: () => void,
+  /** S1 (issue #15): the raw inserted `messages` row, delivered synchronously
+   *  — not behind the 400ms debounce below — so the currently-open thread can
+   *  paint an inbound message immediately instead of waiting on a full
+   *  queue+preview+thread refetch. `ping()` still runs afterwards so queue
+   *  ordering and unread counts reconcile in the background. */
+  onMessageInsert?: (row: Message & { conversation_id: string; client_id: string }) => void,
+) {
   const cb = useRef(onChange)
   cb.current = onChange
+  const insertCb = useRef(onMessageInsert)
+  insertCb.current = onMessageInsert
   const [channelLive, setChannelLive] = useState(false)
 
   useEffect(() => {
@@ -286,7 +363,10 @@ export function useLiveRefresh(clientId: string | null, onChange: () => void) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
-        ping,
+        (payload) => {
+          insertCb.current?.(payload.new as Message & { conversation_id: string; client_id: string })
+          ping()
+        },
       )
       .subscribe((status) => setChannelLive(status === 'SUBSCRIBED'))
 

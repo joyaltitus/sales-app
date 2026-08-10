@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Bot, Check, CheckCheck, MessageCircle } from 'lucide-react'
+import { Bot, Check, CheckCheck, Clock, MessageCircle } from 'lucide-react'
 import type { Message } from '../../lib/inbox-data'
 import { resolveMarks, type SeamMark, type Trace } from '../../lib/seam'
 import { clockTime } from '../../lib/wait'
@@ -42,7 +42,16 @@ function InlineTag({ mark }: { mark: SeamMark }) {
   )
 }
 
-function Bubble({ message }: { message: Message }) {
+function Bubble({
+  message,
+  onRetryFailed,
+}: {
+  message: Message
+  /** S1 (issue #15): retry affordance for a bubble the browser sent locally
+   *  and never reconciled — only wired for synthetic `optimistic:` ids;
+   *  a real failed row has no client-side retry route. */
+  onRetryFailed?: (id: string, body: string) => void
+}) {
   // Bubbles by direction/sender_type. Inbound is the customer; outbound is
   // either the bot or a human agent, and the thread does not pretend they are
   // the same author — but it also does not shout about it, because the seam
@@ -50,6 +59,8 @@ function Bubble({ message }: { message: Message }) {
   const inbound = message.direction === 'inbound'
   const fromHuman = message.sender_type === 'agent'
   const failed = message.delivery_status === 'failed'
+  const pending = message.delivery_status === 'pending'
+  const retryable = failed && message.id.startsWith('optimistic:') && !!onRetryFailed
 
   const text =
     message.body ??
@@ -82,11 +93,22 @@ function Bubble({ message }: { message: Message }) {
           {clockTime(message.created_at)}
         </span>
         {!inbound && !failed && (
-          message.delivery_status === 'read'
-            ? <CheckCheck aria-label="Read" size={13} className="text-info" />
-            : <Check aria-label={message.delivery_status || 'Sent'} size={13} className="text-fg-subtle" />
+          pending
+            ? <Clock aria-label="Sending" size={13} className="text-fg-subtle" />
+            : message.delivery_status === 'read'
+              ? <CheckCheck aria-label="Read" size={13} className="text-info" />
+              : <Check aria-label={message.delivery_status || 'Sent'} size={13} className="text-fg-subtle" />
         )}
-        {failed && (
+        {failed && retryable && (
+          <button
+            type="button"
+            onClick={() => onRetryFailed?.(message.id, message.body ?? '')}
+            className="text-2xs text-danger underline decoration-dotted hover:text-danger"
+          >
+            {message.failure_reason ?? "Didn't send"} · Tap to retry
+          </button>
+        )}
+        {failed && !retryable && (
           <span className="text-2xs text-danger">
             {message.failure_reason ?? "Didn't send"}
           </span>
@@ -96,7 +118,15 @@ function Bubble({ message }: { message: Message }) {
   )
 }
 
-export function Thread({ messages, traces }: { messages: Message[]; traces: Trace[] }) {
+export function Thread({
+  messages,
+  traces,
+  onRetryFailed,
+}: {
+  messages: Message[]
+  traces: Trace[]
+  onRetryFailed?: (id: string, body: string) => void
+}) {
   const endRef = useRef<HTMLDivElement>(null)
 
   // Marks are resolved once per trace list, then placed against the message
@@ -153,7 +183,7 @@ export function Thread({ messages, traces }: { messages: Message[]; traces: Trac
             </div>
           )}
           {marksBefore.get(m.id)?.map((mark) => <Seam key={mark.id} mark={mark} />)}
-          <Bubble message={m} />
+          <Bubble message={m} onRetryFailed={onRetryFailed} />
           {tagsFor.get(m.id) && (
             <div className="flex justify-end gap-2 px-1">
               {tagsFor.get(m.id)?.map((mark) => <InlineTag key={mark.id} mark={mark} />)}

@@ -3,8 +3,8 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio, X } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
-import { useQueue, usePreviews, useThread, useLiveRefresh } from '../../lib/inbox-data'
-import type { QueueItem } from '../../lib/inbox-data'
+import { useQueue, usePreviews, useThread, useLiveRefresh, mergeOutbound, newOptimisticId } from '../../lib/inbox-data'
+import type { QueueItem, OptimisticBubble, Message } from '../../lib/inbox-data'
 import { useTeammates, teammateLabel } from '../../lib/crm-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
@@ -127,6 +127,12 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const [railOpen, setRailOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280)
   const [draftSeed, setDraftSeed] = useState<{ n: number; text: string } | null>(null)
 
+  // S1 (issue #15, AT-01..AT-08): outbound bubbles the browser has sent but
+  // hub-service has not yet persisted. Lives here, not in Composer, because
+  // Thread (a sibling) needs the merged view. Cleared on conversation switch
+  // — a pending/failed bubble belongs to the thread it was typed into.
+  const [optimistic, setOptimistic] = useState<OptimisticBubble[]>([])
+
   // S11: a notification tap arrives with the AI draft in router state (prose,
   // not an address — it does not belong in the query string). Seed the composer
   // once, then clear the state so a refresh or a Back does not re-insert it.
@@ -159,7 +165,13 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     loading: threadLoading,
     error: threadError,
     reload: reloadThread,
+    setMessages: setThreadMessages,
   } = useThread(clientId, selectedId)
+
+  // A conversation switch already fully reloads `messages` (useThread's own
+  // effect), so the only transient state that needs its own reset here is
+  // the outbound bubbles this screen owns.
+  useEffect(() => setOptimistic([]), [selectedId])
 
   const refreshAll = useCallback(() => {
     void reloadQueue()
@@ -167,7 +179,35 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     void reloadThread()
   }, [reloadQueue, reloadPreviews, reloadThread])
 
-  const { channelLive } = useLiveRefresh(clientId, refreshAll)
+  // S1: paint an inbound Realtime INSERT into the open thread immediately —
+  // no waiting on the 400ms debounced full refetch below. Ignored for any
+  // other conversation (and cross-tenant rows never reach here at all: the
+  // channel's `client_id=eq.` filter keeps them off the wire). Deduped by id
+  // so redundant delivery on reconnect is a no-op.
+  const onMessageInsert = useCallback(
+    (row: Message & { conversation_id: string }) => {
+      if (row.conversation_id !== selectedId) return
+      setThreadMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]))
+    },
+    [selectedId, setThreadMessages],
+  )
+
+  const { channelLive } = useLiveRefresh(clientId, refreshAll, onMessageInsert)
+
+  const onOptimisticSend = useCallback((body: string) => {
+    const tempId = newOptimisticId()
+    setOptimistic((prev) => [...prev, { tempId, body, status: 'pending', createdAt: new Date().toISOString() }])
+    return tempId
+  }, [])
+  const onOptimisticSettle = useCallback((tempId: string, ok: boolean) => {
+    if (ok) return // stays pending until an authoritative row reconciles it (mergeOutbound)
+    setOptimistic((prev) => prev.map((b) => (b.tempId === tempId ? { ...b, status: 'failed' } : b)))
+  }, [])
+  const onRetryFailed = useCallback((tempId: string, body: string) => {
+    setOptimistic((prev) => prev.filter((b) => b.tempId !== tempId))
+    setDraftSeed((prev) => ({ n: (prev?.n ?? 0) + 1, text: body }))
+  }, [])
+  const displayMessages = useMemo(() => mergeOutbound(messages, optimistic), [messages, optimistic])
 
   // Client-side filter over the already-fetched bounded list. The needs-human
   // count is over the channel-filtered set so the badge agrees with the list
@@ -433,7 +473,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         ) : !selected && messages.length === 0 ? (
           <EmptyState icon={MessageCircle} title="Conversation unavailable" body="It may have moved outside your current access or been removed. Return to the queue and choose another chat." />
         ) : (
-          <Thread messages={messages} traces={traces} />
+          <Thread messages={displayMessages} traces={traces} onRetryFailed={onRetryFailed} />
         )}
       </div>
 
@@ -444,6 +484,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           canSend={canSend}
           onSent={refreshAll}
           seed={draftSeed}
+          onOptimisticSend={onOptimisticSend}
+          onOptimisticSettle={onOptimisticSettle}
         />
       )}
     </div>

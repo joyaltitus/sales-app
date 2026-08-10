@@ -18,12 +18,16 @@ vi.mock('../../shell/ClientProvider', () => ({
 vi.mock('../../auth/AuthProvider', () => ({
   useAuth: () => ({ session: { user: { id: authState.userId } } }),
 }))
-vi.mock('../../lib/inbox-data', () => ({
-  useQueue: () => ({ items: queueItems, loading: false, error: null, reload: vi.fn() }),
-  usePreviews: () => ({ previews: new Map(), reload: vi.fn() }),
-  useThread: () => ({ messages: [], traces: [], loading: false, error: null, reload: vi.fn() }),
-  useLiveRefresh: () => ({ channelLive: false }),
-}))
+vi.mock('../../lib/inbox-data', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/inbox-data')>()
+  return {
+    ...actual,
+    useQueue: () => ({ items: queueItems, loading: false, error: null, reload: vi.fn() }),
+    usePreviews: () => ({ previews: new Map(), reload: vi.fn() }),
+    useThread: () => ({ messages: [], traces: [], loading: false, error: null, reload: vi.fn(), setMessages: vi.fn() }),
+    useLiveRefresh: () => ({ channelLive: false }),
+  }
+})
 vi.mock('../../lib/crm-data', () => ({ useTeammates: () => ({ items: [] }), teammateLabel: () => 'Teammate' }))
 vi.mock('./QueueRow', () => ({
   QueueRow: ({ item }: { item: { id: string; contact: { external_id: string } } }) => (
