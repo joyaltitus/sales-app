@@ -131,6 +131,8 @@ export function Composer({
   canSend,
   onSent,
   seed,
+  onOptimisticSend = () => '',
+  onOptimisticSettle = () => {},
 }: {
   conversationId: string
   contactId: string
@@ -139,6 +141,13 @@ export function Composer({
   /** SA-05: AI draft from the context rail. Counter-keyed so the same draft
    *  can be pushed twice; it seeds the input, the human still edits + sends. */
   seed?: { n: number; text: string } | null
+  /** S1 (issue #15): paint a pending bubble immediately, before the network
+   *  call resolves. Returns the bubble's tempId for onOptimisticSettle. */
+  onOptimisticSend?: (body: string) => string
+  /** S1: flips the bubble to failed on any non-ok result (including no_key,
+   *  which never reached the network); leaves it pending on ok — only an
+   *  authoritative row may claim sent/delivered/read. */
+  onOptimisticSettle?: (tempId: string, ok: boolean) => void
 }) {
   const { session } = useAuth()
   const { activeClient } = useClient()
@@ -201,12 +210,16 @@ export function Composer({
   const send = async () => {
     const body = text.trim()
     if (!body || state.kind === 'sending') return
+    // S1: paint the bubble and clear the input before the network call
+    // resolves — click-to-pending must not wait on a round trip.
+    const tempId = onOptimisticSend(body)
+    setText('')
     setState({ kind: 'sending' })
 
     const res = await sendAgentMessage(conversationId, body)
+    onOptimisticSettle(tempId, res.kind === 'ok')
 
     if (res.kind === 'ok') {
-      setText('')
       setState({ kind: 'sent' })
       // The row is written server-side by the send worker, so the thread is
       // reconciled by refetch (and by the realtime INSERT) rather than by
