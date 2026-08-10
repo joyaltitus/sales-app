@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { SendHorizontal, Sparkles, Trash2, Zap } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
-import { loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
+import { clearGatewayKey, hasConfiguredGatewayKey, loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
 import { VoiceButton } from '../../ui/agent/VoiceButton'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { useAuth } from '../../auth/AuthProvider'
@@ -97,13 +97,16 @@ type SendState =
   | { kind: 'idle' }
   | { kind: 'sending' }
   | { kind: 'sent' }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; unauthorized?: boolean; configuredAccess?: boolean }
 
 // Every failure the hub-service matrix can produce, in the rep's words. Never
 // name the machinery: no status codes, no route names, no `PM_GATEWAY_KEY`.
-function explain(kind: string): string {
+function explain(kind: string, configuredAccess: boolean): string {
   switch (kind) {
     case 'unauthorized':
+      if (configuredAccess) {
+        return 'Workspace access is unavailable. Ask your admin to update the app configuration.'
+      }
       return 'Your session or access key was rejected. Sign out and back in, then try again.'
     case 'forbidden':
       return "You don't have permission to reply on this conversation."
@@ -146,6 +149,10 @@ export function Composer({
   }, [seed])
   const [needsKey, setNeedsKey] = useState(!loadGatewayKey())
   const [keyDraft, setKeyDraft] = useState('')
+  const keyInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (needsKey) keyInputRef.current?.focus()
+  }, [needsKey])
   const { items: replies, save: saveReply, remove: removeReply } = useQuickReplies(
     activeClient?.id ?? null,
     session?.user.id ?? null,
@@ -168,6 +175,7 @@ export function Composer({
         </label>
         <div className="flex items-center gap-2">
           <Input
+            ref={keyInputRef}
             id="gwkey"
             type="password"
             autoComplete="off"
@@ -212,14 +220,38 @@ export function Composer({
       setState({ kind: 'idle' })
       return
     }
-    setState({ kind: 'error', message: explain(res.kind) })
+    const configuredAccess = hasConfiguredGatewayKey()
+    setState({
+      kind: 'error',
+      message: explain(res.kind, configuredAccess),
+      unauthorized: res.kind === 'unauthorized',
+      configuredAccess,
+    })
   }
 
   return (
     <div className="border-t border-border bg-surface-glass backdrop-blur-xl">
       {state.kind === 'error' && (
-        <div className="border-b border-border bg-danger-subtle px-4 py-2 text-xs text-danger">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="border-b border-border bg-danger-subtle px-4 py-2 text-xs text-danger"
+        >
           {state.message}
+          {state.unauthorized && !state.configuredAccess && (
+            <Button
+              size="sm"
+              onClick={() => {
+                clearGatewayKey()
+                setKeyDraft('')
+                setNeedsKey(true)
+                setState({ kind: 'idle' })
+              }}
+              className="ml-2"
+            >
+              Replace access key
+            </Button>
+          )}
         </div>
       )}
 

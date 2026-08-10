@@ -19,6 +19,14 @@ import { loadGatewayKey } from './gateway-key'
 // failing POST, which hub-service's own comment calls "the worst kind of green".
 const BASE = import.meta.env.VITE_HUB_API_BASE ?? ''
 
+function requestHeaders(init: RequestInit, key: string, token: string): Headers {
+  const headers = new Headers(init.headers)
+  headers.set('content-type', 'application/json')
+  headers.set('x-pm-gateway-key', key)
+  headers.set('x-pm-user-jwt', token)
+  return headers
+}
+
 /** Discriminated result — every hub-service failure matrix code gets a name, so
  *  the UI can say what happened rather than rendering a bare status number. */
 export type HubResult<T> =
@@ -48,12 +56,7 @@ export async function hubFetch<T = unknown>(
   try {
     res = await fetch(`${BASE}${path}`, {
       ...init,
-      headers: {
-        'content-type': 'application/json',
-        'x-pm-gateway-key': key,
-        'x-pm-user-jwt': token,
-        ...(init.headers ?? {}),
-      },
+      headers: requestHeaders(init, key, token),
     })
   } catch (e) {
     return { kind: 'network', message: e instanceof Error ? e.message : String(e) }
@@ -67,6 +70,40 @@ export async function hubFetch<T = unknown>(
       /* tolerate an empty or non-JSON 200 */
     }
     return { kind: 'ok', data: body as T }
+  }
+
+  if (res.status === 401) {
+    let refreshedToken: string | undefined
+    try {
+      const { data } = await supabase.auth.refreshSession()
+      refreshedToken = data.session?.access_token
+    } catch {
+      /* Treat a failed refresh as an expired browser authorization. */
+    }
+    if (!refreshedToken) {
+      return { kind: 'no_session' }
+    }
+
+    const refreshedKey = loadGatewayKey()
+    if (!refreshedKey) return { kind: 'no_key' }
+
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        ...init,
+        headers: requestHeaders(init, refreshedKey, refreshedToken),
+      })
+    } catch (e) {
+      return { kind: 'network', message: e instanceof Error ? e.message : String(e) }
+    }
+    if (res.ok) {
+      let body: unknown = null
+      try {
+        body = await res.json()
+      } catch {
+        /* tolerate an empty or non-JSON 200 */
+      }
+      return { kind: 'ok', data: body as T }
+    }
   }
 
   if (res.status === 400) return { kind: 'bad_request' }
