@@ -14,7 +14,7 @@ import { Sheet } from '../ui/Sheet'
 // Fixed shell header. Visible health (§C): AI/bot state + connection are always
 // on screen — no silent failures.
 export function TopBar() {
-  const { activeClient } = useClient()
+  const { clients, activeClient, setActiveClientId } = useClient()
   const { signOut } = useAuth()
   const { theme, toggle } = useTheme()
   const online = useOnline()
@@ -59,9 +59,22 @@ export function TopBar() {
     <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface-glass px-3 backdrop-blur-xl sm:h-16 sm:px-4">
       <ProductMark size={32} />
       <div className="min-w-0">
-        <span className="block truncate text-sm font-semibold tracking-[-0.015em] text-fg">
-          {activeClient?.name ?? 'Sales App'}
-        </span>
+        {clients.length > 1 ? (
+          <label className="block">
+            <span className="sr-only">Workspace</span>
+            <select
+              value={activeClient?.id ?? ''}
+              onChange={(event) => setActiveClientId(event.target.value)}
+              className="block max-w-full truncate bg-transparent text-sm font-semibold tracking-[-0.015em] text-fg"
+            >
+              {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
+            </select>
+          </label>
+        ) : (
+          <span className="block truncate text-sm font-semibold tracking-[-0.015em] text-fg">
+            {activeClient?.name ?? 'Sales App'}
+          </span>
+        )}
         <span className="hidden text-2xs text-fg-subtle sm:block">
           {desktopRole ? 'Sales operations' : 'Your workday'}
         </span>
