@@ -89,7 +89,7 @@ export function DashboardScreen() {
   const { items: bookings } = useBookings(clientId)
   // WIRE-B2/S10: one snapshot from GET /api/metrics, no polling — response-time
   // series, volume by channel, per-rep replies/median/won, follow-up compliance.
-  const { data: metrics, loading: metricsLoading } = useMetrics('14d')
+  const { data: metrics, loading: metricsLoading } = useMetrics('14d', clientId)
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedView = searchParams.get('view')
   const view: DashboardView = DASHBOARD_VIEWS.some((item) => item.key === requestedView) ? requestedView as DashboardView : 'operate'

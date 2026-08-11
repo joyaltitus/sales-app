@@ -59,22 +59,34 @@ export type MetricsResponse = {
 
 export type MetricsWindow = '7d' | '14d' | '30d'
 
-export function fetchMetrics(window: MetricsWindow = '14d'): Promise<HubResult<MetricsResponse>> {
-  return hubFetch<MetricsResponse>(`${METRICS_PATH}?window=${window}`)
+export function fetchMetrics(
+  window: MetricsWindow = '14d',
+  clientId: string | null = null,
+): Promise<HubResult<MetricsResponse>> {
+  const clientParam = clientId ? `&client_id=${encodeURIComponent(clientId)}` : ''
+  return hubFetch<MetricsResponse>(`${METRICS_PATH}?window=${window}${clientParam}`)
 }
 
-/** One fetch per (window) change — no interval, no polling, no refetch-on-focus.
- *  A dashboard visit issues exactly one request; a period toggle issues exactly one more. */
-export function useMetrics(window: MetricsWindow = '14d') {
+/** One fetch per (window, clientId) change — no interval, no polling, no
+ *  refetch-on-focus. A dashboard visit issues exactly one request; a period
+ *  toggle issues exactly one more. clientId disambiguates a manager who
+ *  belongs to more than one client (hub-service otherwise 400s
+ *  'ambiguous_client' — see src/api/auth.ts resolveClientMemberContext). */
+export function useMetrics(window: MetricsWindow = '14d', clientId: string | null = null) {
   const [data, setData] = useState<MetricsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<HubResult<MetricsResponse> | null>(null)
 
   useEffect(() => {
+    if (!clientId) {
+      setData(null)
+      setLoading(false)
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetchMetrics(window).then((res) => {
+    fetchMetrics(window, clientId).then((res) => {
       if (cancelled) return
       if (res.kind === 'ok') setData(res.data)
       else setError(res)
@@ -83,7 +95,7 @@ export function useMetrics(window: MetricsWindow = '14d') {
     return () => {
       cancelled = true
     }
-  }, [window])
+  }, [window, clientId])
 
   return { data, loading, error }
 }
