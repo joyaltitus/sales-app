@@ -57,9 +57,30 @@ export type Message = {
   msg_type: string
   created_at: string
   media: unknown
+  channel_message_id?: string | null
   delivery_status: string
   failure_reason: string | null
   transcription: string | null
+}
+
+/** A downloaded WhatsApp attachment, joined onto its message by
+ *  `channel_message_id` (Part 6, #90 — the `inbound_media` table, not the
+ *  unused `messages.media` jsonb column, which real inbound rows leave null). */
+export type InboundMediaRow = {
+  channel_message_id: string
+  storage_bucket: string
+  storage_path: string | null
+  mime: string | null
+  media_type: string
+}
+
+/** Time-limited signed URL for a private `inbound-media` object. RLS (both the
+ *  bucket policy and the `inbound_media` table policy) scopes this to the
+ *  caller's own client_id — a deny or network failure degrades to null, never
+ *  a thrown error into a render. */
+export async function getInboundMediaSignedUrl(storagePath: string): Promise<string | null> {
+  const { data } = await supabase.storage.from('inbound-media').createSignedUrl(storagePath, 300)
+  return data?.signedUrl ?? null
 }
 
 /** Supabase infers a to-one embed as an array; at runtime it is the single
@@ -196,7 +217,7 @@ export type PreviewKind = 'text' | 'image' | 'audio' | 'document' | 'other'
 
 export type Preview = { text: string; kind: PreviewKind }
 
-function previewKind(msgType: string): PreviewKind {
+export function previewKind(msgType: string): PreviewKind {
   if (msgType === 'image') return 'image'
   if (msgType === 'audio') return 'audio'
   if (msgType === 'document') return 'document'
@@ -252,6 +273,7 @@ export function usePreviews(clientId: string | null) {
 export function useThread(clientId: string | null, conversationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([])
   const [traces, setTraces] = useState<Trace[]>([])
+  const [media, setMedia] = useState<Map<string, InboundMediaRow>>(new Map())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -259,17 +281,18 @@ export function useThread(clientId: string | null, conversationId: string | null
     if (!clientId || !conversationId) {
       setMessages([])
       setTraces([])
+      setMedia(new Map())
       setError(null)
       setLoading(false)
       return
     }
     setError(null)
-    // Two independent reads, issued together — neither depends on the other.
-    const [msgRes, traceRes] = await Promise.all([
+    // Three independent reads, issued together — none depends on another.
+    const [msgRes, traceRes, mediaRes] = await Promise.all([
       supabase
         .from('messages')
         .select(
-          'id, sender_type, direction, body, msg_type, created_at, media, delivery_status, failure_reason, transcription',
+          'id, sender_type, direction, body, msg_type, created_at, media, channel_message_id, delivery_status, failure_reason, transcription',
         )
         .eq('client_id', clientId)
         .eq('conversation_id', conversationId)
@@ -283,11 +306,18 @@ export function useThread(clientId: string | null, conversationId: string | null
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
         .limit(TRACE_LIMIT),
+      supabase
+        .from('inbound_media')
+        .select('channel_message_id, storage_bucket, storage_path, mime, media_type')
+        .eq('client_id', clientId)
+        .eq('conversation_id', conversationId)
+        .limit(MESSAGE_LIMIT),
     ])
 
     if (msgRes.error) {
       setMessages([])
       setTraces([])
+      setMedia(new Map())
       setError(msgRes.error.message)
       setLoading(false)
       return
@@ -300,6 +330,14 @@ export function useThread(clientId: string | null, conversationId: string | null
     // placeholder (spec: "the seam must degrade to nothing when the trace is
     // absent"). So a failed or empty trace read is not an error path here.
     setTraces((traceRes.data ?? []) as Trace[])
+    // Same degrade rule as traces: most historical media messages have no
+    // matching inbound_media row yet (ingestion gap, #22/#33) — that renders
+    // the existing [msg_type] placeholder, never an error.
+    setMedia(
+      new Map(
+        ((mediaRes.data ?? []) as InboundMediaRow[]).map((row) => [row.channel_message_id, row]),
+      ),
+    )
     setLoading(false)
   }, [clientId, conversationId])
 
@@ -308,7 +346,7 @@ export function useThread(clientId: string | null, conversationId: string | null
     void load()
   }, [load, conversationId])
 
-  return { messages, traces, loading, error, reload: load, setMessages }
+  return { messages, traces, media, loading, error, reload: load, setMessages }
 }
 
 /**

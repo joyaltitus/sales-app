@@ -1,14 +1,18 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-const { from, channel, removeChannel } = vi.hoisted(() => ({
+const { from, channel, removeChannel, createSignedUrl } = vi.hoisted(() => ({
   from: vi.fn(),
   channel: vi.fn(),
   removeChannel: vi.fn(),
+  createSignedUrl: vi.fn(),
 }))
-vi.mock('./supabase', () => ({ supabase: { from, channel, removeChannel } }))
+vi.mock('./supabase', () => ({
+  supabase: { from, channel, removeChannel, storage: { from: () => ({ createSignedUrl }) } },
+}))
 
-const { useQueue, useThread, useLiveRefresh, mergeOutbound } = await import('./inbox-data')
+const { useQueue, useThread, useLiveRefresh, mergeOutbound, getInboundMediaSignedUrl } =
+  await import('./inbox-data')
 type Message = import('./inbox-data').Message
 type OptimisticBubble = import('./inbox-data').OptimisticBubble
 
@@ -37,6 +41,59 @@ describe('useThread', () => {
     expect(result.current.messages).toEqual([])
     expect(result.current.error).toBeNull()
     expect(from).not.toHaveBeenCalled()
+  })
+
+  // #90 Part 6: real inbound media lives in `inbound_media`, joined onto its
+  // message by channel_message_id — never in the unused `messages.media` column.
+  it('scopes the inbound_media read to client_id + conversation_id and maps rows by channel_message_id', async () => {
+    const chainOf = (limit: ReturnType<typeof vi.fn>) => {
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {}
+      chain.select = vi.fn(() => chain)
+      chain.eq = vi.fn(() => chain)
+      chain.order = vi.fn(() => chain)
+      chain.limit = limit
+      return chain
+    }
+    const messagesChain = chainOf(vi.fn().mockResolvedValue({ data: [], error: null }))
+    const tracesChain = chainOf(vi.fn().mockResolvedValue({ data: [], error: null }))
+    const mediaRow = {
+      channel_message_id: 'wamid.1',
+      storage_bucket: 'inbound-media',
+      storage_path: `${PIXELLEDU_ID}/conv-1/wamid.1.jpg`,
+      mime: 'image/jpeg',
+      media_type: 'document',
+    }
+    const mediaChain = chainOf(vi.fn().mockResolvedValue({ data: [mediaRow], error: null }))
+
+    from.mockImplementation((table: string) => {
+      if (table === 'messages') return messagesChain
+      if (table === 'turn_traces') return tracesChain
+      if (table === 'inbound_media') return mediaChain
+      throw new Error(`unexpected table ${table}`)
+    })
+
+    const { result } = renderHook(() => useThread(PIXELLEDU_ID, 'conv-1'))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(mediaChain.eq).toHaveBeenCalledWith('client_id', PIXELLEDU_ID)
+    expect(mediaChain.eq).toHaveBeenCalledWith('conversation_id', 'conv-1')
+    expect(result.current.media.get('wamid.1')).toEqual(mediaRow)
+  })
+})
+
+describe('getInboundMediaSignedUrl', () => {
+  it('resolves the signed URL on success', async () => {
+    createSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.example/x' }, error: null })
+
+    await expect(getInboundMediaSignedUrl('client/conv/wamid.jpg')).resolves.toBe(
+      'https://signed.example/x',
+    )
+  })
+
+  it('degrades to null on a storage error instead of throwing', async () => {
+    createSignedUrl.mockResolvedValue({ data: null, error: { message: 'not found' } })
+
+    await expect(getInboundMediaSignedUrl('client/conv/missing.jpg')).resolves.toBeNull()
   })
 })
 

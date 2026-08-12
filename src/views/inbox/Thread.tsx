@@ -1,6 +1,21 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { Bot, Check, CheckCheck, Clock, MessageCircle } from 'lucide-react'
-import type { Message } from '../../lib/inbox-data'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Bot,
+  Check,
+  CheckCheck,
+  Clock,
+  Download,
+  FileText,
+  Image as ImageIcon,
+  MessageCircle,
+  Mic,
+} from 'lucide-react'
+import {
+  getInboundMediaSignedUrl,
+  previewKind,
+  type InboundMediaRow,
+  type Message,
+} from '../../lib/inbox-data'
 import { resolveMarks, type SeamMark, type Trace } from '../../lib/seam'
 import { clockTime } from '../../lib/wait'
 import { EmptyState } from '../../ui/EmptyState'
@@ -8,6 +23,8 @@ import { EmptyState } from '../../ui/EmptyState'
 // The thread is a conversation, not a board (§1.4). Rounded, warm,
 // WhatsApp-legible, generous. The seam is the ONLY board-like element that
 // crosses into it.
+
+const EMPTY_MEDIA: Map<string, InboundMediaRow> = new Map()
 
 /** The signature: a full-bleed hairline with a micro-caps label inset into it —
  *  a legend break, not a chat bubble. The `· PRICING` suffix is the matched rule
@@ -42,11 +59,75 @@ function InlineTag({ mark }: { mark: SeamMark }) {
   )
 }
 
+/** Part 6 (#90): a downloaded WhatsApp attachment. Shows `fallbackText` (the
+ *  same `[msg_type]` placeholder Bubble already falls back to) until the
+ *  signed URL resolves, and permanently if it never does — a storage RLS
+ *  deny or network failure degrades to text, never a crash or a broken icon. */
+function MediaAttachment({
+  storagePath,
+  mime,
+  msgType,
+  fallbackText,
+}: {
+  storagePath: string
+  mime: string | null
+  msgType: string
+  fallbackText: string
+}) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setUrl(null)
+    void getInboundMediaSignedUrl(storagePath).then((signed) => {
+      if (!cancelled) setUrl(signed)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [storagePath])
+
+  if (!url) return <>{fallbackText}</>
+
+  if (mime?.startsWith('image/')) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt={msgType} className="max-h-64 max-w-full rounded-md" />
+      </a>
+    )
+  }
+
+  if (mime?.startsWith('audio/')) {
+    return <audio controls src={url} className="max-w-full" />
+  }
+
+  const kind = previewKind(msgType)
+  const Icon = kind === 'image' ? ImageIcon : kind === 'audio' ? Mic : FileText
+  const filename = storagePath.split('/').pop() || fallbackText
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-2 text-sm underline decoration-dotted"
+    >
+      <Icon aria-hidden size={16} />
+      {filename}
+      <Download aria-hidden size={13} />
+    </a>
+  )
+}
+
 function Bubble({
   message,
+  media,
   onRetryFailed,
 }: {
   message: Message
+  /** The message's downloaded attachment, if the ingestion pipeline actually
+   *  stored one (#90 Part 6) — most historical media messages have none yet. */
+  media?: InboundMediaRow
   /** S1 (issue #15): retry affordance for a bubble the browser sent locally
    *  and never reconciled — only wired for synthetic `optimistic:` ids;
    *  a real failed row has no client-side retry route. */
@@ -83,7 +164,16 @@ function Bubble({
           failed ? 'border border-danger' : '',
         ].join(' ')}
       >
-        {text}
+        {media?.storage_path ? (
+          <MediaAttachment
+            storagePath={media.storage_path}
+            mime={media.mime}
+            msgType={message.msg_type}
+            fallbackText={text}
+          />
+        ) : (
+          text
+        )}
         {message.transcription && message.body && (
           <div className="mt-1 text-xs text-fg-muted italic">{message.transcription}</div>
         )}
@@ -122,9 +212,13 @@ export function Thread({
   messages,
   traces,
   onRetryFailed,
+  media = EMPTY_MEDIA,
 }: {
   messages: Message[]
   traces: Trace[]
+  /** channel_message_id -> downloaded attachment (#90 Part 6). Optional so the
+   *  PreviewGallery mock caller (no live inbound_media reads) is unaffected. */
+  media?: Map<string, InboundMediaRow>
   onRetryFailed?: (id: string, body: string) => void
 }) {
   const endRef = useRef<HTMLDivElement>(null)
@@ -183,7 +277,11 @@ export function Thread({
             </div>
           )}
           {marksBefore.get(m.id)?.map((mark) => <Seam key={mark.id} mark={mark} />)}
-          <Bubble message={m} onRetryFailed={onRetryFailed} />
+          <Bubble
+            message={m}
+            media={m.channel_message_id ? media.get(m.channel_message_id) : undefined}
+            onRetryFailed={onRetryFailed}
+          />
           {tagsFor.get(m.id) && (
             <div className="flex justify-end gap-2 px-1">
               {tagsFor.get(m.id)?.map((mark) => <InlineTag key={mark.id} mark={mark} />)}
