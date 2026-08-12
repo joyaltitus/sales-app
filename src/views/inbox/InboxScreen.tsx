@@ -162,6 +162,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const {
     messages,
     traces,
+    media,
     loading: threadLoading,
     error: threadError,
     reload: reloadThread,
@@ -473,7 +474,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         ) : !selected && messages.length === 0 ? (
           <EmptyState icon={MessageCircle} title="Conversation unavailable" body="It may have moved outside your current access or been removed. Return to the queue and choose another chat." />
         ) : (
-          <Thread messages={displayMessages} traces={traces} onRetryFailed={onRetryFailed} />
+          <Thread messages={displayMessages} traces={traces} media={media} onRetryFailed={onRetryFailed} />
         )}
       </div>
 

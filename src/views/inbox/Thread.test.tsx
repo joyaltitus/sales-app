@@ -1,8 +1,17 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Thread } from './Thread'
-import type { Message } from '../../lib/inbox-data'
+import type { InboundMediaRow, Message } from '../../lib/inbox-data'
+
+// #90 Part 6: the real signed-URL fetch hits Supabase Storage over the
+// network — mocked here so the bubble render tests stay hermetic. Everything
+// else in inbox-data (previewKind, types) passes through untouched.
+const { getInboundMediaSignedUrl } = vi.hoisted(() => ({ getInboundMediaSignedUrl: vi.fn() }))
+vi.mock('../../lib/inbox-data', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/inbox-data')>()
+  return { ...actual, getInboundMediaSignedUrl }
+})
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = () => {}
@@ -53,6 +62,54 @@ describe('Thread with messages', () => {
 
     expect(screen.getByText('Hello, is the batch still open')).toBeInTheDocument()
     expect(screen.getByText('Yes, seats are open.')).toBeInTheDocument()
+  })
+})
+
+// #90 Part 6: real inbound media (image/audio/document), joined by
+// channel_message_id — with an explicit regression guard for the common case
+// today, a media message with no matching inbound_media row.
+describe('Thread inbound media', () => {
+  const imageMessage: Message = {
+    id: 'm1',
+    direction: 'inbound',
+    sender_type: 'customer',
+    msg_type: 'document',
+    body: null,
+    media: null,
+    channel_message_id: 'wamid.1',
+    transcription: null,
+    delivery_status: '',
+    failure_reason: null,
+    created_at: '2026-08-01T09:10:00Z',
+  }
+  const imageMediaRow: InboundMediaRow = {
+    channel_message_id: 'wamid.1',
+    storage_bucket: 'inbound-media',
+    storage_path: 'client/conv/wamid.1.jpg',
+    mime: 'image/jpeg',
+    media_type: 'document',
+  }
+
+  it('renders a real image once its signed URL resolves', async () => {
+    getInboundMediaSignedUrl.mockResolvedValue('https://signed.example/wamid.1.jpg')
+
+    render(
+      <Thread
+        messages={[imageMessage]}
+        traces={[]}
+        media={new Map([[imageMediaRow.channel_message_id, imageMediaRow]])}
+      />,
+    )
+
+    const img = await waitFor(() => screen.getByRole('img'))
+    expect(img).toHaveAttribute('src', 'https://signed.example/wamid.1.jpg')
+  })
+
+  it('falls back to the [msg_type] placeholder when no inbound_media row matches — the common case today', () => {
+    render(<Thread messages={[imageMessage]} traces={[]} media={new Map()} />)
+
+    expect(screen.getByText('[document]')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 })
 
