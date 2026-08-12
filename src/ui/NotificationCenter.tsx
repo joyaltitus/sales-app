@@ -222,6 +222,25 @@ export function NotificationCenter() {
   const actionableUnread = useMemo(() => items.filter((item) => item.unread && actionableKinds.has(item.kind)).length, [items, actionableKinds])
   const visibleItems = useMemo(() => items.filter((item) => filter === 'all' || (filter === 'action' ? actionableKinds.has(item.kind) : !actionableKinds.has(item.kind))), [items, filter, actionableKinds])
 
+  // S12 SA-PUSH-01 tab badge: title + OS badge count. Sourced from `live` only, never
+  // `samples` — the in-app dot above is fine to show for demo data, but the browser tab
+  // and OS badge are more "real" surfaces than that, so they must reflect actual unread
+  // work only. NotificationCenter is mounted once per shell (TopBar is shared across
+  // rep/manager/admin), so this effect gives every shell a badge for free.
+  const liveActionableUnread = useMemo(
+    () => live.filter((item) => item.unread && actionableKinds.has(item.kind)).length,
+    [live, actionableKinds],
+  )
+  useEffect(() => {
+    document.title = liveActionableUnread > 0 ? `(${liveActionableUnread}) Sales App` : 'Sales App'
+    const badgeNav = navigator as Navigator & {
+      setAppBadge?: (count?: number) => Promise<void>
+      clearAppBadge?: () => Promise<void>
+    }
+    if (liveActionableUnread > 0) badgeNav.setAppBadge?.(liveActionableUnread).catch(() => {})
+    else badgeNav.clearAppBadge?.().catch(() => {})
+  }, [liveActionableUnread])
+
   useEffect(() => {
     if (!open) return
     const close = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false)

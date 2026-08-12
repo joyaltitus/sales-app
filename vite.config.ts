@@ -10,6 +10,16 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // S12 SA-PUSH-01: generateSW has no hook for a hand-written push/notificationclick
+      // listener — injectManifest lets src/sw.ts own that while still precaching the app
+      // shell (self.__WB_MANIFEST, injected at build time) exactly as generateSW's
+      // globPatterns did below.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+      },
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
@@ -30,10 +40,6 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
-      },
-      workbox: {
-        navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
   ],

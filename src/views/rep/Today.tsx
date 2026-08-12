@@ -1,7 +1,8 @@
-import { lazy, Suspense, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  BellRing,
   CalendarCheck2,
   Check,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Target,
   TimerReset,
   Trophy,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
@@ -23,6 +25,7 @@ import { waitingLongest, isOverdue } from '../../lib/landing-data'
 import { useTodos, toggleTodo } from '../../lib/todos-data'
 import { useRepDailyStats } from '../../lib/stats-data'
 import { firstOfMonth, useTarget } from '../../lib/targets-data'
+import { isSubscribed, pushSupported, subscribe } from '../../lib/push'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Chip } from '../../ui/Chip'
@@ -80,6 +83,72 @@ function ProgressRing({ value }: { value: number }) {
         <strong className="tnum text-lg leading-none text-fg">{value}%</strong>
         <span className="mt-1 text-2xs font-semibold text-fg-muted">today</span>
       </span>
+    </div>
+  )
+}
+
+const PUSH_BANNER_DISMISSED_KEY = 'sales-app.pushBannerDismissed'
+
+/** S12 SA-PUSH-01: gesture-gated ask, never a nag. Hidden once subscribed, once permission
+ *  is denied, or once dismissed (persisted — a rep who says no once should not see it again). */
+function NotifyMeBanner() {
+  const [supported] = useState(() => pushSupported())
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(PUSH_BANNER_DISMISSED_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const [denied, setDenied] = useState(
+    () => typeof Notification !== 'undefined' && Notification.permission === 'denied',
+  )
+  const [subscribed, setSubscribed] = useState(false)
+
+  useEffect(() => {
+    if (!supported) return
+    let live = true
+    isSubscribed().then((value) => {
+      if (live) setSubscribed(value)
+    })
+    return () => {
+      live = false
+    }
+  }, [supported])
+
+  if (!supported || dismissed || denied || subscribed) return null
+
+  const dismiss = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem(PUSH_BANNER_DISMISSED_KEY, '1')
+    } catch {
+      /* non-persistent browser; the in-session dismiss still holds */
+    }
+  }
+
+  const onNotifyMe = async () => {
+    const result = await subscribe()
+    if (result.kind === 'ok') setSubscribed(true)
+    else if (result.kind === 'denied') setDenied(true)
+    // any other outcome (unsupported/hub_error) leaves the banner as-is — a transient
+    // failure should not read as a permanent no.
+  }
+
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-dashed border-border bg-surface-sunk px-3 py-2 text-2xs text-fg-muted">
+      <p className="flex items-center gap-1.5">
+        <BellRing aria-hidden size={13} />
+        Get told about labeled chats and follow-ups without keeping the app open.
+      </p>
+      <div className="flex shrink-0 items-center gap-3">
+        <button onClick={onNotifyMe} className="font-semibold text-accent hover:underline">
+          Notify me
+        </button>
+        <button onClick={dismiss} aria-label="Dismiss" className="text-fg-subtle hover:text-fg">
+          <X aria-hidden size={13} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -266,6 +335,8 @@ export function Today() {
         </div>
         <Chip tone="accent"><Flame aria-hidden size={12} /> {stats.streakDays} days</Chip>
       </header>
+
+      <NotifyMeBanner />
 
       <section className="overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-elev-2 sm:p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
