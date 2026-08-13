@@ -21,7 +21,24 @@ else
   fail=1
 fi
 
+echo "--- adapters ---"
+# S12: the pi worker seat is ported here. Its shim carries its own conformance,
+# discovered the same way hub-service discovers adapters.
+if [ -f .pi/adapter-conformance.sh ]; then
+  if bash .pi/adapter-conformance.sh; then
+    echo "PASS: .pi/adapter-conformance.sh"
+  else
+    echo "FAIL: .pi/adapter-conformance.sh"
+    fail=1
+  fi
+else
+  echo "FAIL: .pi/adapter-conformance.sh missing"
+  fail=1
+fi
+
 echo "--- proof suites ---"
+# pi-cases.sh is run by the pi adapter shim above, so it is deliberately not
+# repeated here — one run, one result, no suite that passes twice and fails once.
 for suite in protect-cases.sh lock-cases.sh campaign-isolation-cases.sh; do
   if [ -f "scripts/$suite" ]; then
     if bash "scripts/$suite"; then
