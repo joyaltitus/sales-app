@@ -31,6 +31,24 @@ describe('useQueue', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(eq).toHaveBeenCalledWith('client_id', PIXELLEDU_ID)
   })
+
+  // #18: the AI Summary rail hydrates from the persisted rolling_summary on
+  // thread open, so the queue read shape must carry it (and summary_upto, the
+  // cut-off used to detect staleness) alongside the other conversation rows.
+  it('reads the persisted AI summary columns for rail hydration', async () => {
+    const eq = vi.fn()
+    const limit = vi.fn().mockResolvedValue({ data: [], error: null })
+    const order = vi.fn(() => ({ limit }))
+    const select = vi.fn(() => ({ eq }))
+    eq.mockReturnValue({ order })
+    from.mockReturnValue({ select })
+
+    const { result } = renderHook(() => useQueue(PIXELLEDU_ID))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('rolling_summary'))
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('summary_upto'))
+  })
 })
 
 describe('useThread', () => {

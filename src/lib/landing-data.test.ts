@@ -26,6 +26,8 @@ function conv(over: Partial<QueueItem> & { id: string }): QueueItem {
     last_bot_message_at: null,
     escalation_resolved: true,
     assigned_to: null,
+    rolling_summary: null,
+    summary_upto: null,
     contact: {
       profile_name: 'Asha',
       channel: 'whatsapp',
