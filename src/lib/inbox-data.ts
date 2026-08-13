@@ -47,6 +47,13 @@ export type QueueItem = {
     profile: unknown
     is_opted_out: boolean
   } | null
+  // Issue #18: the persisted AI summary. `rolling_summary` holds the last
+  // server-generated summary text and `summary_upto` the conversation cut-off
+  // it covers (both null while there is no summary). The AI Summary panel
+  // hydrates from these on thread open and only generates on demand when they
+  // are null or stale.
+  rolling_summary: string | null
+  summary_upto: string | null
 }
 
 export type Message = {
@@ -170,7 +177,7 @@ export function useQueue(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('conversations')
       .select(
-        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, contacts ( profile_name, channel, external_id, profile, is_opted_out )',
+        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, contacts ( profile_name, channel, external_id, profile, is_opted_out )',
       )
       .eq('client_id', clientId)
       .order('last_customer_message_at', { ascending: false, nullsFirst: false })

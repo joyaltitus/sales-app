@@ -25,6 +25,8 @@ function q(
     last_bot_message_at: min(waitedMin + 2),
     escalation_resolved: false,
     assigned_to: null,
+    rolling_summary: null,
+    summary_upto: null,
     contact: {
       profile_name: name,
       channel,

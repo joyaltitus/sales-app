@@ -156,15 +156,33 @@ export function ContextRail({
     setInsight(null)
     setInsightState('idle')
   }, [item.id])
+
+  // Issue #18: the server persists the summary in conversations.rolling_summary
+  // (summary_upto = the cut-off it covers), but the panel only ever generated
+  // on demand and never read the saved text back — so a reopened thread looked
+  // empty. Hydrate from the column on thread open; fall back to on-demand
+  // generation only when it is null or stale (a customer message newer than
+  // the summary covers).
+  const persistedSummary =
+    item.rolling_summary && item.rolling_summary.trim() ? item.rolling_summary : null
+  const summaryStale =
+    !!persistedSummary &&
+    !!item.summary_upto &&
+    !!item.last_customer_message_at &&
+    new Date(item.last_customer_message_at).getTime() > new Date(item.summary_upto).getTime()
+  const summaryFresh = !!persistedSummary && !summaryStale
+
   // Handover moment: the bot stepped aside and a human is picking this up —
   // fetch the summary unprompted, once per conversation (it's the exact moment
   // "don't make the customer repeat themselves" is decided). Ordinary threads
-  // keep the button; every LLM call costs money.
+  // keep the button; every LLM call costs money. A fresh persisted summary
+  // already answers the panel, so skip the regeneration there too (#18).
   const autoFetched = useRef<string | null>(null)
   useEffect(() => {
     if (
       item.bot_paused &&
       !item.escalation_resolved &&
+      !summaryFresh &&
       autoFetched.current !== item.id
     ) {
       autoFetched.current = item.id
@@ -452,6 +470,8 @@ export function ContextRail({
               </div>
             )}
           </>
+        ) : summaryFresh ? (
+          <p className="text-xs leading-relaxed text-fg">{persistedSummary}</p>
         ) : (
           <>
             <Button
