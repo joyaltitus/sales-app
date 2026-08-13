@@ -635,6 +635,16 @@ cmd_run() {
     git -C "$wt" -c "user.name=orchestrator[$lane]" -c user.email=noreply@localhost \
       commit -q -m "$(printf 'feat(#%s): %s\n\nWorker lane: %s. Committed by scripts/orchestrator.sh;\ngates re-run independently below.\n' \
         "$issue" "$(gh issue view "$issue" --json title --jq .title 2>/dev/null || echo "issue #$issue")" "$lane")"
+    # 2026-08-14: a live dispatch (#18) staged a real diff here and then this whole process
+    # went silent before this point printed again — not reproduced after four close repro
+    # attempts (incl. matching its ~7min duration), so the actual cause is still unknown.
+    # This is not a fix for that; it is a gate, so a repeat is LOUD instead of silent — an
+    # unverified assumption ("the commit must have landed") is not a guarantee.
+    if ! git -C "$wt" diff --cached --quiet; then
+      echo "COMMIT DID NOT LAND: staged changes are still present after 'git commit' returned." >&2
+      echo "This is the still-unexplained #18 failure shape — do not silently continue." >&2
+      return 50
+    fi
   fi
   # Against the MERGE-BASE, never the moving origin/main tip. #70 ran for ~25
   # minutes while this session merged #111; the worker committed nothing, but
