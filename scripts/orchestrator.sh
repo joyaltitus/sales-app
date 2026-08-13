@@ -280,8 +280,15 @@ PREAMBLE
 # without building a git fixture. Everything git-shaped stays in cmd_run.
 gate_tests_accompany_code() {
   local touched="$1" diff="$2"
-  printf '%s' "$touched" | grep -qE '(^|\n)src/.*\.(ts|js)$' || return 0
-  printf '%s' "$touched" | grep -qE '(^|\n)tests?/' && return 0
+  # .tsx/.jsx included (sales-app#24) — the original hub-service pattern only matched bare
+  # .ts/.js, so a diff touching only .tsx production files (most of this React repo) never
+  # tripped this check at all, test or no test.
+  printf '%s' "$touched" | grep -qE '(^|\n)src/.*\.(ts|tsx|js|jsx)$' || return 0
+  # Recognizes BOTH hub-service's top-level tests?/ convention AND sales-app's co-located
+  # *.test.tsx/*.spec.ts files (sales-app#24) — the original only matched the former, so a
+  # correctly-tested sales-app PR (tests sitting next to the source file) still read as
+  # "NO TEST FOR NEW CODE".
+  printf '%s' "$touched" | grep -qE '(^|\n)tests?/|\.(test|spec)\.[jt]sx?$' && return 0
   # Judge by the diff, not the filename: a comment-only edit inside src/ is not
   # new logic, and #50 was exactly that — one comment line, correctly no test.
   local added comments
@@ -297,6 +304,34 @@ gate_no_silent_producer() {
   printf '%s\n' "$1" |
     grep -qE '^\+.*(QUEUE_DEFS|cron:|boss\.schedule|boss\.work|setInterval|mode: .live.)' && return 1
   return 0
+}
+
+# sales-app#24: `npm run gate:quick` doesn't exist here (only dev/build/preview/test/
+# test:watch/check:no-service-role/check:tokens do, per package.json — this repo has no
+# lint/typecheck story yet, Phase 1 finding). Asserting a script that isn't there hard-fails
+# every run before a worker's actual diff is even judged. Read package.json's real scripts:
+# use gate:quick if some future session adds it, else run every check:*/lint/typecheck
+# script that actually exists (mirrors what .github/workflows/ci.yml itself runs), then
+# always npm test — never assert a name, only what's really defined.
+run_gates() {
+  local wt="$1"
+  local scripts
+  scripts="$(python3 -c "
+import json
+print('\n'.join(json.load(open('$wt/package.json')).get('scripts', {}).keys()))
+" 2>/dev/null)"
+  if printf '%s\n' "$scripts" | grep -qx 'gate:quick'; then
+    ( cd "$wt" && npm run gate:quick && npm test )
+    return
+  fi
+  (
+    cd "$wt"
+    while IFS= read -r s; do
+      [ -n "$s" ] || continue
+      npm run "$s" || exit 1
+    done < <(printf '%s\n' "$scripts" | grep -E '^(check:|lint$|typecheck)')
+    npm test
+  )
 }
 
 # --- real cost, alongside the credit gate ------------------------------------
@@ -647,7 +682,7 @@ cmd_run() {
     return 31
   fi
 
-  ( cd "$wt" && npm run gate:quick && npm test ) >>"$log" 2>&1 || {
+  run_gates "$wt" >>"$log" 2>&1 || {
     echo "GATES RED (tail of $log):"; tail -30 "$log"; return 10
   }
 
@@ -659,8 +694,8 @@ cmd_run() {
      --body "Closes #$issue
 
 Worker lane: \`$lane\`. Gates run in-worktree by scripts/orchestrator.sh, not self-reported:
-\`gate:quick\` + \`npm test\` green · protected paths clean · tests accompany new code ·
-no queue/cron/producer started.
+this repo's own check scripts (see \`run_gates\`) + \`npm test\` green · protected paths clean ·
+tests accompany new code · no queue/cron/producer started.
 
 Cross-model review (\`$(reviewer_for "$lane")\` lane, adversarial, read-only):
 \`\`\`
