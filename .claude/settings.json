@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "LOCK_HOME=\"$HOME/.claude/projects/-Users-joyaltitus-Documents-sales-app/locks\" python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/lock_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "LOCK_HOME=\"$HOME/.claude/projects/-Users-joyaltitus-Documents-sales-app/locks\" python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/lock_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "codex@openai-codex": true
+  }
+}

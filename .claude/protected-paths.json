@@ -1,0 +1,21 @@
+{
+  "_doc": "Read by .claude/hooks/protect.py (ported verbatim from hub-service, generic — see its own docstring). This file is sales-app-specific, not a copy of hub-service's list. Paths are prefixes relative to repo root unless noted; the root is resolved from the FILE being written, not the session cwd.",
+  "system": [
+    ".claude/hooks/",
+    ".claude/protected-paths.json",
+    ".claude/settings.json",
+    ".codex/",
+    ".pi/",
+    ".cursor/",
+    ".github/workflows/"
+  ],
+  "product": [
+    "src/lib/gateway-key.ts",
+    "src/lib/supabase.ts",
+    ".env",
+    ".env.production",
+    ".env.example"
+  ],
+  "edit_existing_only": [],
+  "no_delete": []
+}

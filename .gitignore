@@ -13,4 +13,9 @@ dev-dist
 .DS_Store
 
 # Claude Code session scratch (worktrees, tmp) — never part of the app.
-.claude/
+# NOT .claude/ wholesale: hooks/, protected-paths.json and settings.json are the
+# guard itself and must be tracked, or a fresh `git worktree add` (every campaign
+# worker gets one) checks out with no guard at all.
+.claude/tmp/
+.claude/worktrees/
+.claude/hooks/__pycache__/
