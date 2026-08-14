@@ -41,9 +41,13 @@ PATHS_CONFIG="$REPO/.claude/protected-paths.json"
 PROTECT_HOOK="$REPO/.claude/hooks/protect.py"
 PI_BIN="$(command -v pi || true)"
 
-# The worker seat reads, searches, runs shell AND writes. `edit`/`write` are
-# bounded per call by the command-guard adapter, never by this list alone.
-TOOL_ALLOWLIST="read,grep,find,ls,bash,edit,write"
+# The worker seat reads, searches, runs shell, writes, and may delegate.
+# `edit`/`write` are bounded per call by the command-guard adapter, never by this
+# list alone; `subagent_spawn` is bounded there too — the adapter refuses any
+# backend other than pi, so a worker can delegate but never escalate into a seat
+# with different bounds. Browser QA needs no tool here: ego-browser is a CLI the
+# worker drives through `bash`.
+TOOL_ALLOWLIST="read,grep,find,ls,bash,edit,write,subagent_spawn"
 
 # Credentials that confer MERGE or DEPLOY authority. Stripped from the child
 # environment unconditionally. Supabase's service-role key is deliberately NOT
