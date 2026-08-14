@@ -171,6 +171,28 @@ export default function commandGuard(pi: ExtensionAPI): void {
         return;
       }
 
+      // Delegation must not become escalation. A pi sub-agent runs in-process,
+      // inheriting this adapter, PI_WRITE_ROOT and the stripped credentials — so
+      // it is genuinely the same seat. A `claude` or `codex` backend is a
+      // different process with different doors and its own billing, which is a
+      // wider seat wearing a sub-agent's name. Only armed under PI_WRITE_ROOT:
+      // an interactive human choosing a backend is not an orchestration launch.
+      if (event.toolName === 'subagent_spawn' && process.env.PI_WRITE_ROOT) {
+        const harness = (event.input as JsonObject | null)?.harness;
+        if (typeof harness === 'string' && harness !== 'pi') {
+          return {
+            block: true,
+            reason: `Blocked: a dispatched worker may only spawn 'pi' sub-agents, not '${harness}'. A sub-agent inherits this seat's bounds; another harness would not.`,
+          };
+        }
+        const dir = (event.input as JsonObject | null)?.working_dir;
+        if (typeof dir === 'string' && dir) {
+          const escaped = outsideWriteRoot(dir, cwd);
+          if (escaped) return { block: true, reason: escaped };
+        }
+        return;
+      }
+
       if (event.toolName === 'edit' || event.toolName === 'write') {
         const target = pathFromInput(event.input);
         if (!target.trim()) return;
