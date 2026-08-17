@@ -11,7 +11,7 @@ vi.mock('./supabase', () => ({
   supabase: { from, channel, removeChannel, storage: { from: () => ({ createSignedUrl }) } },
 }))
 
-const { useQueue, useThread, useLiveRefresh, mergeOutbound, getInboundMediaSignedUrl } =
+const { useQueue, useThread, useLiveRefresh, mergeOutbound, getInboundMediaSignedUrl, usePreviews } =
   await import('./inbox-data')
 type Message = import('./inbox-data').Message
 type OptimisticBubble = import('./inbox-data').OptimisticBubble
@@ -207,5 +207,41 @@ describe('useLiveRefresh (S1, issue #15: direct-paint on messages INSERT)', () =
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('usePreviews (AT-03: unsupported media placeholder)', () => {
+  it('renders [unsupported] for unsupported msg_type matching thread view', async () => {
+    const chainOf = (limit: ReturnType<typeof vi.fn>) => {
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {}
+      chain.select = vi.fn(() => chain)
+      chain.eq = vi.fn(() => chain)
+      chain.order = vi.fn(() => chain)
+      chain.limit = limit
+      return chain
+    }
+    const messagesChain = chainOf(
+      vi.fn().mockResolvedValue({
+        data: [
+          {
+            conversation_id: 'conv-unsupported',
+            body: null,
+            transcription: null,
+            msg_type: 'unsupported',
+            created_at: '2026-08-11T09:00:00Z',
+          },
+        ],
+        error: null,
+      }),
+    )
+    from.mockReturnValue(messagesChain)
+
+    const { result } = renderHook(() => usePreviews(PIXELLEDU_ID))
+    await waitFor(() => expect(result.current.previews.size).toBe(1))
+
+    expect(result.current.previews.get('conv-unsupported')).toEqual({
+      text: '[unsupported]',
+      kind: 'other',
+    })
   })
 })

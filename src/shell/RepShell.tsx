@@ -3,6 +3,7 @@ import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import { Home, Inbox, Kanban, Ellipsis, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useFlags, flagOn } from '../lib/flags'
+import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
 import { Today, RepInbox, More, ProductAiDoor } from '../views/rep/screens'
@@ -34,6 +35,8 @@ const TABS = [
 export function RepShell() {
   const { activeClient } = useClient()
   const { flags } = useFlags(activeClient?.id ?? null)
+  const { items: queueItems } = useQueue(activeClient?.id ?? null)
+  const unreadInboxCount = queueItems.filter((i) => i.unread_count > 0).length
   const productAi = flagOn(flags, 'product_ai')
   const [collapsed, setCollapsed] = useState(
     () => typeof window !== 'undefined' && window.localStorage.getItem('sa:rep-sidebar-collapsed') === '1',
@@ -72,7 +75,15 @@ export function RepShell() {
                   ].join(' ')}
                 >
                   <tab.icon aria-hidden size={18} strokeWidth={1.8} />
-                  {tab.label}
+                  <span>{tab.label}</span>
+                  {tab.to === '/inbox' && unreadInboxCount > 0 && (
+                    <span
+                      className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-2xs font-bold text-accent-fg"
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                    >
+                      {unreadInboxCount}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </nav>
@@ -137,7 +148,17 @@ export function RepShell() {
               ].join(' ')
             }
           >
-            <t.icon aria-hidden size={19} strokeWidth={1.8} />
+            <div className="relative">
+              <t.icon aria-hidden size={19} strokeWidth={1.8} />
+              {t.to === '/inbox' && unreadInboxCount > 0 && (
+                <span
+                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  {unreadInboxCount}
+                </span>
+              )}
+            </div>
             {t.label}
           </NavLink>
         ))}

@@ -127,4 +127,82 @@ describe('Composer optimistic bubble lifecycle (S1, issue #15)', () => {
     await screen.findByText(/Paste your workspace access key once/i)
     expect(onOptimisticSettle).toHaveBeenCalledWith('optimistic:temp-3', false)
   })
+
+  it('prompts before overwriting existing typed text with an AI draft (AT-05)', async () => {
+    const user = userEvent.setup()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const { rerender } = render(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        onSent={vi.fn()}
+        seed={null}
+      />,
+    )
+
+    const input = screen.getByRole('textbox', { name: 'Type a reply' })
+    await user.type(input, 'My typed response')
+
+    // Seed arrival when text is typed -> rejected by user
+    rerender(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        onSent={vi.fn()}
+        seed={{ n: 1, text: 'AI generated draft' }}
+      />,
+    )
+
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(input).toHaveValue('My typed response')
+
+    // Now user accepts replacement
+    confirmSpy.mockReturnValue(true)
+    rerender(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        onSent={vi.fn()}
+        seed={{ n: 2, text: 'AI generated draft' }}
+      />,
+    )
+
+    expect(input).toHaveValue('AI generated draft')
+    confirmSpy.mockRestore()
+  })
+
+  it('applies the draft immediately without prompt when composer is empty (AT-05)', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm')
+
+    const { rerender } = render(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        onSent={vi.fn()}
+        seed={null}
+      />,
+    )
+
+    const input = screen.getByRole('textbox', { name: 'Type a reply' })
+    expect(input).toHaveValue('')
+
+    rerender(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        onSent={vi.fn()}
+        seed={{ n: 1, text: 'AI draft for empty composer' }}
+      />,
+    )
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(input).toHaveValue('AI draft for empty composer')
+    confirmSpy.mockRestore()
+  })
 })

@@ -46,6 +46,20 @@ export async function setBotPaused(
   return fromUpdate(data, error)
 }
 
+/** Mark a conversation read (clears unread_count). */
+export async function markConversationRead(
+  clientId: string,
+  conversationId: string,
+): Promise<WriteResult> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .update({ unread_count: 0 })
+    .eq('client_id', clientId)
+    .eq('id', conversationId)
+    .select('id')
+  return fromUpdate(data, error)
+}
+
 /** Assign / unassign a conversation (Wave-1; RLS may deny for reps). */
 export async function assignConversation(
   clientId: string,

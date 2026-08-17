@@ -28,7 +28,11 @@ vi.mock('../../lib/inbox-data', async (importOriginal) => {
     useLiveRefresh: () => ({ channelLive: false }),
   }
 })
-vi.mock('../../lib/crm-data', () => ({ useTeammates: () => ({ items: [] }), teammateLabel: () => 'Teammate' }))
+vi.mock('../../lib/crm-data', () => ({
+  useTeammates: () => ({ items: [] }),
+  teammateLabel: () => 'Teammate',
+  useConvLead: () => ({ lead: null, reload: vi.fn() }),
+}))
 vi.mock('./QueueRow', () => ({
   QueueRow: ({ item }: { item: { id: string; contact: { external_id: string } } }) => (
     <div data-testid={`conversation-${item.id}`}>{item.contact.external_id}</div>

@@ -30,6 +30,10 @@ describe('Composer authentication recovery', () => {
     vi.clearAllMocks()
     loadGatewayKey.mockReturnValue('rejected-key')
     hasConfiguredGatewayKey.mockReturnValue(false)
+    const limit = vi.fn().mockResolvedValue({ data: [], error: null })
+    const order = vi.fn(() => ({ limit }))
+    const eq = vi.fn(() => ({ eq, order }))
+    from.mockReturnValue({ select: vi.fn(() => ({ eq })) })
   })
 
   it('lets the user replace a rejected workspace access key', async () => {
@@ -107,5 +111,22 @@ describe('Composer authentication recovery', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/ask your admin to update the app configuration/i)
     expect(screen.queryByRole('button', { name: 'Replace access key' })).not.toBeInTheDocument()
     expect(clearGatewayKey).not.toHaveBeenCalled()
+  })
+
+  it('renders opt-out notice and disables composer when contact has opted out', () => {
+    render(
+      <Composer
+        conversationId="conversation-1"
+        contactId="contact-1"
+        canSend
+        isOptedOut
+        onSent={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText('This contact has opted out of messages. Outbound replies are disabled.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Type a reply' })).not.toBeInTheDocument()
   })
 })

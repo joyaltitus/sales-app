@@ -70,7 +70,6 @@ export function ObjectionCapture({
   const [error, setError] = useState<string | null>(null)
 
   const [callOpen, setCallOpen] = useState(false)
-  const [callSessionId, setCallSessionId] = useState<string | null>(null)
   const [callStage, setCallStage] = useState<'pick' | 'objection'>('pick')
   const [callConfirm, setCallConfirm] = useState<string | null>(null)
 
@@ -183,11 +182,14 @@ export function ObjectionCapture({
     setGapFlagged(false)
   }
 
-  const openCallSheet = async () => {
+  const openCallSheet = () => {
     setCallOpen(true)
     setCallStage('pick')
+  }
+
+  const finishCallOutcome = async (outcome: CallOutcome, taxonomyKey?: string) => {
     if (!clientId || !actorId) return
-    const res = await startCallSession({
+    const sessionRes = await startCallSession({
       clientId,
       contactId,
       leadId,
@@ -196,15 +198,14 @@ export function ObjectionCapture({
       surface: 'objection-capture',
       clientRequestId: crypto.randomUUID(),
     })
-    if (res.ok) setCallSessionId(res.id)
-    else setError(res.message)
-  }
-
-  const finishCallOutcome = async (outcome: CallOutcome, taxonomyKey?: string) => {
-    if (!callSessionId) return
-    const res = await completeCall(callSessionId, outcome, taxonomyKey ? { taxonomyKey } : undefined)
+    if (!sessionRes.ok) {
+      setError(sessionRes.message)
+      setCallOpen(false)
+      setCallStage('pick')
+      return
+    }
+    const res = await completeCall(sessionRes.id, outcome, taxonomyKey ? { taxonomyKey } : undefined)
     setCallOpen(false)
-    setCallSessionId(null)
     setCallStage('pick')
     if (!res.ok) {
       setError(res.message)
@@ -333,7 +334,7 @@ export function ObjectionCapture({
             </div>
           </div>
         )}
-        <button onClick={() => { setCallOpen(false); setCallSessionId(null); setCallStage('pick') }} className="mt-3 min-h-10 w-full text-xs font-semibold text-fg-subtle hover:text-fg">Not now</button>
+        <button onClick={() => { setCallOpen(false); setCallStage('pick') }} className="mt-3 min-h-10 w-full text-xs font-semibold text-fg-subtle hover:text-fg">Not now</button>
       </Sheet>
       {callConfirm && <div className="fixed right-4 bottom-24 z-[90] flex max-w-sm items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--success)_28%,var(--border))] bg-surface-glass px-3 py-2.5 text-xs font-semibold text-success shadow-elev-3 backdrop-blur-xl" role="status"><Check aria-hidden size={15} />{callConfirm}</div>}
     </section>

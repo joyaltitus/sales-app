@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { parseFacts, type QueueItem } from './inbox-data'
+import type { LeadFact } from './mock-wave3'
 
 // SA-05 CRM data layer — REAL PostgREST reads for the CRM tabs that shipped as
 // sample data in SA-04. Same laws as inbox-data.ts / leads-data.ts: explicit
@@ -108,13 +110,12 @@ export function useBookings(clientId: string | null) {
   return { items, loading, reload: load }
 }
 
-export type Teammate = { user_id: string; role: string }
+export type Teammate = { user_id: string; role: string; displayName?: string | null }
 
 /** SA-06 roster probe — teammates of the active client, for the label
- *  (assignment) control. `user_client_memberships` may be RLS-scoped to the
+ *  (assignment) control. user_client_memberships may be RLS-scoped to the
  *  caller's own rows; an empty/denied result degrades the UI to Me/Unassign
- *  only, it is not an error. Display names need a profiles table (backlog) —
- *  until then teammates render as role + short id. */
+ *  only, it is not an error. Display names are joined from profiles client-side. */
 export function useTeammates(clientId: string | null) {
   const [items, setItems] = useState<Teammate[]>([])
 
@@ -125,12 +126,30 @@ export function useTeammates(clientId: string | null) {
       return
     }
     void (async () => {
-      const { data } = await supabase
-        .from('user_client_memberships')
-        .select('user_id, role')
-        .eq('client_id', clientId)
-        .limit(50)
-      if (!cancelled) setItems((data ?? []) as Teammate[])
+      const [membersRes, profilesRes] = await Promise.all([
+        supabase
+          .from('user_client_memberships')
+          .select('user_id, role')
+          .eq('client_id', clientId)
+          .limit(50),
+        supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .eq('client_id', clientId)
+          .limit(50),
+      ])
+      if (cancelled) return
+      const names = new Map(
+        ((profilesRes.data ?? []) as { user_id: string; display_name: string }[]).map((p) => [
+          p.user_id,
+          p.display_name,
+        ]),
+      )
+      const members = ((membersRes.data ?? []) as { user_id: string; role: string }[]).map((m) => ({
+        ...m,
+        displayName: names.get(m.user_id) ?? null,
+      }))
+      setItems(members)
     })()
     return () => {
       cancelled = true
@@ -140,8 +159,9 @@ export function useTeammates(clientId: string | null) {
   return { items }
 }
 
-/** Short human-usable label for a teammate until real names exist. */
+/** Human-usable label for a teammate — uses profile display name when known. */
 export function teammateLabel(t: Teammate): string {
+  if (t.displayName) return t.displayName
   return `${t.role === 'agent' ? 'Rep' : t.role} · ${t.user_id.slice(0, 4)}`
 }
 
@@ -154,6 +174,7 @@ export type ConvLead = {
   est_value: number | null
   temperature_override: string | null
   objection: string | null
+  next_action: string | null
 }
 
 /** The open lead behind one conversation's contact (context rail). */
@@ -168,7 +189,7 @@ export function useConvLead(clientId: string | null, contactId: string | null) {
     const { data } = await supabase
       .from('leads')
       .select(
-        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, objection',
+        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, objection, next_action',
       )
       .eq('client_id', clientId)
       .eq('contact_id', contactId)
@@ -234,4 +255,69 @@ export function useNotes(
   }, [load])
 
   return { items, reload: load }
+}
+
+/** Customer memory facts for a contact / lead in CRM drawer. */
+export function useLeadMemory(
+  clientId: string | null,
+  contactId: string | null,
+  conversationId: string | null,
+) {
+  const [facts, setFacts] = useState<LeadFact[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!clientId || !contactId) {
+      setFacts([])
+      setLoading(false)
+      return
+    }
+    const [contactRes, convRes] = await Promise.all([
+      supabase
+        .from('contacts')
+        .select('profile_name, channel, external_id, profile, is_opted_out, captured_fields')
+        .eq('client_id', clientId)
+        .eq('id', contactId)
+        .maybeSingle(),
+      conversationId
+        ? supabase
+            .from('conversations')
+            .select(
+              'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, extracted_fields',
+            )
+            .eq('client_id', clientId)
+            .eq('id', conversationId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+
+    const contact = contactRes.data as QueueItem['contact'] | null
+    const conv = convRes.data as Record<string, unknown> | null
+
+    const item: QueueItem = {
+      id: conversationId ?? `contact-${contactId}`,
+      contact_id: contactId,
+      status: (conv?.status as string) ?? 'open',
+      bot_paused: Boolean(conv?.bot_paused),
+      unread_count: Number(conv?.unread_count ?? 0),
+      last_customer_message_at: (conv?.last_customer_message_at as string) ?? null,
+      last_bot_message_at: (conv?.last_bot_message_at as string) ?? null,
+      escalation_resolved: Boolean(conv?.escalation_resolved),
+      assigned_to: (conv?.assigned_to as string) ?? null,
+      contact: contact ?? null,
+      rolling_summary: (conv?.rolling_summary as string) ?? null,
+      summary_upto: (conv?.summary_upto as string) ?? null,
+      extracted_fields: (conv?.extracted_fields as Record<string, unknown>) ?? null,
+    }
+
+    setFacts(parseFacts(item))
+    setLoading(false)
+  }, [clientId, contactId, conversationId])
+
+  useEffect(() => {
+    setLoading(true)
+    void load()
+  }, [load])
+
+  return { facts, loading, reload: load }
 }
