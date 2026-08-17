@@ -5,7 +5,8 @@ import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useQueue, usePreviews, useThread, useLiveRefresh, mergeOutbound, newOptimisticId } from '../../lib/inbox-data'
 import type { QueueItem, OptimisticBubble, Message } from '../../lib/inbox-data'
-import { useTeammates, teammateLabel } from '../../lib/crm-data'
+import { useTeammates, teammateLabel, useConvLead } from '../../lib/crm-data'
+import { markConversationRead } from '../../lib/crm-actions'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { QueueRow } from './QueueRow'
@@ -114,7 +115,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       if (!assignedTo) return null
       if (assignedTo === userId) return 'You'
       const t = teammates.find((x) => x.user_id === assignedTo)
-      return t ? teammateLabel(t) : 'Teammate'
+      return t ? teammateLabel(t) : `External (${assignedTo.slice(0, 4)})`
     },
     [userId, teammates],
   )
@@ -228,6 +229,20 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     () => channelItems.filter((i) => matchesStatus(i, 'needs_human')).length,
     [channelItems],
   )
+  const unreadCount = useMemo(
+    () => channelItems.filter((i) => matchesStatus(i, 'unread')).length,
+    [channelItems],
+  )
+
+  // Mark open conversation as read when actively viewed
+  useEffect(() => {
+    if (!clientId || !selectedId) return
+    const target = items.find((i) => i.id === selectedId)
+    if (target && target.unread_count > 0) {
+      target.unread_count = 0
+      void markConversationRead(clientId, selectedId)
+    }
+  }, [clientId, selectedId, items])
   const visibleItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     return channelItems.filter((i) => {
@@ -239,11 +254,12 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     })
   }, [channelItems, status, query])
   const emailVisible = useMemo(() => {
+    if (scope === 'my') return false
     if (channel && channel !== 'email') return false
     if (status === 'closed' || status === 'needs_human') return false
     const q = query.trim().toLowerCase()
     return !q || 'kavya menon corporate wellness proposal mumbai clinic'.includes(q)
-  }, [channel, status, query])
+  }, [scope, channel, status, query])
 
   // Selection is looked up in the UNFILTERED list on purpose: a landing can
   // deep-link a closed conversation while the queue shows Open — the thread
@@ -251,6 +267,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const selected = items.find((i) => i.id === selectedId) ?? null
   const selectedName =
     selected?.contact?.profile_name ?? selected?.contact?.external_id ?? 'Conversation'
+  const { lead } = useConvLead(clientId, selected?.contact_id ?? null)
 
   if (loading) {
     return (
@@ -373,6 +390,14 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
                 {needsHumanCount}
               </span>
             )}
+            {c.key === 'unread' && unreadCount > 0 && (
+              <span
+                className="tnum ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {unreadCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -414,10 +439,17 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <QueueRow
               key={item.id}
               item={item}
-              preview={previews.get(item.id)?.text ?? item.contact?.profile_name ?? '—'}
+              preview={previews.get(item.id)?.text ?? '—'}
               previewKind={previews.get(item.id)?.kind ?? 'text'}
               selected={item.id === selectedId}
-              onSelect={() => { setEmailOpen(false); setSelectedId(item.id) }}
+              onSelect={() => {
+                setEmailOpen(false)
+                setSelectedId(item.id)
+                if (item.unread_count > 0 && clientId) {
+                  item.unread_count = 0
+                  void markConversationRead(clientId, item.id)
+                }
+              }}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
             />
           ))}
@@ -441,7 +473,19 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         {/* On the thread the hierarchy flips back and the NAME leads (§1.5). */}
         <div className="min-w-0">
           <span className="block truncate text-md font-semibold tracking-[-0.015em] text-fg">{selectedName}</span>
-          <span className="mt-0.5 flex items-center gap-1 text-2xs font-medium text-accent"><span className="h-1.5 w-1.5 rounded-pill bg-signal" /> Next: answer the price question</span>
+          {lead?.next_action ? (
+            <span className="mt-0.5 flex items-center gap-1 text-2xs font-medium text-accent">
+              <span className="h-1.5 w-1.5 rounded-pill bg-signal" /> Next: {lead.next_action}
+            </span>
+          ) : selected?.bot_paused && !selected?.escalation_resolved ? (
+            <span className="mt-0.5 flex items-center gap-1 text-2xs font-medium text-warn">
+              <span className="h-1.5 w-1.5 rounded-pill bg-warn" /> Needs human reply
+            </span>
+          ) : (
+            <span className="mt-0.5 flex items-center gap-1 text-2xs font-medium text-fg-subtle">
+              <span className="h-1.5 w-1.5 rounded-pill bg-fg-subtle" /> Active conversation
+            </span>
+          )}
         </div>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {!channelLive && (
@@ -457,7 +501,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg"
             >
               {railOpen ? <X aria-hidden size={15} /> : <PanelRight aria-hidden size={15} />}
-              {railOpen ? 'Close' : 'Details'}
+              {railOpen ? 'Hide details' : 'Details'}
             </button>
           )}
         </span>
@@ -483,6 +527,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           conversationId={selectedId}
           contactId={selected?.contact_id ?? ''}
           canSend={canSend}
+          isOptedOut={selected?.contact?.is_opted_out}
           onSent={refreshAll}
           seed={draftSeed}
           onOptimisticSend={onOptimisticSend}
@@ -527,7 +572,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <EmptyState
               icon={MessageCircle}
               title="Pick a conversation"
-              body="The queue is ordered by who has waited longest."
+              body="The queue is ordered by most recent message."
             />
           </div>
         )}

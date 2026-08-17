@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles, Pause, Play, Trash2 } from 'lucide-react'
 import type { QueueItem } from '../../lib/inbox-data'
+import { parseFacts } from '../../lib/inbox-data'
 import { useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
 import { useConvLead, useNotes, useTeammates, teammateLabel } from '../../lib/crm-data'
 import { setBotPaused, assignConversation, addFollowUp, addNote, deleteNote } from '../../lib/crm-actions'
@@ -10,8 +11,6 @@ import type { Insight } from '../../lib/api'
 import { useAuth } from '../../auth/AuthProvider'
 import { Avatar } from '../../ui/Avatar'
 import { FactCard } from '../../ui/agent/FactCard'
-import { SampleTag } from '../../ui/agent/primitives'
-import { MOCK_FACTS } from '../../lib/mock-wave3'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
@@ -58,6 +57,7 @@ export function ContextRail({
   const { session } = useAuth()
   const userId = session?.user?.id ?? null
   const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
+  const memoryFacts = useMemo(() => parseFacts(item), [item])
 
   // --- bot pause/resume ------------------------------------------------
   const [pauseBusy, setPauseBusy] = useState(false)
@@ -309,7 +309,9 @@ export function ContextRail({
               {item.assigned_to &&
                 item.assigned_to !== userId &&
                 !teammates.some((t) => t.user_id === item.assigned_to) && (
-                  <option value={item.assigned_to}>Teammate</option>
+                  <option value={item.assigned_to}>
+                    External assignee ({item.assigned_to.slice(0, 4)})
+                  </option>
                 )}
             </select>
           </label>
@@ -378,23 +380,30 @@ export function ContextRail({
       <div className="space-y-2 border-b border-border px-4 py-4">
         <SectionTitle>Follow-up</SectionTitle>
         {pendingFu && (
-          <p className="text-xs text-fg-muted">
-            <span
-              className={[
-                'tnum mr-2',
-                new Date(pendingFu.due_at).getTime() < Date.now() ? 'text-danger' : 'text-fg-subtle',
-              ].join(' ')}
-              style={monoStyle}
-            >
-              {new Date(pendingFu.due_at).toLocaleString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-            {pendingFu.note}
-          </p>
+          <div className="flex items-center justify-between gap-2 text-xs text-fg-muted">
+            <p className="min-w-0 flex-1 truncate">
+              <span
+                className={[
+                  'tnum mr-2',
+                  new Date(pendingFu.due_at).getTime() < Date.now() ? 'text-danger font-medium' : 'text-fg-subtle',
+                ].join(' ')}
+                style={monoStyle}
+              >
+                {new Date(pendingFu.due_at).toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              {pendingFu.note}
+            </p>
+            {new Date(pendingFu.due_at).getTime() < Date.now() && (
+              <span className="shrink-0 rounded bg-danger-subtle px-1.5 py-0.5 text-3xs font-semibold text-danger">
+                Overdue
+              </span>
+            )}
+          </div>
         )}
         {fuOpen ? (
           <>
@@ -433,17 +442,20 @@ export function ContextRail({
         )}
       </div>
 
-      {/* Lead Brain — compact (UI-BUILD-02, mock; full view = drawer Memory tab) */}
+      {/* Customer memory — wired to real per-conversation extracted facts (sales-app#21 S2) */}
       <div className="space-y-2 border-b border-border px-4 py-4">
         <div className="flex items-center justify-between">
           <SectionTitle>Customer memory</SectionTitle>
-          <SampleTag label="Preview" />
         </div>
-        <div className="space-y-2">
-          {MOCK_FACTS.slice(0, 3).map((f) => (
-            <FactCard key={f.id} fact={f} compact />
-          ))}
-        </div>
+        {memoryFacts.length === 0 ? (
+          <p className="text-xs text-fg-subtle">No customer facts extracted yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {memoryFacts.slice(0, 5).map((f) => (
+              <FactCard key={f.id} fact={f} compact />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* AI summary */}

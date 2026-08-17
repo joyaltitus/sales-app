@@ -18,6 +18,7 @@ const {
   addNote,
   deleteNote,
   moveLeadStage,
+  followUpsState,
 } = vi.hoisted(() => ({
   fetchInsight: vi.fn(),
   setBotPaused: vi.fn(),
@@ -26,6 +27,7 @@ const {
   addNote: vi.fn(),
   deleteNote: vi.fn(),
   moveLeadStage: vi.fn(),
+  followUpsState: [] as Array<{ id: string; contact_id: string; due_at: string; status: string; note: string }>,
 }))
 
 vi.mock('../../lib/api', () => ({ fetchInsight }))
@@ -38,7 +40,7 @@ vi.mock('../../lib/crm-actions', () => ({
 }))
 vi.mock('../../lib/leads-data', () => ({
   useLeadStages: () => ({ stages: [] }),
-  useFollowUps: () => ({ items: [], reload: vi.fn() }),
+  useFollowUps: () => ({ items: followUpsState, reload: vi.fn() }),
   moveLeadStage,
 }))
 vi.mock('../../lib/crm-data', () => ({
@@ -101,6 +103,7 @@ beforeEach(() => {
       rationale: null,
     },
   })
+  followUpsState.splice(0, followUpsState.length)
 })
 
 describe('ContextRail AI summary (#18 — hydrate persisted rolling_summary)', () => {
@@ -160,5 +163,63 @@ describe('ContextRail AI summary (#18 — hydrate persisted rolling_summary)', (
     )
 
     await waitFor(() => expect(fetchInsight).toHaveBeenCalledWith(CONVERSATION_ID))
+  })
+})
+
+describe('ContextRail Customer Memory (sales-app#21 S2)', () => {
+  it('S2-AT-01: renders real extracted facts from conversation and contact data', () => {
+    renderRail(
+      queueItem({
+        extracted_fields: {
+          target_course: 'NEET evening batch',
+          budget_limit: '60,000 INR',
+        },
+      }),
+    )
+
+    expect(screen.getByText('NEET evening batch')).toBeInTheDocument()
+    expect(screen.getByText('60,000 INR')).toBeInTheDocument()
+    expect(screen.queryByText('NEET repeater batch, evening only')).not.toBeInTheDocument()
+  })
+
+  it('S2-AT-02: two conversations show independent sets of memory cards', () => {
+    const { unmount } = renderRail(
+      queueItem({
+        id: 'conv-a',
+        extracted_fields: { pref: 'Saturday classes only' },
+      }),
+    )
+    expect(screen.getByText('Saturday classes only')).toBeInTheDocument()
+    unmount()
+
+    renderRail(
+      queueItem({
+        id: 'conv-b',
+        extracted_fields: { pref: 'Weekday morning batch' },
+      }),
+    )
+    expect(screen.getByText('Weekday morning batch')).toBeInTheDocument()
+    expect(screen.queryByText('Saturday classes only')).not.toBeInTheDocument()
+  })
+
+  it('S2-AT-03: shows honest empty state when no extracted facts exist', () => {
+    renderRail(queueItem({ extracted_fields: null }))
+
+    expect(screen.getByText('No customer facts extracted yet.')).toBeInTheDocument()
+    expect(screen.queryByText('NEET repeater batch, evening only')).not.toBeInTheDocument()
+  })
+
+  it('displays Overdue badge when a pending follow-up is past its due date', () => {
+    followUpsState.push({
+      id: 'fu-1',
+      contact_id: 'contact-1',
+      due_at: '2026-08-01T09:00:00Z',
+      status: 'pending',
+      note: 'Call back about scholarship',
+    })
+    renderRail(queueItem())
+
+    expect(screen.getByText('Overdue')).toBeInTheDocument()
+    expect(screen.getByText(/Call back about scholarship/)).toBeInTheDocument()
   })
 })

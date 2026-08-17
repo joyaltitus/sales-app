@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { Trace } from './seam'
+import type { LeadFact, FactCategory, FactState } from './mock-wave3'
 
 // Inbox data layer. Plain PostgREST table reads only — no RPCs, no views, no
 // edge functions (direction §0.3, the Workbench behaviour reference).
@@ -46,6 +47,7 @@ export type QueueItem = {
     external_id: string
     profile: unknown
     is_opted_out: boolean
+    captured_fields?: Record<string, unknown> | null
   } | null
   // Issue #18: the persisted AI summary. `rolling_summary` holds the last
   // server-generated summary text and `summary_upto` the conversation cut-off
@@ -54,6 +56,7 @@ export type QueueItem = {
   // are null or stale.
   rolling_summary: string | null
   summary_upto: string | null
+  extracted_fields?: Record<string, unknown> | null
 }
 
 export type Message = {
@@ -177,7 +180,7 @@ export function useQueue(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('conversations')
       .select(
-        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, contacts ( profile_name, channel, external_id, profile, is_opted_out )',
+        'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, extracted_fields, contacts ( profile_name, channel, external_id, profile, is_opted_out, captured_fields )',
       )
       .eq('client_id', clientId)
       .order('last_customer_message_at', { ascending: false, nullsFirst: false })
@@ -244,7 +247,6 @@ export function usePreviews(clientId: string | null) {
       .from('messages')
       .select('conversation_id, body, transcription, msg_type, created_at')
       .eq('client_id', clientId)
-      .eq('direction', 'inbound')
       .order('created_at', { ascending: false })
       .limit(PREVIEW_LIMIT)
 
@@ -264,7 +266,7 @@ export function usePreviews(clientId: string | null) {
       const text =
         row.body ??
         row.transcription ??
-        (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'document' ? 'Document' : `sent ${row.msg_type}`)
+        (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'document' ? 'Document' : `[${row.msg_type}]`)
       next.set(row.conversation_id, { text, kind })
     }
     setPreviews(next)
@@ -430,4 +432,105 @@ export function useLiveRefresh(
   }, [clientId])
 
   return { channelLive }
+}
+
+function inferCategory(key: string): FactCategory {
+  const k = key.toLowerCase()
+  if (k.includes('budget') || k.includes('fee') || k.includes('price')) return 'budget'
+  if (k.includes('pref') || k.includes('batch') || k.includes('time') || k.includes('schedule')) return 'preference'
+  if (k.includes('object') || k.includes('concern') || k.includes('doubt')) return 'objection'
+  if (k.includes('promis') || k.includes('commit')) return 'promise'
+  if (k.includes('signal') || k.includes('intent') || k.includes('interest')) return 'buying_signal'
+  if (k.includes('follow')) return 'follow_up'
+  return 'requirement'
+}
+
+function formatFactLabel(key: string): string {
+  return key
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim()
+}
+
+/**
+ * Parse real per-conversation extracted facts and contact captured fields
+ * into LeadFact objects for the Customer Memory panel (sales-app#21 S2).
+ */
+export function parseFacts(item: QueueItem): LeadFact[] {
+  const facts: LeadFact[] = []
+  const rawExtracted = item.extracted_fields
+  const rawCaptured = item.contact?.captured_fields
+  const defaultChannel: 'whatsapp' | 'instagram' =
+    item.contact?.channel === 'instagram' ? 'instagram' : 'whatsapp'
+  const defaultAt = item.last_customer_message_at || new Date().toISOString()
+
+  const addFact = (
+    key: string,
+    val: unknown,
+    sourceChannel: 'whatsapp' | 'instagram' = defaultChannel,
+  ) => {
+    if (val == null) return
+    if (typeof val === 'object' && !Array.isArray(val)) {
+      const obj = val as Record<string, unknown>
+      const valueStr = String(obj.value ?? obj.text ?? JSON.stringify(obj))
+      if (!valueStr.trim()) return
+      const cat = (obj.category as FactCategory) || inferCategory(key)
+      const st = (obj.state as FactState) || 'confirmed'
+      facts.push({
+        id: `fact-${item.id}-${key}`,
+        category: cat,
+        label: formatFactLabel(key),
+        value: valueStr,
+        state: st,
+        confidence: typeof obj.confidence === 'number' ? obj.confidence : 0.9,
+        evidence: {
+          quote: typeof obj.quote === 'string' ? obj.quote : valueStr,
+          channel: (obj.channel as 'whatsapp' | 'instagram') || sourceChannel,
+          at: typeof obj.at === 'string' ? obj.at : defaultAt,
+        },
+      })
+    } else if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      const valueStr = String(val).trim()
+      if (!valueStr) return
+      facts.push({
+        id: `fact-${item.id}-${key}`,
+        category: inferCategory(key),
+        label: formatFactLabel(key),
+        value: valueStr,
+        state: 'confirmed',
+        confidence: 0.9,
+        evidence: {
+          quote: valueStr,
+          channel: sourceChannel,
+          at: defaultAt,
+        },
+      })
+    }
+  }
+
+  if (rawExtracted && typeof rawExtracted === 'object') {
+    if (Array.isArray(rawExtracted)) {
+      rawExtracted.forEach((f, idx) => addFact(`extracted_${idx}`, f))
+    } else {
+      Object.entries(rawExtracted).forEach(([k, v]) => addFact(k, v))
+    }
+  }
+
+  if (rawCaptured && typeof rawCaptured === 'object') {
+    if (Array.isArray(rawCaptured)) {
+      rawCaptured.forEach((f, idx) => addFact(`captured_${idx}`, f))
+    } else {
+      Object.entries(rawCaptured).forEach(([k, v]) => {
+        if (
+          !facts.some(
+            (existing) => existing.label.toLowerCase() === formatFactLabel(k).toLowerCase(),
+          )
+        ) {
+          addFact(k, v)
+        }
+      })
+    }
+  }
+
+  return facts
 }

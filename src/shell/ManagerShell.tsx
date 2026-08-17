@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles } from 'lucide-react'
+import { useClient } from './ClientProvider'
+import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
 import { Floor, ManagerInbox } from '../views/manager/screens'
@@ -44,6 +46,10 @@ function LazyFallback() {
 }
 
 export function ManagerShell() {
+  const { activeClient } = useClient()
+  const { items: queueItems } = useQueue(activeClient?.id ?? null)
+  const unreadInboxCount = queueItems.filter((i) => i.unread_count > 0).length
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
       <TopBar />
@@ -71,7 +77,15 @@ export function ManagerShell() {
               }
             >
               <t.icon aria-hidden size={17} strokeWidth={1.8} />
-              {t.label}
+              <span>{t.label}</span>
+              {t.to === '/inbox' && unreadInboxCount > 0 && (
+                <span
+                  className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-2xs font-bold text-accent-fg"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  {unreadInboxCount}
+                </span>
+              )}
             </NavLink>
           ))}
           <div className="mt-auto rounded-lg border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--surface-sunk))] p-3 shadow-elev-1">
@@ -114,7 +128,17 @@ export function ManagerShell() {
               isActive ? 'text-accent' : 'text-fg-subtle',
             ].join(' ')}
           >
-            <t.icon aria-hidden size={18} />
+            <div className="relative">
+              <t.icon aria-hidden size={18} />
+              {t.to === '/inbox' && unreadInboxCount > 0 && (
+                <span
+                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  {unreadInboxCount}
+                </span>
+              )}
+            </div>
             <span className="max-w-full truncate px-1">{t.label === 'Documents' ? 'Docs' : t.label}</span>
           </NavLink>
         ))}

@@ -93,6 +93,14 @@ function ReadOnlyNotice() {
   )
 }
 
+function OptedOutNotice() {
+  return (
+    <div className="border-t border-border bg-surface px-4 py-3 text-xs text-warn">
+      This contact has opted out of messages. Outbound replies are disabled.
+    </div>
+  )
+}
+
 type SendState =
   | { kind: 'idle' }
   | { kind: 'sending' }
@@ -129,6 +137,7 @@ export function Composer({
   conversationId,
   contactId,
   canSend,
+  isOptedOut = false,
   onSent,
   seed,
   onOptimisticSend = () => '',
@@ -137,6 +146,7 @@ export function Composer({
   conversationId: string
   contactId: string
   canSend: boolean
+  isOptedOut?: boolean
   onSent: () => void
   /** SA-05: AI draft from the context rail. Counter-keyed so the same draft
    *  can be pushed twice; it seeds the input, the human still edits + sends. */
@@ -154,7 +164,14 @@ export function Composer({
   const [text, setText] = useState('')
   const [state, setState] = useState<SendState>({ kind: 'idle' })
   useEffect(() => {
-    if (seed) setText(seed.text)
+    if (!seed) return
+    if (text.trim() && text !== seed.text) {
+      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        const ok = window.confirm('Replace your typed message with the AI draft?')
+        if (!ok) return
+      }
+    }
+    setText(seed.text)
   }, [seed])
   const [needsKey, setNeedsKey] = useState(!loadGatewayKey())
   const [keyDraft, setKeyDraft] = useState('')
@@ -169,6 +186,7 @@ export function Composer({
   const [repliesOpen, setRepliesOpen] = useState(false)
   const [replyError, setReplyError] = useState<string | null>(null)
 
+  if (isOptedOut) return <OptedOutNotice />
   if (!canSend) return <ReadOnlyNotice />
 
   // The gateway key is anti-noise defence-in-depth, not a wall, and anything

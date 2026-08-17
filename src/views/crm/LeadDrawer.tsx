@@ -190,7 +190,7 @@ export function LeadDrawer({
 
       {tab === 'memory' ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <MemoryTab />
+          <MemoryTab clientId={clientId} lead={lead} />
         </div>
       ) : (
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
