@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Search, Kanban, Download } from 'lucide-react'
+import { Search, Kanban, Download, Plus } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
 import { useLeads, useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
@@ -9,10 +9,12 @@ import { leadTemperature } from '../../lib/temperature'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Sheet } from '../../ui/Sheet'
+import { Button } from '../../ui/Button'
 import { LeadRow } from './LeadRow'
 import { PipelineStrip } from '../crm/PipelineStrip'
 import { BoardView } from '../crm/BoardView'
 import { LeadDrawer } from '../crm/LeadDrawer'
+import { AddLeadModal } from '../crm/AddLeadModal'
 
 // ONE Leads implementation, mounted by both RepShell and ManagerShell — same
 // pattern as InboxScreen (amendment item 1). The difference between the two
@@ -53,6 +55,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   const [tempFilter, setTempFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selected, setSelected] = useState<LeadItem | null>(null)
+  const [addLeadOpen, setAddLeadOpen] = useState(false)
 
   const stageById = useMemo(() => new Map(stages.map((s) => [s.id, s])), [stages])
   const now = Date.now()
@@ -197,12 +200,32 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
 
   if (items.length === 0) {
     return (
-      <div className="p-6">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-6">
         <EmptyState
           icon={Kanban}
           title="Nothing waiting."
-          body="Share your WhatsApp link to start capturing leads."
+          body="Share your WhatsApp link or add a new customer lead manually."
         />
+        {clientId && (
+          <div className="mt-4">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddLeadOpen(true)}
+              className="gap-1.5 font-semibold"
+            >
+              <Plus aria-hidden size={15} strokeWidth={2} />
+              <span>Add Lead</span>
+            </Button>
+            <AddLeadModal
+              open={addLeadOpen}
+              onClose={() => setAddLeadOpen(false)}
+              onCreated={() => void reload()}
+              clientId={clientId}
+              stages={stages}
+            />
+          </div>
+        )}
       </div>
     )
   }
@@ -264,6 +287,15 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
               <Download aria-hidden size={13} strokeWidth={1.75} />
               Export
             </button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddLeadOpen(true)}
+              className="h-10 shrink-0 gap-1.5 font-semibold"
+            >
+              <Plus aria-hidden size={15} strokeWidth={2} />
+              <span>Add Lead</span>
+            </Button>
           </div>
         </div>
       )}
@@ -352,6 +384,17 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
             )}
           </Sheet>
         </div>
+      )}
+
+      {clientId && (
+        <AddLeadModal
+          open={addLeadOpen}
+          onClose={() => setAddLeadOpen(false)}
+          onCreated={() => void reload()}
+          clientId={clientId}
+          stages={stages}
+          defaultStageId={stageFilter ?? undefined}
+        />
       )}
     </div>
   )

@@ -64,7 +64,7 @@ describe('PixellEdu inbox visibility', () => {
   it('opens a manager on All and shows the target conversation', () => {
     clientState.role = 'manager'
     authState.userId = 'manager-id'
-    render(<MemoryRouter><InboxScreen canSend={false} /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><InboxScreen canSend={false} /></MemoryRouter>)
 
     const scopeTabs = screen.getByRole('tablist', { name: 'Inbox scope' })
     expect(within(scopeTabs).getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true')
@@ -74,7 +74,7 @@ describe('PixellEdu inbox visibility', () => {
   it('opens the assigned demo rep on My inbox and shows the target conversation', () => {
     clientState.role = 'agent'
     authState.userId = DEMO_REP_ID
-    render(<MemoryRouter><InboxScreen canSend /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><InboxScreen canSend /></MemoryRouter>)
 
     expect(screen.getByRole('tab', { name: 'My inbox' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByTestId(`conversation-${TARGET_CONVERSATION_ID}`)).toHaveTextContent('919947638424')
@@ -83,7 +83,7 @@ describe('PixellEdu inbox visibility', () => {
   it('does not show LuxeLine data while PixellEdu is active', () => {
     clientState.role = 'manager'
     authState.userId = 'manager-id'
-    render(<MemoryRouter><InboxScreen canSend={false} /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><InboxScreen canSend={false} /></MemoryRouter>)
 
     expect(screen.queryByText(/LuxeLine/i)).not.toBeInTheDocument()
   })

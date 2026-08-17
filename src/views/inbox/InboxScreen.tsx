@@ -17,6 +17,8 @@ import { Sheet } from '../../ui/Sheet'
 import { EmailQueueRow } from '../email/EmailQueueRow'
 import { CallButton } from '../calls/CallButton'
 import { ErrorState } from '../../ui/ErrorState'
+import { ErrorBoundary } from '../../ui/ErrorBoundary'
+import { formatPhone } from '../../lib/phone'
 
 const EmailConversation = lazy(() => import('../email/EmailConversation'))
 
@@ -133,6 +135,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   // Thread (a sibling) needs the merged view. Cleared on conversation switch
   // — a pending/failed bubble belongs to the thread it was typed into.
   const [optimistic, setOptimistic] = useState<OptimisticBubble[]>([])
+  const readAttempts = useRef(new Set<string>())
 
   // S11: a notification tap arrives with the AI draft in router state (prose,
   // not an address — it does not belong in the query string). Seed the composer
@@ -233,16 +236,6 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     () => channelItems.filter((i) => matchesStatus(i, 'unread')).length,
     [channelItems],
   )
-
-  // Mark open conversation as read when actively viewed
-  useEffect(() => {
-    if (!clientId || !selectedId) return
-    const target = items.find((i) => i.id === selectedId)
-    if (target && target.unread_count > 0) {
-      target.unread_count = 0
-      void markConversationRead(clientId, selectedId)
-    }
-  }, [clientId, selectedId, items])
   const visibleItems = useMemo(() => {
     const q = query.trim().toLowerCase()
     return channelItems.filter((i) => {
@@ -261,12 +254,40 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     return !q || 'kavya menon corporate wellness proposal mumbai clinic'.includes(q)
   }, [scope, channel, status, query])
 
+  const myUnreadCount = useMemo(
+    () => items.filter((i) => i.assigned_to === userId && i.unread_count > 0).length,
+    [items, userId],
+  )
+  const waUnreadCount = useMemo(
+    () => scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === 'whatsapp' && i.unread_count > 0).length,
+    [scopedItems],
+  )
+  const igUnreadCount = useMemo(
+    () => scopedItems.filter((i) => i.contact?.channel === 'instagram' && i.unread_count > 0).length,
+    [scopedItems],
+  )
+  const emailUnreadCount = useMemo(
+    () => (emailVisible ? 1 : 0),
+    [emailVisible],
+  )
+
+  // Mark open conversation as read when actively viewed
+  useEffect(() => {
+    if (!clientId || !selectedId) return
+    const target = items.find((i) => i.id === selectedId)
+    if (!target || target.unread_count <= 0) return
+    const attempt = `${clientId}:${selectedId}:${target.unread_count}:${target.last_customer_message_at ?? ''}`
+    if (readAttempts.current.has(attempt)) return
+    readAttempts.current.add(attempt)
+    void markConversationRead(clientId, selectedId)
+  }, [clientId, selectedId, items])
+
   // Selection is looked up in the UNFILTERED list on purpose: a landing can
   // deep-link a closed conversation while the queue shows Open — the thread
   // must still render even though its row is filtered out.
   const selected = items.find((i) => i.id === selectedId) ?? null
   const selectedName =
-    selected?.contact?.profile_name ?? selected?.contact?.external_id ?? 'Conversation'
+    selected?.contact?.profile_name ?? formatPhone(selected?.contact?.external_id) ?? 'Conversation'
   const { lead } = useConvLead(clientId, selected?.contact_id ?? null)
 
   if (loading) {
@@ -311,21 +332,28 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         >
           {(
             [
-              ['my', 'My inbox'],
-              ['all', 'All'],
+              ['my', 'My inbox', myUnreadCount > 0],
+              ['all', 'All', false],
             ] as const
-          ).map(([key, label]) => (
+          ).map(([key, label, hasUnread]) => (
             <button
               key={key}
               role="tab"
               aria-selected={scope === key}
               onClick={() => setScope(key)}
               className={[
-                'rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
+                'inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
                 scope === key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg',
               ].join(' ')}
             >
-              {label}
+              <span>{label}</span>
+              {hasUnread && (
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                  aria-hidden="true"
+                  data-testid={`unread-dot-${key}`}
+                />
+              )}
             </button>
           ))}
         </div>
@@ -334,22 +362,40 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           aria-label="Channel"
           className="flex shrink-0 rounded-md border border-border bg-surface-sunk p-0.5"
         >
-          {CHANNEL_TABS.map((t) => (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={channel === t.key}
-              onClick={() => setChannel(t.key)}
-              className={[
-                'rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
-                channel === t.key
-                  ? 'bg-surface-raised text-fg shadow-elev-1'
-                  : 'text-fg-muted hover:text-fg',
-              ].join(' ')}
-            >
-              {t.label}
-            </button>
-          ))}
+          {CHANNEL_TABS.map((t) => {
+            const hasUnread =
+              t.key === 'whatsapp'
+                ? waUnreadCount > 0
+                : t.key === 'instagram'
+                  ? igUnreadCount > 0
+                  : t.key === 'email'
+                    ? emailUnreadCount > 0
+                    : false
+
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={channel === t.key}
+                onClick={() => setChannel(t.key)}
+                className={[
+                  'inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors',
+                  channel === t.key
+                    ? 'bg-surface-raised text-fg shadow-elev-1'
+                    : 'text-fg-muted hover:text-fg',
+                ].join(' ')}
+              >
+                <span>{t.label}</span>
+                {hasUnread && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                    aria-hidden="true"
+                    data-testid={`unread-dot-${t.key}`}
+                  />
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
       {/* Search on its own line — three controls plus a usable input don't
@@ -445,10 +491,6 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               onSelect={() => {
                 setEmailOpen(false)
                 setSelectedId(item.id)
-                if (item.unread_count > 0 && clientId) {
-                  item.unread_count = 0
-                  void markConversationRead(clientId, item.id)
-                }
               }}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
             />
@@ -567,27 +609,29 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       </div>
 
       <div className={['min-h-0 flex-1 overflow-hidden bg-surface lg:border-y lg:border-r lg:border-border', hasSelection ? 'flex' : 'hidden lg:flex'].join(' ')}>
-        {activeThread ?? (
-          <div className="hidden flex-1 items-center justify-center lg:flex">
-            <EmptyState
-              icon={MessageCircle}
-              title="Pick a conversation"
-              body="The queue is ordered by most recent message."
-            />
-          </div>
-        )}
+        <ErrorBoundary resetKey={selectedId}>
+          {activeThread ?? (
+            <div className="hidden flex-1 items-center justify-center lg:flex">
+              <EmptyState
+                icon={MessageCircle}
+                title="Pick a conversation"
+                body="The queue is ordered by most recent message."
+              />
+            </div>
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* SA-05 context rail: its own pane at xl+ … */}
       {rail && railOpen && (
         <div className="hidden w-80 shrink-0 overflow-hidden rounded-r-xl border-y border-r border-border bg-surface shadow-elev-1 xl:block">
-          {rail}
+          <ErrorBoundary resetKey={selectedId}>{rail}</ErrorBoundary>
         </div>
       )}
       {/* … and a sheet below xl (§1.10 #12: sheets on phone, inline on desktop). */}
       <div className="xl:hidden">
         <Sheet open={railOpen && !!rail} onClose={() => setRailOpen(false)} title={selectedName}>
-          {rail}
+          <ErrorBoundary resetKey={selectedId}>{rail}</ErrorBoundary>
         </Sheet>
       </div>
     </div>

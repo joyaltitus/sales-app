@@ -1,6 +1,7 @@
 import { Link2 } from 'lucide-react'
 import { FactCard } from '../../ui/agent/FactCard'
 import { Skeleton } from '../../ui/Skeleton'
+import { ErrorState } from '../../ui/ErrorState'
 import { useLeadMemory } from '../../lib/crm-data'
 import type { LeadItem } from '../../lib/leads-data'
 
@@ -15,7 +16,7 @@ export function MemoryTab({
   clientId?: string
   lead?: LeadItem | null
 }) {
-  const { facts, loading } = useLeadMemory(
+  const { facts, loading, error, reload } = useLeadMemory(
     clientId ?? null,
     lead?.contact_id ?? null,
     lead?.conversation_id ?? null,
@@ -31,6 +32,10 @@ export function MemoryTab({
         <Skeleton className="h-16 w-full" />
       </div>
     )
+  }
+
+  if (error) {
+    return <ErrorState title="Couldn't load customer memory" body={error} onRetry={() => void reload()} />
   }
 
   return (

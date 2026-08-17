@@ -125,7 +125,7 @@ describe('AdminShell — forcing the client-side role grants nothing', () => {
 
   it('renders the admin landing when the role value is forced', async () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={['/']}>
         <AdminShell />
       </MemoryRouter>,
     )
@@ -136,7 +136,7 @@ describe('AdminShell — forcing the client-side role grants nothing', () => {
 
   it('reads only tables the browser may already read under RLS', async () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={['/']}>
         <AdminShell />
       </MemoryRouter>,
     )
@@ -152,7 +152,7 @@ describe('AdminShell — forcing the client-side role grants nothing', () => {
 
   it('scopes every read to the same tenant with an explicit client_id filter', async () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={['/']}>
         <AdminShell />
       </MemoryRouter>,
     )
@@ -172,7 +172,7 @@ describe('AdminShell — forcing the client-side role grants nothing', () => {
 
   it('bounds every read — no unbounded list', async () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={['/']}>
         <AdminShell />
       </MemoryRouter>,
     )
@@ -186,7 +186,7 @@ describe('AdminShell — forcing the client-side role grants nothing', () => {
 
   it('gains no API capability — the landing calls hub-service not at all', async () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={['/']}>
         <AdminShell />
       </MemoryRouter>,
     )

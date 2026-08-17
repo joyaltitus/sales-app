@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { X, ExternalLink } from 'lucide-react'
 import type { LeadItem, LeadStage } from '../../lib/leads-data'
 import { saveLead } from '../../lib/crm-actions'
 import { useNotes } from '../../lib/crm-data'
@@ -14,6 +14,7 @@ import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Button } from '../../ui/Button'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { ObjectionHistory } from '../objections/ObjectionHistory'
+import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
 
 // SA-05 lead drawer — the Workbench lead editor rebuilt: stage, status,
 // est. value, temperature override, lost reason (required on a lost move,
@@ -77,6 +78,14 @@ export function LeadDrawer({
     setObjection(lead.objection ?? '')
     setState('idle')
   }, [lead])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const targetStage = stages.find((s) => s.id === stageId)
   // Workbench's gate: moving into a lost-ish stage or setting status=lost
@@ -143,11 +152,24 @@ export function LeadDrawer({
         <Avatar name={name} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-md font-semibold text-fg">{name}</div>
-          <div className="mt-0.5 flex items-center gap-1.5">
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             <ChannelIcon channel={lead.contact?.channel ?? null} size={12} />
             <span className="tnum truncate text-2xs text-fg-subtle" style={monoStyle}>
-              {lead.contact?.external_id}
+              {formatPhone(lead.contact?.external_id)}
             </span>
+            {lead.contact?.channel === 'whatsapp' && lead.contact?.external_id && (
+              <a
+                href={getWhatsAppUrl(lead.contact.external_id) ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open in WhatsApp"
+                aria-label="Open in WhatsApp"
+                className="inline-flex items-center gap-1 rounded border border-border bg-surface px-1.5 py-0.5 text-3xs font-semibold text-fg-muted transition-colors hover:border-[#25D366]/50 hover:bg-[#25D366]/10 hover:text-fg"
+              >
+                <ExternalLink aria-hidden size={9} />
+                <span>WhatsApp</span>
+              </a>
+            )}
             <TempBadge temp={temp} overridden={overridden} />
           </div>
         </div>
@@ -213,8 +235,10 @@ export function LeadDrawer({
               <option value="lost">Lost</option>
             </select>
           </label>
-          <label className="block">
-            <Label>Est. value (₹)</Label>
+          <div className="block">
+            <div className="flex items-baseline justify-between">
+              <Label>Est. value (₹)</Label>
+            </div>
             <input
               type="number"
               inputMode="numeric"
@@ -223,7 +247,25 @@ export function LeadDrawer({
               placeholder="—"
               className={[field, 'tnum'].join(' ')}
             />
-          </label>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {[
+                ['25K', '25000'],
+                ['50K', '50000'],
+                ['60K', '60000'],
+                ['1L', '100000'],
+                ['1.5L', '150000'],
+              ].map(([lbl, val]) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setEstValue(val)}
+                  className="rounded border border-border bg-surface px-1.5 py-0.5 text-3xs font-semibold text-fg-muted hover:border-accent hover:text-accent transition-colors"
+                >
+                  ₹{lbl}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="block">
             <Label>Temperature</Label>
             <select

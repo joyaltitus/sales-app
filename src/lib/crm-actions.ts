@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { cleanPhoneForWhatsApp } from './phone'
 
 // SA-05 CRM/Inbox write layer — direct PostgREST writes under RLS, the same
 // lane Workbench already uses browser-side (anon key + RLS; messages remain
@@ -19,6 +20,48 @@ function fromUpdate(data: unknown[] | null, error: { message: string } | null): 
   if (error) return { ok: false, reason: 'error', message: error.message }
   if (!data || data.length === 0) return { ok: false, reason: 'denied' }
   return { ok: true }
+}
+
+export type CreateLeadInput = {
+  profileName: string
+  phone: string
+  channel?: string
+  stageId: string
+  estValue?: number | null
+  nextAction?: string | null
+  note?: string | null
+  authorEmail?: string | null
+}
+
+/** Atomically create a manual lead through the tenant-checked database RPC. */
+export async function createLead(
+  clientId: string,
+  input: CreateLeadInput,
+): Promise<WriteResult & { leadId?: string }> {
+  const cleanedPhone = cleanPhoneForWhatsApp(input.phone) || input.phone.trim()
+  if (!cleanedPhone) {
+    return { ok: false, reason: 'error', message: 'Phone number or contact identifier is required.' }
+  }
+
+  const { data, error } = await supabase.rpc('create_manual_lead', {
+    p_client_id: clientId,
+    p_profile_name: input.profileName.trim() || null,
+    p_external_id: cleanedPhone,
+    p_channel: input.channel || 'phone',
+    p_stage_id: input.stageId,
+    p_est_value: input.estValue != null ? Number(input.estValue) : null,
+    p_next_action: input.nextAction?.trim() || null,
+    p_note: input.note?.trim() || null,
+  })
+
+  if (error) {
+    const denied = error.code === '42501' || /not authorized|row-level security/i.test(error.message)
+    return { ok: false, reason: denied ? 'denied' : 'error', message: error.message }
+  }
+  if (typeof data !== 'string' || !data) {
+    return { ok: false, reason: 'error', message: 'Lead creation returned no lead ID.' }
+  }
+  return { ok: true, leadId: data }
 }
 
 /** Pause or resume the bot on one conversation. */
@@ -57,7 +100,13 @@ export async function markConversationRead(
     .eq('client_id', clientId)
     .eq('id', conversationId)
     .select('id')
-  return fromUpdate(data, error)
+  const result = fromUpdate(data, error)
+  if (result.ok && typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('sa:conversation-read', { detail: { clientId, conversationId } }),
+    )
+  }
+  return result
 }
 
 /** Assign / unassign a conversation (Wave-1; RLS may deny for reps). */

@@ -10,6 +10,7 @@ import { AgentLauncher } from '../views/agent/AgentLauncher'
 import { NotificationCenter } from '../ui/NotificationCenter'
 import { ProductMark } from '../ui/ProductMark'
 import { Sheet } from '../ui/Sheet'
+import { OfflineBanner } from '../ui/OfflineBanner'
 
 // Fixed shell header. Visible health (§C): AI/bot state + connection are always
 // on screen — no silent failures.
@@ -57,6 +58,7 @@ export function TopBar() {
 
   return (
     <header className="relative z-20 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface-glass px-3 backdrop-blur-xl sm:h-16 sm:px-4">
+      <OfflineBanner />
       <ProductMark size={32} />
       <div className="min-w-0">
         {clients.length > 1 ? (

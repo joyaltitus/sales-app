@@ -60,7 +60,7 @@ describe('NotificationCenter tab badge', () => {
     useNotificationsMock.mockReturnValue({ items: [row({ id: 'a' }), row({ id: 'b' })], reload: vi.fn() })
     const { setAppBadge } = setAppBadgeSpy()
 
-    render(<MemoryRouter><NotificationCenter /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationCenter /></MemoryRouter>)
 
     expect(document.title).toBe('(2) Sales App')
     expect(setAppBadge).toHaveBeenCalledWith(2)
@@ -73,7 +73,7 @@ describe('NotificationCenter tab badge', () => {
     })
     const { clearAppBadge } = setAppBadgeSpy()
 
-    render(<MemoryRouter><NotificationCenter /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationCenter /></MemoryRouter>)
 
     expect(document.title).toBe('Sales App')
     expect(clearAppBadge).toHaveBeenCalled()
@@ -90,7 +90,7 @@ describe('NotificationCenter tab badge', () => {
     })
     setAppBadgeSpy()
 
-    render(<MemoryRouter><NotificationCenter /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationCenter /></MemoryRouter>)
 
     expect(document.title).toBe('(1) Sales App')
   })
@@ -99,7 +99,7 @@ describe('NotificationCenter tab badge', () => {
     useNotificationsMock.mockReturnValue({ items: [], reload: vi.fn() })
     const { clearAppBadge, setAppBadge } = setAppBadgeSpy()
 
-    render(<MemoryRouter><NotificationCenter /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationCenter /></MemoryRouter>)
 
     expect(document.title).toBe('Sales App')
     expect(clearAppBadge).toHaveBeenCalled()
@@ -109,7 +109,7 @@ describe('NotificationCenter tab badge', () => {
   it('does not throw when the Badge API is unavailable (most browsers today)', async () => {
     useNotificationsMock.mockReturnValue({ items: [row()], reload: vi.fn() })
     // deliberately NOT calling setAppBadgeSpy() — navigator.setAppBadge is undefined
-    expect(() => render(<MemoryRouter><NotificationCenter /></MemoryRouter>)).not.toThrow()
+    expect(() => render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><NotificationCenter /></MemoryRouter>)).not.toThrow()
     expect(document.title).toBe('(1) Sales App')
   })
 })

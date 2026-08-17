@@ -7,10 +7,11 @@ const PIXELLEDU_ID = 'cc4a7484-064e-495c-b611-b5ca105410f7'
 const CONV_ID = 'conv-1'
 const CONTACT_ID = 'contact-1'
 
-const { queueItems, leadState, teammatesState } = vi.hoisted(() => ({
+const { queueItems, leadState, teammatesState, markConversationRead } = vi.hoisted(() => ({
   queueItems: [] as Array<Record<string, unknown>>,
   leadState: { next_action: null as string | null },
   teammatesState: [] as Array<{ user_id: string; role: string; displayName?: string | null }>,
+  markConversationRead: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
 vi.mock('../../shell/ClientProvider', () => ({
@@ -19,6 +20,7 @@ vi.mock('../../shell/ClientProvider', () => ({
 vi.mock('../../auth/AuthProvider', () => ({
   useAuth: () => ({ session: { user: { id: 'manager-user-id' } } }),
 }))
+vi.mock('../../lib/crm-actions', () => ({ markConversationRead }))
 vi.mock('../../lib/inbox-data', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/inbox-data')>()
   return {
@@ -69,14 +71,15 @@ const sampleConversation = {
 
 describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
   beforeEach(() => {
-    queueItems.splice(0, queueItems.length, sampleConversation)
+    queueItems.splice(0, queueItems.length, { ...sampleConversation, unread_count: 1 })
     leadState.next_action = null
     teammatesState.splice(0, teammatesState.length)
+    markConversationRead.mockClear()
   })
 
   it('AT-01: empty state copy matches the actual sort order (most recent message first)', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <InboxScreen canSend={false} />
       </MemoryRouter>,
     )
@@ -92,7 +95,7 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
   it('AT-02: rail toggle button is labeled "Hide details" when open and "Details" when closed', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={[`/?c=${CONV_ID}`]}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[`/?c=${CONV_ID}`]}>
         <InboxScreen canSend={false} />
       </MemoryRouter>,
     )
@@ -112,7 +115,7 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
   it('AT-06: thread header derives Next-Best-Action from real lead data', () => {
     leadState.next_action = 'Confirm fee breakdown and ask for seat reservation'
     render(
-      <MemoryRouter initialEntries={[`/?c=${CONV_ID}`]}>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[`/?c=${CONV_ID}`]}>
         <InboxScreen canSend={false} />
       </MemoryRouter>,
     )
@@ -128,7 +131,7 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
   it('AT-07: Email demo row is hidden under "My inbox" and visible under "All"', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <InboxScreen canSend={false} />
       </MemoryRouter>,
     )
@@ -142,5 +145,67 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
 
     // Email row should be hidden under "My inbox"
     expect(screen.queryByTestId('email-queue-row')).not.toBeInTheDocument()
+  })
+
+  it('renders unread indicator dot on WhatsApp channel tab when WhatsApp conversation is unread', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+
+    // WhatsApp has 1 unread conversation
+    expect(screen.getByTestId('unread-dot-whatsapp')).toBeInTheDocument()
+    // Instagram has 0 unread
+    expect(screen.queryByTestId('unread-dot-instagram')).not.toBeInTheDocument()
+  })
+
+  it('renders unread indicator dot on My inbox scope tab when user has unread conversation', () => {
+    queueItems.splice(0, queueItems.length, {
+      ...sampleConversation,
+      assigned_to: 'manager-user-id',
+      unread_count: 2,
+    })
+
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('unread-dot-my')).toBeInTheDocument()
+  })
+
+  it('renders unread count on Unread filter chip', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+
+    const unreadButton = screen.getByRole('button', { name: /Unread/i })
+    expect(unreadButton).toHaveTextContent('1')
+  })
+
+  it('does not mutate the queue item and sends only one read request across rerenders', async () => {
+    const user = userEvent.setup()
+    const original = queueItems[0]
+    const { rerender } = render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByTestId(`conversation-${CONV_ID}`))
+    await vi.waitFor(() => expect(markConversationRead).toHaveBeenCalledTimes(1))
+    rerender(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+
+    expect(markConversationRead).toHaveBeenCalledTimes(1)
+    expect(queueItems[0]).toBe(original)
+    expect(queueItems[0].unread_count).toBe(1)
   })
 })

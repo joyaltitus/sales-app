@@ -44,7 +44,7 @@ vi.mock('../../lib/crm-data', () => ({
 describe('DashboardScreen', () => {
   it('opens with actionable operations and keeps revenue and owner reporting separate', async () => {
     const user = userEvent.setup()
-    render(<MemoryRouter><DashboardScreen /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><DashboardScreen /></MemoryRouter>)
 
     expect(screen.getByRole('heading', { name: 'What needs attention today' })).toBeInTheDocument()
     expect(screen.queryByText('The business, at a glance.')).not.toBeInTheDocument()

@@ -6,6 +6,7 @@ import { useFlags, flagOn } from '../lib/flags'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
+import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { Today, RepInbox, More, ProductAiDoor } from '../views/rep/screens'
 
 // SA-05 (Joyal's ruling 2026-07-30, supersedes SA-04's "rep gets no CRM"):
@@ -17,7 +18,7 @@ const CrmScreen = lazy(() =>
 )
 // UI-BUILD-02: full-screen agent surface (phone entry from the TopBar launcher).
 const AgentScreen = lazy(() =>
-  import('../views/agent/AgentLauncher').then((m) => ({ default: m.AgentScreen })),
+  import('../views/agent/AgentScreen').then((m) => ({ default: m.AgentScreen })),
 )
 const DocsStudio = lazy(() =>
   import('../views/docs/DocsStudio').then((m) => ({ default: m.DocsStudio })),
@@ -78,7 +79,7 @@ export function RepShell() {
                   <span>{tab.label}</span>
                   {tab.to === '/inbox' && unreadInboxCount > 0 && (
                     <span
-                      className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-2xs font-bold text-accent-fg"
+                      className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-[11px] font-bold text-accent-fg shadow-xs"
                       style={{ fontFamily: 'var(--font-mono)' }}
                     >
                       {unreadInboxCount}
@@ -105,26 +106,28 @@ export function RepShell() {
         </div>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
-          <Suspense
-            fallback={
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            }
-          >
-            <Routes>
-              <Route index element={<Today />} />
-              <Route path="inbox" element={<RepInbox />} />
-              <Route path="leads" element={<CrmScreen />} />
-              <Route path="more" element={<More productAi={productAi} />} />
-              <Route path="agent" element={<AgentScreen />} />
-              <Route path="docs" element={<DocsStudio />} />
-              {/* Flag-gated door: only mounts when the flag is on. */}
-              {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              }
+            >
+              <Routes>
+                <Route index element={<Today />} />
+                <Route path="inbox" element={<RepInbox />} />
+                <Route path="leads" element={<CrmScreen />} />
+                <Route path="more" element={<More productAi={productAi} />} />
+                <Route path="agent" element={<AgentScreen />} />
+                <Route path="docs" element={<DocsStudio />} />
+                {/* Flag-gated door: only mounts when the flag is on. */}
+                {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -152,7 +155,7 @@ export function RepShell() {
               <t.icon aria-hidden size={19} strokeWidth={1.8} />
               {t.to === '/inbox' && unreadInboxCount > 0 && (
                 <span
-                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg"
+                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg shadow-xs"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
                   {unreadInboxCount}

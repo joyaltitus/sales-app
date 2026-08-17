@@ -46,5 +46,16 @@ export default defineConfig({
   build: {
     // JS budget (§C speed budget) enforced post-build by check-bundle-size.mjs.
     reportCompressedSize: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('@supabase')) return 'vendor-supabase'
+          if (id.includes('lucide-react')) return 'vendor-icons'
+          if (id.includes('react')) return 'vendor-react'
+          return 'vendor'
+        },
+      },
+    },
   },
 })

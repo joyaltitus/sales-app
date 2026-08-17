@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { parseFacts, type QueueItem } from './inbox-data'
 import type { LeadFact } from './mock-wave3'
@@ -265,59 +265,84 @@ export function useLeadMemory(
 ) {
   const [facts, setFacts] = useState<LeadFact[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const requestGeneration = useRef(0)
 
   const load = useCallback(async () => {
+    const generation = ++requestGeneration.current
     if (!clientId || !contactId) {
       setFacts([])
+      setError(null)
       setLoading(false)
       return
     }
-    const [contactRes, convRes] = await Promise.all([
-      supabase
-        .from('contacts')
-        .select('profile_name, channel, external_id, profile, is_opted_out, captured_fields')
-        .eq('client_id', clientId)
-        .eq('id', contactId)
-        .maybeSingle(),
-      conversationId
-        ? supabase
-            .from('conversations')
-            .select(
-              'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, extracted_fields',
-            )
-            .eq('client_id', clientId)
-            .eq('id', conversationId)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ])
+    setFacts([])
+    setError(null)
+    setLoading(true)
+    try {
+      const [contactRes, convRes] = await Promise.all([
+        supabase
+          .from('contacts')
+          .select('profile_name, channel, external_id, profile, is_opted_out, captured_fields')
+          .eq('client_id', clientId)
+          .eq('id', contactId)
+          .maybeSingle(),
+        conversationId
+          ? supabase
+              .from('conversations')
+              .select(
+                'id, contact_id, status, bot_paused, unread_count, last_customer_message_at, last_bot_message_at, escalation_resolved, assigned_to, rolling_summary, summary_upto, extracted_fields',
+              )
+              .eq('client_id', clientId)
+              .eq('id', conversationId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ])
 
-    const contact = contactRes.data as QueueItem['contact'] | null
-    const conv = convRes.data as Record<string, unknown> | null
+      if (generation !== requestGeneration.current) return
+      const readError = contactRes.error ?? convRes.error
+      if (readError) {
+        setFacts([])
+        setError(readError.message)
+        setLoading(false)
+        return
+      }
 
-    const item: QueueItem = {
-      id: conversationId ?? `contact-${contactId}`,
-      contact_id: contactId,
-      status: (conv?.status as string) ?? 'open',
-      bot_paused: Boolean(conv?.bot_paused),
-      unread_count: Number(conv?.unread_count ?? 0),
-      last_customer_message_at: (conv?.last_customer_message_at as string) ?? null,
-      last_bot_message_at: (conv?.last_bot_message_at as string) ?? null,
-      escalation_resolved: Boolean(conv?.escalation_resolved),
-      assigned_to: (conv?.assigned_to as string) ?? null,
-      contact: contact ?? null,
-      rolling_summary: (conv?.rolling_summary as string) ?? null,
-      summary_upto: (conv?.summary_upto as string) ?? null,
-      extracted_fields: (conv?.extracted_fields as Record<string, unknown>) ?? null,
+      const contact = contactRes.data as QueueItem['contact'] | null
+      const conv = convRes.data as Record<string, unknown> | null
+
+      const item: QueueItem = {
+        id: conversationId ?? `contact-${contactId}`,
+        contact_id: contactId,
+        status: (conv?.status as string) ?? 'open',
+        bot_paused: Boolean(conv?.bot_paused),
+        unread_count: Number(conv?.unread_count ?? 0),
+        last_customer_message_at: (conv?.last_customer_message_at as string) ?? null,
+        last_bot_message_at: (conv?.last_bot_message_at as string) ?? null,
+        escalation_resolved: Boolean(conv?.escalation_resolved),
+        assigned_to: (conv?.assigned_to as string) ?? null,
+        contact: contact ?? null,
+        rolling_summary: (conv?.rolling_summary as string) ?? null,
+        summary_upto: (conv?.summary_upto as string) ?? null,
+        extracted_fields: (conv?.extracted_fields as Record<string, unknown>) ?? null,
+      }
+
+      setFacts(parseFacts(item))
+      setLoading(false)
+    } catch (cause) {
+      if (generation !== requestGeneration.current) return
+      setFacts([])
+      setError(cause instanceof Error ? cause.message : 'Failed to load customer memory.')
+      setLoading(false)
     }
-
-    setFacts(parseFacts(item))
-    setLoading(false)
   }, [clientId, contactId, conversationId])
 
   useEffect(() => {
-    setLoading(true)
     void load()
+    return () => {
+      requestGeneration.current++
+    }
   }, [load])
 
-  return { facts, loading, reload: load }
+  return { facts, loading, error, reload: load }
 }

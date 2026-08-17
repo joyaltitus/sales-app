@@ -81,7 +81,7 @@ function queueItem(over: Partial<QueueItem> = {}): QueueItem {
 
 function renderRail(item: QueueItem) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ContextRail
         clientId={PIXELLEDU_ID}
         item={item}
@@ -221,5 +221,25 @@ describe('ContextRail Customer Memory (sales-app#21 S2)', () => {
 
     expect(screen.getByText('Overdue')).toBeInTheDocument()
     expect(screen.getByText(/Call back about scholarship/)).toBeInTheDocument()
+  })
+
+  it('renders Open in WhatsApp link for WhatsApp channel contacts', () => {
+    renderRail(
+      queueItem({
+        contact: {
+          profile_name: 'Asha Patel',
+          channel: 'whatsapp',
+          external_id: '919947638424',
+          profile: null,
+          is_opted_out: false,
+        },
+      }),
+    )
+
+    const link = screen.getByRole('link', { name: 'Open in WhatsApp' })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', 'https://wa.me/919947638424')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 })

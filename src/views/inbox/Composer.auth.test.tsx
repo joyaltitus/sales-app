@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -113,7 +113,7 @@ describe('Composer authentication recovery', () => {
     expect(clearGatewayKey).not.toHaveBeenCalled()
   })
 
-  it('renders opt-out notice and disables composer when contact has opted out', () => {
+  it('renders opt-out notice and disables composer when contact has opted out', async () => {
     render(
       <Composer
         conversationId="conversation-1"
@@ -123,6 +123,7 @@ describe('Composer authentication recovery', () => {
         onSent={vi.fn()}
       />,
     )
+    await act(async () => {})
 
     expect(
       screen.getByText('This contact has opted out of messages. Outbound replies are disabled.'),

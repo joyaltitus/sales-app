@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Mail, Search } from 'lucide-react'
+import { Mail, Search, Plus } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useContacts } from '../../lib/crm-data'
 import type { ContactRow } from '../../lib/crm-data'
+import { useLeadStages } from '../../lib/leads-data'
 import { waitStamp } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { Chip } from '../../ui/Chip'
+import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
 import { Sheet } from '../../ui/Sheet'
 import { CallButton } from '../calls/CallButton'
 import { RelationshipTimeline } from './RelationshipTimeline'
+import { AddLeadModal } from './AddLeadModal'
 
 // Contacts — REAL as of SA-05 (crm-data.useContacts: the `contacts` read
 // Workbench already issues browser-side under RLS). Search, channel filter,
@@ -23,10 +26,13 @@ const capsStyle = {
 
 export function ContactsTab() {
   const { activeClient } = useClient()
-  const { items } = useContacts(activeClient?.id ?? null)
+  const clientId = activeClient?.id ?? null
+  const { items, reload } = useContacts(clientId)
+  const { stages } = useLeadStages(clientId)
   const [query, setQuery] = useState('')
   const [channel, setChannel] = useState<'' | 'whatsapp' | 'instagram' | 'email'>('')
   const [selected, setSelected] = useState<ContactRow | null>(null)
+  const [addLeadOpen, setAddLeadOpen] = useState(false)
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -70,6 +76,15 @@ export function ContactsTab() {
           <option value="instagram">Instagram</option>
           <option value="email">Email</option>
         </select>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setAddLeadOpen(true)}
+          className="h-8 shrink-0 gap-1 text-xs font-semibold"
+        >
+          <Plus aria-hidden size={14} strokeWidth={2} />
+          <span>Add Lead</span>
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -129,6 +144,16 @@ export function ContactsTab() {
           <div className="mt-6"><RelationshipTimeline contactId={selected.id} /></div>
         </div>}
       </Sheet>
+
+      {clientId && (
+        <AddLeadModal
+          open={addLeadOpen}
+          onClose={() => setAddLeadOpen(false)}
+          onCreated={() => void reload()}
+          clientId={clientId}
+          stages={stages}
+        />
+      )}
     </div>
   )
 }

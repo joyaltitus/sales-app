@@ -5,6 +5,7 @@ import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
+import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { Floor, ManagerInbox } from '../views/manager/screens'
 
 // SA-04: CRM + Dashboard are lazy — they are desktop-role surfaces with their
@@ -16,7 +17,7 @@ const DocsStudio = lazy(() =>
   import('../views/docs/DocsStudio').then((m) => ({ default: m.DocsStudio })),
 )
 const AgentScreen = lazy(() =>
-  import('../views/agent/AgentLauncher').then((m) => ({ default: m.AgentScreen })),
+  import('../views/agent/AgentScreen').then((m) => ({ default: m.AgentScreen })),
 )
 const DashboardScreen = lazy(() =>
   import('../views/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
@@ -80,7 +81,7 @@ export function ManagerShell() {
               <span>{t.label}</span>
               {t.to === '/inbox' && unreadInboxCount > 0 && (
                 <span
-                  className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-2xs font-bold text-accent-fg"
+                  className="tnum ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-pill bg-accent px-1.5 text-[11px] font-bold text-accent-fg shadow-xs"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
                   {unreadInboxCount}
@@ -100,21 +101,23 @@ export function ManagerShell() {
           </div>
         </nav>
         <main className="app-grid min-w-0 flex-1 overflow-y-auto">
-          <Suspense fallback={<LazyFallback />}>
-            <Routes>
-              <Route index element={<Floor />} />
-              <Route path="inbox" element={<ManagerInbox />} />
-              <Route path="crm" element={<CrmScreen />} />
-              <Route path="dashboard" element={<DashboardScreen />} />
-              <Route path="agent" element={<AgentScreen />} />
-              <Route path="docs" element={<DocsStudio />} />
-              {/* Pre-SA-04 paths — keep deep links alive. */}
-              <Route path="leads" element={<Navigate to="/crm" replace />} />
-              <Route path="assign" element={<Navigate to="/crm" replace />} />
-              <Route path="analytics" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LazyFallback />}>
+              <Routes>
+                <Route index element={<Floor />} />
+                <Route path="inbox" element={<ManagerInbox />} />
+                <Route path="crm" element={<CrmScreen />} />
+                <Route path="dashboard" element={<DashboardScreen />} />
+                <Route path="agent" element={<AgentScreen />} />
+                <Route path="docs" element={<DocsStudio />} />
+                {/* Pre-SA-04 paths — keep deep links alive. */}
+                <Route path="leads" element={<Navigate to="/crm" replace />} />
+                <Route path="assign" element={<Navigate to="/crm" replace />} />
+                <Route path="analytics" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <nav className="grid shrink-0 grid-cols-5 border-t border-border bg-surface md:hidden" aria-label="Primary">
@@ -132,7 +135,7 @@ export function ManagerShell() {
               <t.icon aria-hidden size={18} />
               {t.to === '/inbox' && unreadInboxCount > 0 && (
                 <span
-                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg"
+                  className="tnum absolute -top-1 -right-2.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-pill bg-accent px-1 text-[10px] font-bold leading-none text-accent-fg shadow-xs"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
                   {unreadInboxCount}

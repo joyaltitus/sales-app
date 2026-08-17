@@ -208,6 +208,22 @@ export function useQueue(clientId: string | null) {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !clientId) return
+    const onConversationRead = (event: Event) => {
+      const detail = (event as CustomEvent<{ clientId: string; conversationId: string }>).detail
+      if (detail && detail.clientId === clientId) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === detail.conversationId ? { ...item, unread_count: 0 } : item,
+          ),
+        )
+      }
+    }
+    window.addEventListener('sa:conversation-read', onConversationRead)
+    return () => window.removeEventListener('sa:conversation-read', onConversationRead)
+  }, [clientId])
+
   return { items, loading, error, reload: load }
 }
 

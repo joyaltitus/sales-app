@@ -3,6 +3,7 @@ import type { PreviewKind, QueueItem } from '../../lib/inbox-data'
 import { waitStamp, urgency } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
+import { formatPhone } from '../../lib/phone'
 
 const PREVIEW_ICON: Partial<Record<PreviewKind, typeof ImageIcon>> = {
   image: ImageIcon,
@@ -54,7 +55,7 @@ export function QueueRow({
   const PreviewIcon = PREVIEW_ICON[previewKind]
   const level = urgency(item.last_customer_message_at)
   const stamp = waitStamp(item.last_customer_message_at)
-  const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
+  const name = item.contact?.profile_name ?? formatPhone(item.contact?.external_id) ?? 'Unknown contact'
 
   return (
     <button
@@ -134,7 +135,7 @@ export function QueueRow({
             )}
             {item.unread_count > 0 && (
               <span
-                className="tnum inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-pill bg-accent px-1 text-2xs font-bold text-accent-fg"
+                className="tnum inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-pill bg-accent px-1.5 text-[11px] font-bold text-accent-fg shadow-xs"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 {item.unread_count}

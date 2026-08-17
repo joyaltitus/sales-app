@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const { from, channel, removeChannel, createSignedUrl } = vi.hoisted(() => ({
@@ -48,6 +48,28 @@ describe('useQueue', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(select).toHaveBeenCalledWith(expect.stringContaining('rolling_summary'))
     expect(select).toHaveBeenCalledWith(expect.stringContaining('summary_upto'))
+  })
+
+  it('acknowledges a confirmed read immutably', async () => {
+    const source = { id: 'conv-1', unread_count: 3 }
+    const limit = vi.fn().mockResolvedValue({ data: [source], error: null })
+    const order = vi.fn(() => ({ limit }))
+    const eq = vi.fn(() => ({ order }))
+    from.mockReturnValue({ select: vi.fn(() => ({ eq })) })
+
+    const { result } = renderHook(() => useQueue(PIXELLEDU_ID))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const before = result.current.items[0]
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('sa:conversation-read', {
+        detail: { clientId: PIXELLEDU_ID, conversationId: 'conv-1' },
+      }))
+    })
+
+    await waitFor(() => expect(result.current.items[0].unread_count).toBe(0))
+    expect(result.current.items[0]).not.toBe(before)
+    expect(source.unread_count).toBe(3)
   })
 })
 

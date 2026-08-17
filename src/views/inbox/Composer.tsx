@@ -87,7 +87,7 @@ function useQuickReplies(clientId: string | null, userId: string | null) {
  *  should degrade into rather than render a button that always 403s. */
 function ReadOnlyNotice() {
   return (
-    <div className="border-t border-border bg-surface px-4 py-3 text-xs text-fg-muted">
+    <div className="border-t border-border bg-surface px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] text-xs text-fg-muted">
       Replying isn't enabled for your role. Open the thread on a rep's account to answer.
     </div>
   )
@@ -95,7 +95,7 @@ function ReadOnlyNotice() {
 
 function OptedOutNotice() {
   return (
-    <div className="border-t border-border bg-surface px-4 py-3 text-xs text-warn">
+    <div className="border-t border-border bg-surface px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] text-xs text-warn">
       This contact has opted out of messages. Outbound replies are disabled.
     </div>
   )
@@ -352,7 +352,7 @@ export function Composer({
           <Sparkles aria-hidden size={13} className="text-accent" /> AI draft added — review before sending.
         </div>
       )}
-      <div className="flex items-end gap-2 px-3 py-3 sm:px-4">
+      <div className="flex items-end gap-2 px-3 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-4">
         <button
           onClick={() => setRepliesOpen((o) => !o)}
           aria-label="Quick replies"
@@ -378,7 +378,7 @@ export function Composer({
               if (state.kind !== 'idle') setState({ kind: 'idle' })
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if ((e.key === 'Enter' && !e.shiftKey) || ((e.metaKey || e.ctrlKey) && e.key === 'Enter')) {
                 e.preventDefault()
                 void send()
               }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -175,7 +175,7 @@ describe('Composer optimistic bubble lifecycle (S1, issue #15)', () => {
     confirmSpy.mockRestore()
   })
 
-  it('applies the draft immediately without prompt when composer is empty (AT-05)', () => {
+  it('applies the draft immediately without prompt when composer is empty (AT-05)', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm')
 
     const { rerender } = render(
@@ -187,6 +187,7 @@ describe('Composer optimistic bubble lifecycle (S1, issue #15)', () => {
         seed={null}
       />,
     )
+    await act(async () => {})
 
     const input = screen.getByRole('textbox', { name: 'Type a reply' })
     expect(input).toHaveValue('')

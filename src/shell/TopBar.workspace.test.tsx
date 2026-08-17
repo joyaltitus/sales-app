@@ -32,7 +32,7 @@ describe('workspace switcher', () => {
       loading: false,
     })
 
-    render(<MemoryRouter><TopBar /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><TopBar /></MemoryRouter>)
     const switcher = screen.getByRole('combobox', { name: 'Workspace' })
     await user.selectOptions(switcher, 'pixelledu')
     expect(setActiveClientId).toHaveBeenCalledWith('pixelledu')
@@ -46,7 +46,7 @@ describe('workspace switcher', () => {
       loading: false,
     })
 
-    render(<MemoryRouter><TopBar /></MemoryRouter>)
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><TopBar /></MemoryRouter>)
     expect(screen.queryByRole('combobox', { name: 'Workspace' })).not.toBeInTheDocument()
   })
 })

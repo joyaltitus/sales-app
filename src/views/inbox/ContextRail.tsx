@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, Pause, Play, Trash2 } from 'lucide-react'
+import { Sparkles, Pause, Play, Trash2, ExternalLink } from 'lucide-react'
 import type { QueueItem } from '../../lib/inbox-data'
 import { parseFacts } from '../../lib/inbox-data'
 import { useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
@@ -15,6 +15,7 @@ import { ChannelIcon } from '../../ui/ChannelIcon'
 import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
 import { formatINR } from '../../ui/formatMoney'
+import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
 
 // SA-05 context rail — the Workbench Inbox right rail rebuilt in the Board
 // language, for manager AND rep alike (capability differences are RLS's job,
@@ -249,11 +250,24 @@ export function ContextRail({
           <Avatar name={name} profile={item.contact?.profile} size="lg" />
           <div className="min-w-0">
             <div className="truncate text-md font-semibold text-fg">{name}</div>
-            <div className="mt-0.5 flex items-center gap-1.5">
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <ChannelIcon channel={item.contact?.channel ?? null} size={13} />
               <span className="tnum truncate text-xs text-fg-subtle" style={monoStyle}>
-                {item.contact?.external_id}
+                {formatPhone(item.contact?.external_id)}
               </span>
+              {item.contact?.channel === 'whatsapp' && item.contact?.external_id && (
+                <a
+                  href={getWhatsAppUrl(item.contact.external_id) ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open in WhatsApp"
+                  aria-label="Open in WhatsApp"
+                  className="inline-flex items-center gap-1 rounded border border-border bg-surface px-1.5 py-0.5 text-3xs font-semibold text-fg-muted transition-colors hover:border-[#25D366]/50 hover:bg-[#25D366]/10 hover:text-fg"
+                >
+                  <ExternalLink aria-hidden size={9} />
+                  <span>WhatsApp</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
