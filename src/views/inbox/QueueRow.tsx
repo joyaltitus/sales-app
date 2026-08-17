@@ -81,15 +81,18 @@ export function QueueRow({
             <span
               className={[
                 'min-w-0 flex-1 truncate text-sm text-fg',
-                item.unread_count > 0 ? 'font-bold' : 'font-semibold',
+                item.unread_count > 0 ? 'font-bold' : 'font-medium',
               ].join(' ')}
             >
               {name}
             </span>
             <ChannelIcon channel={item.contact?.channel ?? null} size={13} />
-            {/* Time: small, mono, right. */}
+            {/* Time: small, mono, right. Highlighted in accent for calm unread messages. */}
             <span
-              className={['tnum shrink-0 text-xs leading-none', STAMP[level]].join(' ')}
+              className={[
+                'tnum shrink-0 text-xs leading-none',
+                item.unread_count > 0 && level === 'calm' ? 'font-semibold text-accent' : STAMP[level],
+              ].join(' ')}
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               {stamp}
@@ -101,7 +104,7 @@ export function QueueRow({
             <span
               className={[
                 'flex min-w-0 flex-1 items-center gap-1 truncate text-xs',
-                item.unread_count > 0 ? 'font-medium text-fg-muted' : 'text-fg-subtle',
+                item.unread_count > 0 ? 'font-medium text-fg' : 'text-fg-subtle',
               ].join(' ')}
             >
               {PreviewIcon && <PreviewIcon aria-hidden size={12} className="shrink-0" />}
@@ -131,7 +134,7 @@ export function QueueRow({
             )}
             {item.unread_count > 0 && (
               <span
-                className="tnum shrink-0 rounded-pill bg-accent-subtle px-1.5 text-2xs font-semibold text-accent"
+                className="tnum inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-pill bg-accent px-1 text-2xs font-bold text-accent-fg"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 {item.unread_count}
