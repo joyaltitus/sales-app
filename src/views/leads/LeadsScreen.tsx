@@ -39,6 +39,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   const clientId = activeClient?.id ?? null
   const userId = session?.user?.id ?? null
   const role = activeClient?.role ?? null
+  const canCreateManualLead = role === 'manager' || role === 'client_admin'
 
   const { items, loading, error, reload } = useLeads(clientId)
   const { stages, loading: stagesLoading } = useLeadStages(clientId)
@@ -206,7 +207,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
           title="Nothing waiting."
           body="Share your WhatsApp link or add a new customer lead manually."
         />
-        {clientId && (
+        {clientId && canCreateManualLead && (
           <div className="mt-4">
             <Button
               variant="primary"
@@ -287,15 +288,17 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
               <Download aria-hidden size={13} strokeWidth={1.75} />
               Export
             </button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setAddLeadOpen(true)}
-              className="h-10 shrink-0 gap-1.5 font-semibold"
-            >
-              <Plus aria-hidden size={15} strokeWidth={2} />
-              <span>Add Lead</span>
-            </Button>
+            {canCreateManualLead && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddLeadOpen(true)}
+                className="h-10 shrink-0 gap-1.5 font-semibold"
+              >
+                <Plus aria-hidden size={15} strokeWidth={2} />
+                <span>Add Lead</span>
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -386,7 +389,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
         </div>
       )}
 
-      {clientId && (
+      {clientId && canCreateManualLead && (
         <AddLeadModal
           open={addLeadOpen}
           onClose={() => setAddLeadOpen(false)}

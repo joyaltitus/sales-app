@@ -27,6 +27,7 @@ const capsStyle = {
 export function ContactsTab() {
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
+  const canCreateManualLead = activeClient?.role === 'manager' || activeClient?.role === 'client_admin'
   const { items, reload } = useContacts(clientId)
   const { stages } = useLeadStages(clientId)
   const [query, setQuery] = useState('')
@@ -76,15 +77,17 @@ export function ContactsTab() {
           <option value="instagram">Instagram</option>
           <option value="email">Email</option>
         </select>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setAddLeadOpen(true)}
-          className="h-8 shrink-0 gap-1 text-xs font-semibold"
-        >
-          <Plus aria-hidden size={14} strokeWidth={2} />
-          <span>Add Lead</span>
-        </Button>
+        {canCreateManualLead && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setAddLeadOpen(true)}
+            className="h-8 shrink-0 gap-1 text-xs font-semibold"
+          >
+            <Plus aria-hidden size={14} strokeWidth={2} />
+            <span>Add Lead</span>
+          </Button>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -145,7 +148,7 @@ export function ContactsTab() {
         </div>}
       </Sheet>
 
-      {clientId && (
+      {clientId && canCreateManualLead && (
         <AddLeadModal
           open={addLeadOpen}
           onClose={() => setAddLeadOpen(false)}
