@@ -27,7 +27,7 @@ const capsStyle = {
 export function ContactsTab() {
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
-  const canCreateManualLead = activeClient?.role === 'manager' || activeClient?.role === 'client_admin'
+  const canCreateManualLead = activeClient?.role === 'manager' || activeClient?.role === 'client_admin' || activeClient?.role === 'agent'
   const { items, reload } = useContacts(clientId)
   const { stages } = useLeadStages(clientId)
   const [query, setQuery] = useState('')

@@ -39,7 +39,7 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   const clientId = activeClient?.id ?? null
   const userId = session?.user?.id ?? null
   const role = activeClient?.role ?? null
-  const canCreateManualLead = role === 'manager' || role === 'client_admin'
+  const canCreateManualLead = role === 'manager' || role === 'client_admin' || role === 'agent'
 
   const { items, loading, error, reload } = useLeads(clientId)
   const { stages, loading: stagesLoading } = useLeadStages(clientId)

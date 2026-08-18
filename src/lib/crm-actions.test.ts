@@ -63,6 +63,17 @@ describe('crm-actions', () => {
     expect(from).not.toHaveBeenCalled()
   })
 
+  it('uses only create_manual_lead for an agent manual lead, with no direct leads insert or fallback', async () => {
+    rpc.mockResolvedValue({ data: 'lead-new', error: null })
+
+    await expect(createLead('client-1', {
+      profileName: 'Agent-owned lead', phone: '9876543210', stageId: 'stage-1',
+    })).resolves.toEqual({ ok: true, leadId: 'lead-new' })
+
+    expect(rpc).toHaveBeenCalledWith('create_manual_lead', expect.any(Object))
+    expect(from).not.toHaveBeenCalled()
+  })
+
   it('reports an RLS/membership denial without attempting browser fallback writes', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'not authorized for supplied client' } })
 

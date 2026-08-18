@@ -37,21 +37,29 @@ describe('manual lead role gate', () => {
     })
   })
 
-  it('does not offer conversation-less manual lead creation to agents', () => {
+  it.each(['agent', 'manager', 'client_admin'])('offers manual lead creation to %s in Contacts and Pipeline', (role) => {
+    mockUseClient.mockReturnValue({
+      activeClient: { id: 'client-1', name: 'Demo', vertical: 'education', role },
+    })
+
+    const { unmount } = render(<ContactsTab />)
+    expect(screen.getByRole('button', { name: 'Add Lead' })).toBeInTheDocument()
+    unmount()
+
+    render(<LeadsScreen crm />)
+    expect(screen.getByRole('button', { name: 'Add Lead' })).toBeInTheDocument()
+  })
+
+  it.each(['super_admin', 'viewer'])('does not offer manual lead creation to unauthorised %s roles', (role) => {
+    mockUseClient.mockReturnValue({
+      activeClient: { id: 'client-1', name: 'Demo', vertical: 'education', role },
+    })
+
     const { unmount } = render(<ContactsTab />)
     expect(screen.queryByRole('button', { name: 'Add Lead' })).not.toBeInTheDocument()
     unmount()
 
     render(<LeadsScreen crm />)
     expect(screen.queryByRole('button', { name: 'Add Lead' })).not.toBeInTheDocument()
-  })
-
-  it('offers manual lead creation to managers', () => {
-    mockUseClient.mockReturnValue({
-      activeClient: { id: 'client-1', name: 'Demo', vertical: 'education', role: 'manager' },
-    })
-
-    render(<ContactsTab />)
-    expect(screen.getByRole('button', { name: 'Add Lead' })).toBeInTheDocument()
   })
 })
