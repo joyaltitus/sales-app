@@ -224,34 +224,11 @@ export const MOCK_PROPOSALS: ProposedAction[] = [
 ]
 
 // ---------------------------------------------------------------- agent script
-export type AgentMsg =
-  | { id: string; role: 'user' | 'agent'; text: string }
-  | { id: string; role: 'tool'; tool: string; status: 'running' | 'done'; summary: string }
-  | { id: string; role: 'proposal'; proposal: ProposedAction }
-
 export const AGENT_STARTERS = [
   'Summarise this customer',
   'Draft a reply about instalments',
   'Which leads should I revive today?',
   'Prepare a quotation for Anjali',
-]
-
-export const MOCK_AGENT_THREAD: AgentMsg[] = [
-  { id: 'g1', role: 'user', text: 'Prepare a quotation for Anjali with the 2-instalment plan' },
-  { id: 'g2', role: 'tool', tool: 'Lead Brain', status: 'done', summary: 'Budget ₹60,000 · two instalments · NEET repeater evening' },
-  { id: 'g3', role: 'tool', tool: 'Templates', status: 'done', summary: 'Matched "Fee quotation — instalment plan"' },
-  {
-    id: 'g4',
-    role: 'agent',
-    text: 'Draft ready: NEET Repeater evening batch, ₹60,000 in two instalments of ₹30,000 (admission + materials in the first). Preview below — sending needs your approval.',
-  },
-  { id: 'g5', role: 'proposal', proposal: MOCK_PROPOSALS[1] },
-]
-
-export const MOCK_AGENT_ACTIVITY = [
-  { id: 'h1', at: h(1), text: 'Created follow-up for Vishnu K (approved by you)' },
-  { id: 'h2', at: h(4), text: 'Drafted instalment reply for Anjali (edited, then sent)' },
-  { id: 'h3', at: h(28), text: 'Matched 3 neglected leads to the new evening batch' },
 ]
 
 // ------------------------------------------------------------------ documents

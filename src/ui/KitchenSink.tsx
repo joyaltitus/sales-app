@@ -13,7 +13,17 @@ import { NotificationCenter } from './NotificationCenter'
 import { VoiceButton } from './agent/VoiceButton'
 import { ApprovalCard } from './agent/ApprovalCard'
 import { FactCard } from './agent/FactCard'
-import { MOCK_FACTS, MOCK_PROPOSALS } from '../lib/mock-wave3'
+import { MOCK_FACTS } from '../lib/mock-wave3'
+import type { ChecklistItem } from '../lib/agent-chat'
+
+const KITCHEN_SINK_CHECKLIST_ITEM: ChecklistItem = {
+  id: 'ks-1',
+  tool: 'update_stage',
+  tier: 'one_tap',
+  summary: { lead: 'Anjali Ramesh', to: 'Visit planned' },
+  dependsOn: [],
+  status: 'proposed',
+}
 
 // Dev route: every primitive × its six control states (§C). Also the dark-mode
 // smoke test — toggle flips cleanly, no unstyled flashes.
@@ -110,7 +120,7 @@ function Inner() {
 
       <Section title="AI — approval and memory">
         <div className="grid w-full gap-3 md:grid-cols-2">
-          <ApprovalCard proposal={MOCK_PROPOSALS[0]} />
+          <ApprovalCard item={KITCHEN_SINK_CHECKLIST_ITEM} decision={null} />
           <FactCard fact={MOCK_FACTS[1]} />
         </div>
       </Section>
