@@ -1,6 +1,7 @@
 # sales-app
 
-Manager + rep views for the sales ecosystem (MASTER-PLAN §A). Phone-first PWA for
+Manager + rep views for the sales ecosystem (MASTER-PLAN §A — the plan lives at
+`hub-service/docs/product/MASTER-PLAN.md`; there is no copy in this repo). Phone-first PWA for
 reps (bottom tabs), desktop-first for managers (left rail). Owns the shared design
 system source (`src/ui/tokens.css`), byte-copied into Workbench.
 
