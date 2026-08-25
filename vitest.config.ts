@@ -29,7 +29,10 @@ export default defineConfig({
       VITE_SUPABASE_ANON_KEY: 'test-anon-key',
     },
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
+    // extension/lib/** is α2's pure-logic suite: `npx vitest run extension/lib`
+    // can only ever NARROW this glob, so the directory must be included here
+    // for its tests to be collected at all. Additive — src collection unchanged.
+    include: ['src/**/*.test.{ts,tsx}', 'extension/lib/**/*.test.ts'],
     restoreMocks: true,
   },
 })
