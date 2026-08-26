@@ -1,0 +1,21 @@
+# Gitleaks config — extends the DEFAULT rule set; this file only adds narrow,
+# justified allowlist entries. One entry per false positive, each naming why.
+#
+# DELIBERATELY NO `paths` ENTRY. A `paths` allowlist makes gitleaks skip the whole
+# FILE before any rule runs, so it exempts every secret in it — not just the one you
+# meant. That is not a guess: an RSA private key planted in wxt.config.ts went
+# undetected under a path-scoped allowlist, while the identical key in a neutral file
+# was caught. `matchCondition = "AND"` does not change it. Allowlisting the literal
+# VALUE instead keeps the exemption to exactly this one string, anywhere it appears,
+# and leaves every other secret in every file still scanned.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Chrome extension manifest key — a PUBLIC RSA key, published by design"
+# wxt.config.ts carries the `key` field Chrome requires in manifest.json to pin the
+# extension ID (chrome.storage is scoped per ID, so a path-derived ID loses the rep's
+# session whenever the folder moves). This is the PUBLIC half of the keypair; the
+# private half is never in this repo. gitleaks' generic-api-key rule matches it on
+# shape alone.
+regexes = ['''MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtBZlAz1W5dO40W9VKQbe8''']
