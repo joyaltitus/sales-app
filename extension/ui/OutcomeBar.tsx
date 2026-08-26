@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CallOutcome, QueueItem } from '../lib/contracts'
 import { Button } from '../../src/ui/Button'
 
@@ -10,7 +10,7 @@ type Props = {
   status: QueueItem['status']
   taxonomy: Option[]
   busy?: boolean
-  onOutcome: (outcome: CallOutcome) => void
+  onOutcome: (outcome: CallOutcome, taxonomyKey?: string) => void
   onStageChange: (stageKey: string) => void
   onStatusChange: (status: QueueItem['status']) => void
   onFollowUpChange: (dateIso: string | null) => void
@@ -54,7 +54,11 @@ export function OutcomeBar({
 }: Props) {
   const [followUp, setFollowUp] = useState('')
   const [note, setNote] = useState('')
-  const [objectionKey, setObjectionKey] = useState('')
+  const [objectionKey, setObjectionKey] = useState(taxonomy[0]?.key ?? '')
+
+  useEffect(() => {
+    if (!objectionKey && taxonomy[0]) setObjectionKey(taxonomy[0].key)
+  }, [objectionKey, taxonomy])
 
   return (
     <div className="space-y-3 px-3 py-3">
@@ -67,7 +71,7 @@ export function OutcomeBar({
               type="button"
               data-outcome={value}
               disabled={busy}
-              onClick={() => onOutcome(value)}
+              onClick={() => value === 'objection' ? onOutcome(value, objectionKey || undefined) : onOutcome(value)}
               className={[
                 'min-h-10 rounded-md border px-2 text-xs font-semibold transition-colors select-none disabled:opacity-45',
                 OUTCOME_TONE[value],

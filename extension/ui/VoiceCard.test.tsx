@@ -65,4 +65,19 @@ describe('VoiceCard', () => {
     )
     expect(screen.getByLabelText('Proposed Note')).toHaveValue('Ring after 5')
   })
+
+  it('re-syncs when a later proposal reuses the same field keys', () => {
+    const { rerender } = render(
+      <VoiceCard proposedFields={fields} transcript={null} onApprove={vi.fn()} onDiscard={vi.fn()} />,
+    )
+    rerender(
+      <VoiceCard
+        proposedFields={fields.map((field) => field.key === 'outcome' ? { ...field, value: 'closed' } : field)}
+        transcript={null}
+        onApprove={vi.fn()}
+        onDiscard={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Proposed Outcome')).toHaveValue('closed')
+  })
 })

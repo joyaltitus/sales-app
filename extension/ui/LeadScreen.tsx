@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { LeadDetail, TimelineEntry } from '../lib/contracts'
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Check, MessageSquare, Phone, ShieldAlert, StickyNote } from 'lucide-react'
 import { Avatar } from '../../src/ui/Avatar'
@@ -14,6 +15,7 @@ type Props = {
   onBack?: () => void
   onOpenChat?: () => void
   onCall?: () => void
+  workspace?: ReactNode
 }
 
 const SOURCE_LABEL = { api: 'AI transcript', rep: 'Rep declared', both: 'AI + rep' } as const
@@ -54,7 +56,7 @@ function EntryBody({ entry }: { entry: TimelineEntry }) {
   }
 }
 
-export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall }: Props) {
+export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, workspace }: Props) {
   const { lead, facts, objections, timeline } = detail
   const ownedByOther = lead.owner != null && lead.owner.user_id !== viewerId
 
@@ -104,6 +106,8 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall }: Pro
             </p>
           )}
         </section>
+
+        {workspace}
 
         {facts.length > 0 && (
           <section aria-label="Facts">

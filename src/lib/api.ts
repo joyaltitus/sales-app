@@ -21,7 +21,7 @@ const BASE = import.meta.env.VITE_HUB_API_BASE ?? ''
 
 function requestHeaders(init: RequestInit, key: string, token: string): Headers {
   const headers = new Headers(init.headers)
-  headers.set('content-type', 'application/json')
+  if (!(init.body instanceof FormData)) headers.set('content-type', 'application/json')
   headers.set('x-pm-gateway-key', key)
   headers.set('x-pm-user-jwt', token)
   return headers
@@ -37,6 +37,7 @@ export type HubResult<T> =
   | { kind: 'forbidden' } //     403 — authenticated, but this role may not do this
   | { kind: 'not_found' } //     404 — conversation missing, or no resolvable send route
   | { kind: 'bad_request' } //   400 — malformed body (a bug here, not a user error)
+  | { kind: 'budget_exceeded' } // 429 — hard AI budget wall; caller offers a non-model fallback
   | { kind: 'paused' } //        503 'paused' — the agent_send kill-switch is passive
   | { kind: 'unavailable' } //   503 — auth/DB/enqueue backend down; not the caller's fault
   | { kind: 'network'; message: string } // fetch threw: offline, DNS, or CORS
@@ -107,6 +108,7 @@ export async function hubFetch<T = unknown>(
   }
 
   if (res.status === 400) return { kind: 'bad_request' }
+  if (res.status === 429) return { kind: 'budget_exceeded' }
   if (res.status === 401) return { kind: 'unauthorized' }
   if (res.status === 403) return { kind: 'forbidden' }
   if (res.status === 404) return { kind: 'not_found' }

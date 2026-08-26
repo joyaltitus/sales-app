@@ -73,7 +73,11 @@ export function sendAgentChat(input: {
   })
 }
 
-export type Approval = { id: string; tier: Exclude<ApprovalTier, 'auto'> }
+export type Approval = {
+  id: string
+  tier: Exclude<ApprovalTier, 'auto'>
+  edits?: Partial<Record<'value' | 'note', string>>
+}
 
 export type AgentApproveOk = { ok: true; session_id: string; items: ChecklistItem[] }
 export type AgentApproveFallback = {

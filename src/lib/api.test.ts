@@ -115,6 +115,7 @@ describe('hub authentication recovery', () => {
     [400, undefined, { kind: 'bad_request' }],
     [403, undefined, { kind: 'forbidden' }],
     [404, undefined, { kind: 'not_found' }],
+    [429, { error: 'budget_exceeded' }, { kind: 'budget_exceeded' }],
     [503, { error: 'paused' }, { kind: 'paused' }],
     [503, { error: 'auth_unavailable' }, { kind: 'unavailable' }],
     [418, undefined, { kind: 'network', message: 'HTTP 418' }],
@@ -138,5 +139,16 @@ describe('hub authentication recovery', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(result).toEqual({ kind: 'network', message: 'offline' })
+  })
+
+  it('lets the browser set the multipart boundary for audio forms', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 200 }))
+    const form = new FormData()
+    form.append('audio', new Blob(['voice'], { type: 'audio/webm' }), 'note.webm')
+
+    await hubFetch('/api/transcribe', { method: 'POST', body: form })
+
+    expect(requestHeader(fetchMock, 0, 'content-type')).toBeNull()
+    expect(requestHeader(fetchMock, 0, 'x-pm-gateway-key')).toBe('browser-key')
   })
 })
