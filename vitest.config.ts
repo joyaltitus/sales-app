@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
 
 // Test config is deliberately SEPARATE from vite.config.ts: the app config
 // carries the PWA plugin, which generates a service worker and precache
@@ -10,6 +11,9 @@ import react from '@vitejs/plugin-react'
 // something S5 would have to absorb rather than pretend around.
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { '@app': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

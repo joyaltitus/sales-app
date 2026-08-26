@@ -14,10 +14,15 @@ import { cleanPhoneForWhatsApp } from './phone'
 
 export type WriteResult =
   | { ok: true }
-  | { ok: false; reason: 'denied' | 'error'; message?: string }
+  | { ok: false; reason: 'denied' | 'error'; message?: string; code?: string }
 
-function fromUpdate(data: unknown[] | null, error: { message: string } | null): WriteResult {
-  if (error) return { ok: false, reason: 'error', message: error.message }
+function fromUpdate(data: unknown[] | null, error: { message: string; code?: string } | null): WriteResult {
+  if (error) return {
+    ok: false,
+    reason: 'error',
+    message: error.message,
+    ...(error.code ? { code: error.code } : {}),
+  }
   if (!data || data.length === 0) return { ok: false, reason: 'denied' }
   return { ok: true }
 }
@@ -155,6 +160,7 @@ export async function saveLead(
 export async function addFollowUp(
   clientId: string,
   row: {
+    id?: string
     contact_id: string
     lead_id: string | null
     conversation_id: string | null
@@ -205,6 +211,7 @@ export async function updateFollowUp(
 export async function addNote(
   clientId: string,
   row: {
+    id?: string
     conversation_id: string | null
     lead_id: string | null
     author: string | null
@@ -224,6 +231,21 @@ export async function deleteNote(clientId: string, noteId: string): Promise<Writ
     .delete()
     .eq('client_id', clientId)
     .eq('id', noteId)
+    .select('id')
+  return fromUpdate(data, error)
+}
+
+/** Extension offline replay is explicitly last-write-wins. */
+export async function saveLeadLastWriteWins(
+  clientId: string,
+  leadId: string,
+  patch: LeadPatch,
+): Promise<WriteResult> {
+  const { data, error } = await supabase
+    .from('leads')
+    .update(patch)
+    .eq('client_id', clientId)
+    .eq('id', leadId)
     .select('id')
   return fromUpdate(data, error)
 }

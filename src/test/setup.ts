@@ -54,6 +54,10 @@ const chromeLocalStore = new Map<string, unknown>()
         chromeLocalStore.clear()
       },
     },
+    onChanged: {
+      addListener: () => {},
+      removeListener: () => {},
+    },
   },
 }
 

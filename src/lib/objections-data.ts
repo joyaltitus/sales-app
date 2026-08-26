@@ -162,6 +162,7 @@ export async function logObjection({
   source,
   note,
   actorId,
+  id,
 }: {
   clientId: string
   contactId: string
@@ -171,10 +172,12 @@ export async function logObjection({
   source: ObjectionSource
   note?: string | null
   actorId: string
-}): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  id?: string
+}): Promise<{ ok: true; id: string } | { ok: false; message: string; code?: string }> {
   const { data, error } = await supabase
     .from('objection_logs')
     .insert({
+      id,
       client_id: clientId,
       contact_id: contactId,
       conversation_id: conversationId ?? null,
@@ -186,7 +189,7 @@ export async function logObjection({
     })
     .select('id')
     .single()
-  if (error) return { ok: false, message: error.message }
+  if (error) return { ok: false, message: error.message, ...(error.code ? { code: error.code } : {}) }
   return { ok: true, id: (data as { id: string }).id }
 }
 

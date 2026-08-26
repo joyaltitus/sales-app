@@ -41,8 +41,8 @@ const { calls, responses, supabaseMock } = vi.hoisted(() => {
 
 vi.mock('./supabase', () => ({ supabase: supabaseMock }))
 
-const { markNotificationsRead, shortAge } = await import('./notifications-data')
-const { snoozeFollowUp, completeFollowUp } = await import('./leads-data')
+const { markNotificationsRead, readNewLeadNotifications, shortAge } = await import('./notifications-data')
+const { snoozeFollowUp, completeFollowUp, readDueFollowUps } = await import('./leads-data')
 
 function lastCall(table: string): Recorded {
   const found = [...calls].reverse().find((c) => c.table === table)
@@ -72,6 +72,25 @@ describe('markNotificationsRead', () => {
   it('does not touch the network for an empty batch', async () => {
     await markNotificationsRead([])
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('extension alarm reads', () => {
+  it('scopes due follow-ups to the authenticated memberships and alarm window', async () => {
+    responses.set('follow_ups', { data: [{ id: 'fu-1', note: 'Call', due_at: '2026-08-26T10:01:00Z' }], error: null })
+    await expect(readDueFollowUps(['client-a', 'client-b'], '2026-08-26T10:01:00Z')).resolves.toHaveLength(1)
+    const rec = lastCall('follow_ups')
+    expect(opArgs(rec, 'in')).toContainEqual(['client_id', ['client-a', 'client-b']])
+    expect(opArgs(rec, 'lte')).toEqual([['due_at', '2026-08-26T10:01:00Z']])
+  })
+
+  it('reads only unread new-lead notifications inside those memberships', async () => {
+    responses.set('notifications', { data: [], error: null })
+    await readNewLeadNotifications(['client-a'])
+    const rec = lastCall('notifications')
+    expect(opArgs(rec, 'in')).toContainEqual(['client_id', ['client-a']])
+    expect(opArgs(rec, 'eq')).toContainEqual(['kind', 'labeled_to_you'])
+    expect(opArgs(rec, 'is')).toContainEqual(['read_at', null])
   })
 })
 

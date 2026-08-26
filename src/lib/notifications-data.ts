@@ -32,6 +32,22 @@ export type NotificationRow = {
   created_at: string
 }
 
+export type NewLeadNotification = Pick<NotificationRow, 'id' | 'title' | 'body'>
+
+/** Bounded worker read for unread lead assignments, explicitly tenant-scoped. */
+export async function readNewLeadNotifications(clientIds: string[]): Promise<NewLeadNotification[]> {
+  if (clientIds.length === 0) return []
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, title, body')
+    .in('client_id', clientIds)
+    .eq('kind', 'labeled_to_you')
+    .is('read_at', null)
+    .limit(NOTIFICATION_LIMIT)
+  if (error) throw error
+  return (data ?? []) as NewLeadNotification[]
+}
+
 /** Bounded, newest-first. No infinite scroll by design (§S11 item 4). */
 export function useNotifications(clientId: string | null, userId: string | null) {
   const [items, setItems] = useState<NotificationRow[]>([])

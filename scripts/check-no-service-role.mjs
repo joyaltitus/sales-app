@@ -1,5 +1,5 @@
 // Law 8 tripwire: the browser bundle must NEVER hold service-role material.
-// Greps src/ for forbidden markers. Wired into CI from day 1.
+// Greps every browser source root for forbidden markers. Wired into CI from day 1.
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -22,10 +22,12 @@ function walk(dir) {
 }
 
 const hits = []
-for (const file of walk('src')) {
-  const text = readFileSync(file, 'utf8')
-  for (const marker of FORBIDDEN) {
-    if (text.includes(marker)) hits.push(`${file}: "${marker}"`)
+for (const root of ['src', 'extension']) {
+  for (const file of walk(root)) {
+    const text = readFileSync(file, 'utf8')
+    for (const marker of FORBIDDEN) {
+      if (text.includes(marker)) hits.push(`${file}: "${marker}"`)
+    }
   }
 }
 
@@ -34,4 +36,4 @@ if (hits.length) {
   for (const h of hits) console.error('  ' + h)
   process.exit(1)
 }
-console.log('✓ no service-role markers in src/')
+console.log('✓ no service-role markers in src/ or extension/')
