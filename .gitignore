@@ -22,3 +22,7 @@ dev-dist
 scripts/__pycache__/
 *.py[cod]
 .orchestrator/
+
+# WXT build artifacts
+.output/
+.wxt/
