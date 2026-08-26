@@ -6,13 +6,18 @@ function fakeStorage() {
   return {
     store,
     chrome: {
-      local: {
-        get: vi.fn(async (key: string) =>
-          store.has(key) ? { [key]: store.get(key) } : {},
-        ),
-        set: vi.fn(async (entries: Record<string, unknown>) => {
-          for (const [key, value] of Object.entries(entries)) store.set(key, value)
-        }),
+      // chrome.storage.local — the `storage` layer was missing here, so
+      // chrome.storage was undefined and every call threw. The file was never
+      // collected by vitest's include glob, so this never ran until now.
+      storage: {
+        local: {
+          get: vi.fn(async (key: string) =>
+            store.has(key) ? { [key]: store.get(key) } : {},
+          ),
+          set: vi.fn(async (entries: Record<string, unknown>) => {
+            for (const [key, value] of Object.entries(entries)) store.set(key, value)
+          }),
+        },
       },
     },
   }
