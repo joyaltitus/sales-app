@@ -1,7 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { MemoryRouter, NavLink, Route, Routes } from 'react-router-dom'
 import SettingsScreen from './screens/SettingsScreen'
+import { drainOutbox } from '../lib/outbox-store'
+import { checkPanelSession } from '../lib/session'
+import { panelSupabase } from '../lib/panel-client'
+import { AUTH_NEEDS_SIGNIN_KEY } from '../lib/storage'
 
 let rootMounts = 0
 
@@ -32,7 +36,7 @@ const navLinkStyle = (active: boolean): CSSProperties => ({
   textDecoration: 'none',
 })
 
-export default function App() {
+export function AppShell() {
   useEffect(() => {
     rootMounts += 1
   }, [])
@@ -59,5 +63,87 @@ export default function App() {
         </nav>
       </div>
     </MemoryRouter>
+  )
+}
+
+type AuthState = 'checking' | 'signed_in' | 'signed_out' | 'refresh_failed'
+
+export default function App() {
+  const [state, setState] = useState<AuthState>('checking')
+  const [message, setMessage] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    void chrome.storage.local.get(AUTH_NEEDS_SIGNIN_KEY).then(async (stored) => {
+      if (!alive) return
+      if (stored[AUTH_NEEDS_SIGNIN_KEY] === true) {
+        setState('refresh_failed')
+        return
+      }
+      const result = await checkPanelSession()
+      if (!alive) return
+      if (result.ok) {
+        setState('signed_in')
+        void drainOutbox()
+      } else {
+        setMessage(result.message ?? null)
+        setState(result.reason)
+      }
+    })
+    const { data } = panelSupabase.auth.onAuthStateChange((event, session) => {
+      if (!alive || event === 'INITIAL_SESSION') return
+      setState(session ? 'signed_in' : 'signed_out')
+    })
+    const storageChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && changes[AUTH_NEEDS_SIGNIN_KEY]?.newValue === true) {
+        setState('refresh_failed')
+      }
+    }
+    chrome.storage.onChanged.addListener(storageChanged)
+    const online = () => {
+      void checkPanelSession().then((result) => {
+        if (result.ok) void drainOutbox()
+      })
+    }
+    window.addEventListener('online', online)
+    return () => {
+      alive = false
+      data.subscription.unsubscribe()
+      chrome.storage.onChanged.removeListener(storageChanged)
+      window.removeEventListener('online', online)
+    }
+  }, [])
+
+  async function signIn(event: React.FormEvent) {
+    event.preventDefault()
+    setSubmitting(true)
+    setMessage(null)
+    const { error } = await panelSupabase.auth.signInWithPassword({ email, password })
+    setSubmitting(false)
+    if (error) setMessage(error.message)
+    else await chrome.storage.local.remove(AUTH_NEEDS_SIGNIN_KEY)
+  }
+
+  if (state === 'checking') return <main style={{ padding: 20 }}>Checking session…</main>
+  if (state === 'signed_in') return <AppShell />
+
+  return (
+    <main style={{ padding: 20, display: 'grid', gap: 16 }}>
+      <h1 style={{ margin: 0 }}>{state === 'refresh_failed' ? 'Sign in again' : 'Sign in'}</h1>
+      {state === 'refresh_failed' && (
+        <p role="alert" style={{ margin: 0, color: 'var(--warn-fg)' }}>
+          Your session could not be refreshed. Offline changes are still safely queued.
+        </p>
+      )}
+      {message && <p role="alert" style={{ margin: 0 }}>{message}</p>}
+      <form onSubmit={signIn} style={{ display: 'grid', gap: 12 }}>
+        <label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        <label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
+      </form>
+    </main>
   )
 }

@@ -1,0 +1,10 @@
+// One extension-facing barrel over the existing app data layer. Do not fork it.
+export * from '@app/lib/leads-data'
+export * from '@app/lib/crm-data'
+export * from '@app/lib/crm-actions'
+export * from '@app/lib/objections-data'
+export * from '@app/lib/scripts-data'
+export * from '@app/lib/targets-data'
+export * from '@app/lib/calls-data'
+export * from '@app/lib/notifications-data'
+export * from '@app/lib/phone'

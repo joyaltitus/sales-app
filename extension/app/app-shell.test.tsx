@@ -1,11 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
-import App, { getRootMounts } from './App'
+import { vi } from 'vitest'
+
+vi.mock('../lib/panel-client', () => ({ panelSupabase: { auth: {} } }))
+import { AppShell, getRootMounts } from './App'
 
 it('navigates all four screens without remounting the app root', async () => {
   const user = userEvent.setup()
-  render(<App />)
+  render(<AppShell />)
 
   expect(getRootMounts()).toBe(1)
   expect(screen.getByRole('heading', { name: 'Queue' })).toBeTruthy()

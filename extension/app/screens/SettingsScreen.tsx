@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ChatMode } from '../../lib/contracts'
 import { loadChatMode, saveChatMode } from '../chat-mode'
+import { signOutExtension } from '../../lib/session'
 
 const OPTIONS: { value: ChatMode; label: string }[] = [
   { value: 'wa_me', label: 'wa.me' },
@@ -69,6 +70,7 @@ export default function SettingsScreen() {
         wa.me keeps the panel visible beside the chat; desktop mode is faster but switches you out
         of the browser.
       </p>
+      <button type="button" onClick={() => void signOutExtension()}>Sign out</button>
     </section>
   )
 }

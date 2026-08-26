@@ -49,6 +49,23 @@ export type FollowUpItem = {
   source_call_id: string | null
 }
 
+export type DueFollowUp = Pick<FollowUpItem, 'id' | 'note' | 'due_at'>
+
+/** Bounded worker read for the next alarm window, explicitly tenant-scoped. */
+export async function readDueFollowUps(clientIds: string[], through: string): Promise<DueFollowUp[]> {
+  if (clientIds.length === 0) return []
+  const { data, error } = await supabase
+    .from('follow_ups')
+    .select('id, note, due_at')
+    .in('client_id', clientIds)
+    .in('status', ['pending', 'snoozed'])
+    .lte('due_at', through)
+    .order('due_at', { ascending: true })
+    .limit(FOLLOW_UP_LIMIT)
+  if (error) throw error
+  return (data ?? []) as DueFollowUp[]
+}
+
 /** Supabase infers a to-one embed as an array; at runtime it is the single
  *  joined row. Normalize either shape (the same trap inbox-data.ts hit). */
 function oneOf<T>(v: T | T[] | null): T | null {
