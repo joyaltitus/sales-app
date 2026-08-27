@@ -15,7 +15,7 @@ type Props = {
   onDiscard: () => void
 }
 
-const fieldsSignature = (fields: ProposedField[]) => fields.map((f) => f.key).join('|')
+const fieldsSignature = (fields: ProposedField[]) => fields.map((f) => `${f.key}:${f.value}`).join('|')
 
 export function VoiceCard({
   recording = false,

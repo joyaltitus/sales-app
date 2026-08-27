@@ -31,6 +31,16 @@ export function firstOfMonth(date: Date = new Date()): string {
   return `${y}-${m}-01`
 }
 
+export async function readOwnTarget(clientId: string, userId: string, month: string) {
+  return supabase
+    .from('employee_targets')
+    .select(TARGET_COLUMNS)
+    .eq('client_id', clientId)
+    .eq('user_id', userId)
+    .eq('month', month)
+    .maybeSingle()
+}
+
 /** The rep's own current-month target row, or null when the manager hasn't
  *  set one yet. */
 export function useTarget(clientId: string | null, userId: string | null, month: string) {
@@ -46,13 +56,7 @@ export function useTarget(clientId: string | null, userId: string | null, month:
       return
     }
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('employee_targets')
-      .select(TARGET_COLUMNS)
-      .eq('client_id', clientId)
-      .eq('user_id', userId)
-      .eq('month', month)
-      .maybeSingle()
+    const { data, error: err } = await readOwnTarget(clientId, userId, month)
     if (err) {
       setItem(null)
       setError(err.message)
@@ -69,6 +73,49 @@ export function useTarget(clientId: string | null, userId: string | null, month:
   }, [load])
 
   return { item, loading, error, reload: load }
+}
+
+/** Revenue won by this rep in the same month as their target. Both tenant and owner filters are
+ * explicit even though RLS remains underneath; this surface is personal progress, not a team view. */
+export function useOwnWonValue(clientId: string | null, userId: string | null, month: string) {
+  const [value, setValue] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!clientId || !userId) {
+      setValue(0)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    // Built directly in UTC (not `new Date(`${month}T00:00:00`)`, which parses in local time and
+    // shifts the window on any non-UTC offset) since `updated_at` is compared as UTC below.
+    const [y, m] = month.split('-').map(Number)
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString()
+    const end = new Date(Date.UTC(y, m, 1)).toISOString()
+    setLoading(true)
+    void supabase
+      .from('leads')
+      .select('est_value')
+      .eq('client_id', clientId)
+      .eq('owner_id', userId)
+      .eq('status', 'won')
+      // `leads` has no `won_at`; `updated_at` is the documented won-at proxy (src/metrics/queries.ts,
+      // useTeamWinsThisMonth) — do not swap this for a real won-at column without updating both.
+      .gte('updated_at', start)
+      .lt('updated_at', end)
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        setError(err?.message ?? null)
+        setValue(err ? 0 : (data ?? []).reduce((sum, row) => sum + Number((row as { est_value: number | null }).est_value ?? 0), 0))
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [clientId, month, userId])
+
+  return { value, loading, error }
 }
 
 /** Every rep's target row for the client/month — feeds the manager set-target

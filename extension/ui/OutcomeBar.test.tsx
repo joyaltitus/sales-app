@@ -36,7 +36,7 @@ describe('OutcomeBar', () => {
   it.each(FIVE)('one tap on %s fires the callback immediately', async (outcome) => {
     const props = setup()
     await userEvent.click(screen.getByRole('button', { name: new RegExp(outcome.replace('_', ' '), 'i') }))
-    expect(props.onOutcome).toHaveBeenCalledWith(outcome)
+    expect(props.onOutcome).toHaveBeenCalledWith(...(outcome === 'objection' ? [outcome, 'price'] : [outcome]))
   })
 
   it('changes stage and status through the selects', async () => {
@@ -66,12 +66,12 @@ describe('OutcomeBar', () => {
     expect(save).toBeDisabled()
   })
 
-  it('objection log requires picking a taxonomy first', async () => {
+  it('defaults to the first objection taxonomy and allows changing it', async () => {
     const props = setup()
     const log = screen.getByRole('button', { name: 'Log' })
-    expect(log).toBeDisabled()
-    await userEvent.selectOptions(screen.getByLabelText('Objection type'), 'price')
+    expect(log).toBeEnabled()
+    await userEvent.selectOptions(screen.getByLabelText('Objection type'), 'timing')
     await userEvent.click(log)
-    expect(props.onObjection).toHaveBeenCalledWith('price')
+    expect(props.onObjection).toHaveBeenCalledWith('timing')
   })
 })

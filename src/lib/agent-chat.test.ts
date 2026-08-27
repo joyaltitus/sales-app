@@ -59,10 +59,10 @@ describe('approveChecklist', () => {
       new Response(JSON.stringify({ ok: true, session_id: 's1', items: [] }), { status: 200 }),
     )
 
-    await approveChecklist('s1', 'client-1', [{ id: 'step-1', tier: 'one_tap' }])
+    await approveChecklist('s1', 'client-1', [{ id: 'step-1', tier: 'one_tap', edits: { value: 'rep edit' } }])
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(AGENT_APPROVE_PATH)
     const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string)
-    expect(body).toEqual({ session_id: 's1', client_id: 'client-1', approvals: [{ id: 'step-1', tier: 'one_tap' }] })
+    expect(body).toEqual({ session_id: 's1', client_id: 'client-1', approvals: [{ id: 'step-1', tier: 'one_tap', edits: { value: 'rep edit' } }] })
   })
 })
