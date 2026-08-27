@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { from, operations } = vi.hoisted(() => ({
   from: vi.fn(),
@@ -7,7 +8,7 @@ const { from, operations } = vi.hoisted(() => ({
 
 vi.mock('./supabase', () => ({ supabase: { from } }))
 
-const { readOwnTarget } = await import('./targets-data')
+const { readOwnTarget, useOwnWonValue } = await import('./targets-data')
 
 function queryResult(data: unknown) {
   const chain: Record<string, (...args: unknown[]) => unknown> = {}
@@ -18,6 +19,21 @@ function queryResult(data: unknown) {
     }
   }
   chain.maybeSingle = async () => ({ data, error: null })
+  return chain
+}
+
+function wonValueChain(data: unknown) {
+  const chain: Record<string, (...args: unknown[]) => unknown> = {}
+  for (const method of ['select', 'eq', 'gte']) {
+    chain[method] = (...args: unknown[]) => {
+      operations.push({ method, args })
+      return chain
+    }
+  }
+  chain.lt = (...args: unknown[]) => {
+    operations.push({ method: 'lt', args })
+    return Promise.resolve({ data, error: null })
+  }
   return chain
 }
 
@@ -39,5 +55,34 @@ describe('personal target read', () => {
       ['month', '2026-08-01'],
     ])
     expect(result.data).toEqual({ id: 'target-own' })
+  })
+})
+
+describe('useOwnWonValue month window (UTC boundary)', () => {
+  const realTZ = process.env.TZ
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    operations.length = 0
+  })
+
+  afterEach(() => {
+    if (realTZ === undefined) delete process.env.TZ
+    else process.env.TZ = realTZ
+  })
+
+  it('builds the month window in UTC, not local time', async () => {
+    process.env.TZ = 'Asia/Kolkata'
+    from.mockReturnValue(wonValueChain([{ est_value: 5000 }, { est_value: 2500 }]))
+
+    const { result } = renderHook(() => useOwnWonValue('client-own', 'rep-own', '2026-08-01'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(from).toHaveBeenCalledWith('leads')
+    const gte = operations.find((op) => op.method === 'gte')
+    const lt = operations.find((op) => op.method === 'lt')
+    expect(gte?.args).toEqual(['updated_at', '2026-08-01T00:00:00.000Z'])
+    expect(lt?.args).toEqual(['updated_at', '2026-09-01T00:00:00.000Z'])
+    expect(result.current.value).toBe(7500)
   })
 })

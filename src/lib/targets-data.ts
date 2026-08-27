@@ -90,8 +90,11 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
       setLoading(false)
       return
     }
-    const start = new Date(`${month}T00:00:00`)
-    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1).toISOString()
+    // Built directly in UTC (not `new Date(`${month}T00:00:00`)`, which parses in local time and
+    // shifts the window on any non-UTC offset) since `updated_at` is compared as UTC below.
+    const [y, m] = month.split('-').map(Number)
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString()
+    const end = new Date(Date.UTC(y, m, 1)).toISOString()
     setLoading(true)
     void supabase
       .from('leads')
@@ -99,7 +102,9 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
       .eq('client_id', clientId)
       .eq('owner_id', userId)
       .eq('status', 'won')
-      .gte('updated_at', start.toISOString())
+      // `leads` has no `won_at`; `updated_at` is the documented won-at proxy (src/metrics/queries.ts,
+      // useTeamWinsThisMonth) — do not swap this for a real won-at column without updating both.
+      .gte('updated_at', start)
       .lt('updated_at', end)
       .then(({ data, error: err }) => {
         if (cancelled) return

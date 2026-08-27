@@ -38,6 +38,11 @@ export function VoiceFlow({ clientId, leadId, onSaved }: Props) {
     setError(null)
     const result = await proposeVoiceNote({ transcript: text, clientId, leadId })
     setBusy(false)
+    if (result.kind === 'budget_exceeded') {
+      setTyping(true)
+      setError('Voice budget reached. Type the note instead \u2014 no lower-quality model will be used.')
+      return
+    }
     if (result.kind !== 'ok' || !result.data.ok) {
       setError(result.kind === 'ok' ? 'No safe CRM proposal was produced. Edit the note and retry.' : failure(result.kind))
       return

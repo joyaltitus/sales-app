@@ -48,3 +48,17 @@ it('a hard voice budget breach offers typing and makes no proposal-model call', 
   expect(screen.getByRole('alert')).toHaveTextContent('no lower-quality model')
   expect(proposeVoiceNote).not.toHaveBeenCalled()
 })
+
+it('a budget breach on the chat path (propose) also offers typing, not the generic failure', async () => {
+  transcribeNote.mockResolvedValue({ kind: 'ok', data: { ok: true, transcript: 'call back tomorrow', provider: 'sarvam', degraded: false } })
+  proposeVoiceNote.mockResolvedValue({ kind: 'budget_exceeded' })
+  const user = userEvent.setup()
+  render(<VoiceFlow clientId="client-1" leadId="lead-1" />)
+
+  await user.click(screen.getByRole('button', { name: 'Start recording' }))
+  await user.click(screen.getByRole('button', { name: 'Stop recording' }))
+
+  expect(await screen.findByText(/Type note instead/)).toBeInTheDocument()
+  expect(screen.getByRole('alert')).toHaveTextContent('no lower-quality model')
+  expect(proposeVoiceNote).toHaveBeenCalled()
+})
