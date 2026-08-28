@@ -1,11 +1,23 @@
 import type { ReactNode } from 'react'
 import type { LeadDetail, TimelineEntry } from '../lib/contracts'
-import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Check, MessageSquare, Phone, ShieldAlert, StickyNote } from 'lucide-react'
+import {
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  ListChecks,
+  MessageSquare,
+  Phone,
+  ShieldAlert,
+  StickyNote,
+} from 'lucide-react'
 import { Avatar } from '../../src/ui/Avatar'
 import { Button } from '../../src/ui/Button'
 import { ChannelIcon } from '../../src/ui/ChannelIcon'
 import { Chip } from '../../src/ui/Chip'
 import { EmptyState } from '../../src/ui/EmptyState'
+import { ReferenceSkeleton } from './Skeletons'
 import { formatDay } from './time'
 
 type Props = {
@@ -16,6 +28,8 @@ type Props = {
   onOpenChat?: () => void
   onCall?: () => void
   workspace?: ReactNode
+  /** Reference data still in flight — hold its height instead of popping in. */
+  pending?: boolean
 }
 
 const SOURCE_LABEL = { api: 'AI transcript', rep: 'Rep declared', both: 'AI + rep' } as const
@@ -25,6 +39,42 @@ const KIND_META: Record<TimelineEntry['kind'], { icon: typeof MessageSquare; lab
   call_log: { icon: Phone, label: 'Call' },
   note: { icon: StickyNote, label: 'Note' },
   objection: { icon: ShieldAlert, label: 'Objection' },
+}
+
+// summary is outside the global :focus-visible selector list, so reference
+// disclosures carry their own ring — same accent + offset, same tokens.
+const summaryClass =
+  'flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 select-none hover:bg-surface-sunk focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden'
+
+/** Reference material: readable before the call, out of the way during it. */
+function Reference({
+  label,
+  icon: Icon,
+  count,
+  children,
+}: {
+  label: string
+  icon: typeof MessageSquare
+  count?: number
+  children: ReactNode
+}) {
+  return (
+    <section aria-label={label}>
+      <details className="group overflow-hidden rounded-lg border border-border bg-surface">
+        <summary className={summaryClass}>
+          <Icon aria-hidden size={14} strokeWidth={1.9} className="shrink-0 text-fg-subtle" />
+          <span className="label-caps">{label}</span>
+          {count != null && <span className="text-2xs text-fg-subtle tnum">{count}</span>}
+          <ChevronDown
+            aria-hidden
+            size={15}
+            className="ml-auto shrink-0 text-fg-subtle transition-transform duration-[var(--motion-fast)] group-open:rotate-180"
+          />
+        </summary>
+        <div className="border-t border-border">{children}</div>
+      </details>
+    </section>
+  )
 }
 
 function EntryBody({ entry }: { entry: TimelineEntry }) {
@@ -56,63 +106,79 @@ function EntryBody({ entry }: { entry: TimelineEntry }) {
   }
 }
 
-export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, workspace }: Props) {
+export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, workspace, pending }: Props) {
   const { lead, facts, objections, timeline } = detail
   const ownedByOther = lead.owner != null && lead.owner.user_id !== viewerId
 
   return (
     <div>
-      <header className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2.5">
-        <div className="flex items-center gap-2.5">
+      {/* Who, what stage, one primary action. Status only earns a chip when it
+          is no longer the default — an "open" pill on every open lead is noise. */}
+      <header className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2">
+        <div className="flex items-center gap-2">
           {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to queue" className="-ml-2">
+            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to queue" className="-ml-2 h-9 w-9">
               <ArrowLeft aria-hidden size={18} strokeWidth={1.75} />
             </Button>
           )}
           <Avatar name={lead.display_name} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <h2 className="truncate text-md font-semibold tracking-[-0.015em] text-fg">{lead.display_name}</h2>
-              <ChannelIcon channel={lead.channel === 'phone' ? null : lead.channel} />
-            </div>
-            <div className="mt-0.5 flex items-center gap-1.5">
-              <span className="truncate text-2xs text-fg-subtle">{lead.stage_label}</span>
-              <Chip tone={lead.status === 'open' ? 'neutral' : lead.status === 'won' ? 'success' : 'danger'}>
-                {lead.status}
-              </Chip>
-              <Chip tone="accent">{SOURCE_LABEL[detail.source]}</Chip>
-            </div>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <h2 className="truncate text-md font-semibold tracking-[-0.015em] text-fg">{lead.display_name}</h2>
+            <ChannelIcon channel={lead.channel === 'phone' ? null : lead.channel} />
           </div>
+          {lead.phone_e164 && (
+            <Button size="sm" className="h-9 shrink-0 px-3" onClick={onOpenChat}>
+              Open chat
+            </Button>
+          )}
         </div>
-        {ownedByOther && (
-          <p className="mt-1 text-2xs text-fg-subtle">Owned by {lead.owner?.display_name ?? 'another rep'}</p>
-        )}
+        <div className="mt-1 flex items-center gap-1.5 pl-1">
+          <span className="min-w-0 truncate text-2xs text-fg-subtle">{lead.stage_label}</span>
+          {lead.status !== 'open' && (
+            <Chip tone={lead.status === 'won' ? 'success' : 'danger'}>{lead.status}</Chip>
+          )}
+          {ownedByOther && (
+            <>
+              <span aria-hidden className="text-2xs text-fg-subtle">·</span>
+              <span className="truncate text-2xs text-fg-subtle">Owned by {lead.owner?.display_name ?? 'another rep'}</span>
+            </>
+          )}
+          {lead.phone_e164 ? (
+            <button
+              type="button"
+              onClick={onCall}
+              className="ml-auto flex min-h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-2xs font-medium text-fg-muted transition-colors select-none tnum hover:bg-surface-sunk hover:text-fg"
+            >
+              <Phone aria-hidden size={12} strokeWidth={2} />
+              {lead.phone_e164}
+            </button>
+          ) : (
+            <span className="ml-auto shrink-0 text-2xs text-fg-subtle">No phone number captured</span>
+          )}
+        </div>
       </header>
 
-      <div className="space-y-4 px-3 py-3">
-        <section aria-label="Contact actions" className="flex gap-2">
-          {lead.phone_e164 ? (
-            <>
-              <Button className="min-h-10 flex-1" onClick={onOpenChat}>
-                Open chat
-              </Button>
-              <Button variant="secondary" className="min-h-10 flex-1" onClick={onCall}>
-                {lead.phone_e164}
-              </Button>
-            </>
-          ) : (
-            <p className="w-full rounded-md border border-border bg-surface-sunk px-3 py-2.5 text-xs text-fg-subtle">
-              No phone number captured for this lead.
-            </p>
-          )}
-        </section>
+      {/* Everything the rep touches mid-call lives here, first, unscrolled. */}
+      {workspace}
 
-        {workspace}
+      <div className="space-y-2 px-3 pt-1 pb-4">
+        <div className="flex items-center gap-2 pt-1">
+          <span className="h-px flex-1 bg-border" />
+          <span className="label-caps">Before the call</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
 
-        {facts.length > 0 && (
-          <section aria-label="Facts">
-            <h3 className="label-caps mb-1.5">Facts</h3>
-            <ul className="overflow-hidden rounded-lg border border-border bg-surface-raised">
+        {pending && <ReferenceSkeleton />}
+
+        {/* All three always render, at 0 too: a section that silently vanishes
+            reads the same as one that failed to load, and three fixed rows let
+            the skeleton above reserve the exact final height. */}
+        {!pending && (
+          <Reference label="Facts" icon={ListChecks} count={facts.length}>
+            {facts.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-fg-subtle">Nothing captured yet.</p>
+            ) : (
+            <ul>
               {facts.map((fact) => (
                 <li key={fact.id} className="flex items-start gap-2 border-b border-border px-3 py-2 last:border-b-0">
                   <span className="min-w-0 flex-1">
@@ -131,30 +197,37 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
                 </li>
               ))}
             </ul>
-          </section>
+            )}
+          </Reference>
         )}
 
-        {objections.length > 0 && (
-          <section aria-label="Objections">
-            <h3 className="label-caps mb-1.5">Objections raised</h3>
-            <ul className="space-y-1.5">
+        {!pending && (
+          <Reference label="Objections" icon={ShieldAlert} count={objections.length}>
+            {objections.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-fg-subtle">None raised yet.</p>
+            ) : (
+            <ul>
               {objections.map((objection) => (
-                <li key={objection.id} className="flex items-center gap-2 text-xs">
+                <li
+                  key={objection.id}
+                  className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs last:border-b-0"
+                >
                   <ShieldAlert aria-hidden size={13} className="shrink-0 text-danger" />
-                  <span className="font-medium text-fg">{objection.label}</span>
-                  <span className="ml-auto shrink-0 text-2xs text-fg-subtle tnum">{formatDay(objection.occurred_at)}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-fg">{objection.label}</span>
+                  <span className="shrink-0 text-2xs text-fg-subtle tnum">{formatDay(objection.occurred_at)}</span>
                 </li>
               ))}
             </ul>
-          </section>
+            )}
+          </Reference>
         )}
 
-        <section aria-label="History">
-          <h3 className="label-caps mb-1.5">History</h3>
+        {!pending && (
+          <Reference label="History" icon={MessageSquare} count={timeline.length}>
           {timeline.length === 0 ? (
             <EmptyState title="No history yet" body="Declared calls and the AI transcript land here." />
           ) : (
-            <ol className="space-y-2.5">
+            <ol className="space-y-2.5 p-3">
               {timeline.map((entry, index) => {
                 const meta = KIND_META[entry.kind]
                 const Icon = meta.icon
@@ -173,12 +246,7 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span
-                          className={[
-                            'label-caps',
-                            fromApi ? 'text-accent' : 'text-fg-subtle',
-                          ].join(' ')}
-                        >
+                        <span className={['label-caps', fromApi ? 'text-accent' : 'text-fg-subtle'].join(' ')}>
                           {fromApi ? 'API' : 'REP'}
                         </span>
                         <span className="text-2xs font-semibold text-fg-muted">{meta.label}</span>
@@ -195,8 +263,13 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
                 )
               })}
             </ol>
-          )}
-        </section>
+            )}
+          </Reference>
+        )}
+
+        <p className="px-1 pt-1 text-2xs text-fg-subtle">
+          Source: <span className="font-medium text-fg-muted">{SOURCE_LABEL[detail.source]}</span>
+        </p>
       </div>
     </div>
   )

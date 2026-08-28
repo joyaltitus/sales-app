@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Mic, Square } from 'lucide-react'
+import { Check, Mic, Square } from 'lucide-react'
 import { Button } from '../../src/ui/Button'
 import { Input } from '../../src/ui/Input'
 
@@ -58,7 +58,7 @@ export function VoiceCard({
         </button>
         <div className="min-w-0 flex-1">
           <span className="label-caps block">{recording ? 'Recording…' : transcribing ? 'Transcribing…' : 'Talk to log'}</span>
-          <p className="text-2xs text-fg-subtle">The model proposes. You approve. Nothing saves by itself.</p>
+          <p className="text-2xs leading-snug text-fg-muted">The model proposes. You approve. Nothing saves by itself.</p>
         </div>
         {recording && (
           <span className="flex h-4 shrink-0 items-end gap-0.5" aria-hidden>
@@ -93,14 +93,17 @@ export function VoiceCard({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Button className="min-h-10 flex-1" disabled={!hasContent || transcribing} onClick={() => onApprove(draft)}>
-          Approve
-        </Button>
-        <Button variant="ghost" className="min-h-10" onClick={onDiscard}>
-          Discard
-        </Button>
-      </div>
+      {hasContent && (
+        <div className="flex gap-2">
+          <Button className="min-h-11 flex-1" disabled={transcribing} onClick={() => onApprove(draft)}>
+            <Check aria-hidden size={16} strokeWidth={2.2} />
+            Approve
+          </Button>
+          <Button variant="ghost" className="min-h-11" onClick={onDiscard}>
+            Discard
+          </Button>
+        </div>
+      )}
     </section>
   )
 }

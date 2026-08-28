@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { MemoryRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { CircleAlert } from 'lucide-react'
 import SettingsScreen from './screens/SettingsScreen'
 import { drainOutbox } from '../lib/outbox-store'
 import { checkPanelSession } from '../lib/session'
@@ -23,7 +24,11 @@ import { OutcomeBar } from '../ui/OutcomeBar'
 import { TargetBar } from '../ui/TargetBar'
 import { VoiceFlow } from '../ui/VoiceFlow'
 import { ScriptCard } from '../ui/ScriptCard'
+import { Button } from '../../src/ui/Button'
 import { EmptyState } from '../../src/ui/EmptyState'
+import { Input } from '../../src/ui/Input'
+import { ErrorState } from '../../src/ui/ErrorState'
+import { LibrarySkeleton, QueueSkeleton, TargetSkeleton } from '../ui/Skeletons'
 
 let rootMounts = 0
 
@@ -52,11 +57,19 @@ const navLinkStyle = (active: boolean): CSSProperties => ({
 
 function OwnTarget({ identity }: { identity: PanelIdentity }) {
   const month = firstOfMonth()
-  const { item, loading, error } = useTarget(identity.clientId, identity.userId, month)
+  const { item, loading, error, reload } = useTarget(identity.clientId, identity.userId, month)
   const won = useOwnWonValue(identity.clientId, identity.userId, month)
-  if (loading || won.loading) return <div className="min-h-10 border-b border-border px-3 py-2 text-xs text-fg-subtle">Loading your target…</div>
-  if (error || won.error) return <div role="alert" className="min-h-10 border-b border-border px-3 py-2 text-xs text-danger">Your target could not be loaded.</div>
-  if (!item) return <div className="min-h-10 border-b border-border px-3 py-2 text-xs text-fg-subtle">No target set for you this month.</div>
+  if (loading || won.loading) return <TargetSkeleton />
+  if (error || won.error)
+    return (
+      <div role="alert" className="flex min-h-10 items-center gap-2 border-b border-border bg-danger-subtle px-3 py-2 text-xs text-danger">
+        <CircleAlert aria-hidden size={14} strokeWidth={1.9} className="shrink-0" />
+        <span className="min-w-0 flex-1">Your target could not be loaded.</span>
+        <Button variant="ghost" size="sm" onClick={() => void reload()}>Retry</Button>
+      </div>
+    )
+  if (!item)
+    return <div className="flex min-h-10 items-center border-b border-border px-3 py-2 text-xs text-fg-subtle">No target set for you this month.</div>
   return (
     <TargetBar
       rep_name={identity.displayName}
@@ -155,15 +168,23 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
     <LeadScreen
       detail={detail}
       viewerId={identity.userId}
+      pending={memory.loading || objections.loading || calls.loading || notes.loading}
       workspace={(
-        <div className="space-y-3">
+        <div className="space-y-3 px-3 pt-3">
           {(memory.error || objections.error || calls.error) && (
-            <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-xs text-danger">
+            <p role="alert" className="flex items-start gap-2 rounded-md bg-danger-subtle px-3 py-2 text-xs leading-relaxed text-danger">
+              <CircleAlert aria-hidden size={14} strokeWidth={1.9} className="mt-0.5 shrink-0" />
               Some lead history could not be loaded. Retry by reopening this lead.
             </p>
           )}
+          {/* Confirmation of the primary action sits above the controls, not
+              below them — after a tap the rep must not have to scroll to learn
+              whether the tap landed. */}
+          {message && (
+            <p role="status" className="rounded-md border border-border bg-surface-sunk px-3 py-2 text-xs text-fg-muted">{message}</p>
+          )}
           <VoiceFlow clientId={identity.clientId} leadId={current.lead_id} onSaved={refreshDetail} />
-          <section className="rounded-lg border border-border bg-surface-raised">
+          <section className="rounded-lg border border-border bg-surface-raised shadow-elev-1">
             <OutcomeBar
               stages={stageOptions}
               stageKey={current.stage_key}
@@ -212,7 +233,6 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
               }}
             />
           </section>
-          {message && <p role="status" className="rounded-md bg-surface-sunk px-3 py-2 text-xs text-fg-muted">{message}</p>}
         </div>
       )}
       onOpenChat={() => {
@@ -227,9 +247,14 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
 }
 
 function LibraryScreen({ clientId }: { clientId: string }) {
-  const { scripts, loading, error } = useScriptLibrary(clientId)
-  if (loading) return <main className="p-3 text-sm text-fg-subtle">Loading library…</main>
-  if (error) return <main role="alert" className="p-3 text-sm text-danger">Library could not be loaded: {error}</main>
+  const { scripts, loading, error, reload } = useScriptLibrary(clientId)
+  if (loading) return <main><LibrarySkeleton /></main>
+  if (error)
+    return (
+      <main>
+        <ErrorState title="Couldn’t load the library" body={error} onRetry={() => void reload()} />
+      </main>
+    )
   if (scripts.length === 0) return <EmptyState title="No scripts yet" body="Your manager’s approved scripts will appear here." />
   return <main className="space-y-3 p-3">{scripts.map((script) => {
     const current = script.current
@@ -245,9 +270,9 @@ function PanelRoutes({ identity }: { identity: PanelIdentity }) {
   return (
     <Routes>
       <Route path="/queue" element={queue.loading
-        ? <main className="p-3 text-sm text-fg-subtle">Loading your queue…</main>
+        ? <QueueSkeleton />
         : queue.error
-          ? <main role="alert" className="p-3 text-sm text-danger">Queue could not be loaded: {queue.error}</main>
+          ? <ErrorState title="Couldn’t load your queue" body={queue.error} onRetry={() => void queue.reload()} />
           : <QueueScreen items={queue.items} target={<OwnTarget identity={identity} />} onNext={(item) => { setSelected(item); navigate('/lead') }} onOpenLead={(item) => { setSelected(item); navigate('/lead') }} />}
       />
       <Route path="/lead" element={selected
@@ -362,22 +387,37 @@ export default function App() {
     else await chrome.storage.local.remove(AUTH_NEEDS_SIGNIN_KEY)
   }
 
-  if (state === 'checking') return <main style={{ padding: 20 }}>Checking session…</main>
+  // Session check is fast and the panel always lands on the queue, so show the
+  // queue's own frame rather than a word on an empty panel.
+  if (state === 'checking') return <main aria-busy="true"><QueueSkeleton /></main>
   if (state === 'signed_in' && identity) return <AppShell identity={identity} />
 
   return (
-    <main style={{ padding: 20, display: 'grid', gap: 16 }}>
-      <h1 style={{ margin: 0 }}>{state === 'refresh_failed' ? 'Sign in again' : 'Sign in'}</h1>
+    <main className="grid gap-4 p-5">
+      <h1 className="text-lg font-semibold tracking-[-0.035em] text-fg">
+        {state === 'refresh_failed' ? 'Sign in again' : 'Sign in'}
+      </h1>
       {state === 'refresh_failed' && (
-        <p role="alert" style={{ margin: 0, color: 'var(--warn-fg)' }}>
+        <p role="alert" className="flex items-start gap-2 rounded-md bg-warn-subtle px-3 py-2 text-xs leading-relaxed text-warn">
+          <CircleAlert aria-hidden size={14} strokeWidth={1.9} className="mt-0.5 shrink-0" />
           Your session could not be refreshed. Offline changes are still safely queued.
         </p>
       )}
-      {message && <p role="alert" style={{ margin: 0 }}>{message}</p>}
-      <form onSubmit={signIn} style={{ display: 'grid', gap: 12 }}>
-        <label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-        <label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-        <button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
+      {message && (
+        <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-xs leading-relaxed text-danger">{message}</p>
+      )}
+      <form onSubmit={signIn} className="grid gap-3">
+        <label className="grid gap-1">
+          <span className="label-caps">Email</span>
+          <Input required type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} />
+        </label>
+        <label className="grid gap-1">
+          <span className="label-caps">Password</span>
+          <Input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
+        </label>
+        <Button type="submit" className="mt-1 min-h-11 w-full" loading={submitting}>
+          {submitting ? 'Signing in…' : 'Sign in'}
+        </Button>
       </form>
     </main>
   )
