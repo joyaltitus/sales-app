@@ -2,7 +2,6 @@ import type { ChatMode } from './contracts'
 
 export const NOTIFIED_FOLLOW_UPS_KEY = 'rep.notifiedFollowUps'
 export const NOTIFIED_NEW_LEADS_KEY = 'rep.notifiedNewLeads'
-export const CHAT_TAB_KEY = 'rep.chatTabId'
 
 export type DueFollowUp = { id: string; note: string; due_at: string }
 export type NewLeadNotice = { id: string; title: string; body: string | null }
@@ -48,20 +47,14 @@ export async function openChatTab(url: string, mode: ChatMode): Promise<number |
     return null
   }
 
-  const stored = await chrome.storage.local.get(CHAT_TAB_KEY)
-  const existing = stored[CHAT_TAB_KEY]
-  if (typeof existing === 'number') {
-    try {
-      const tab = await chrome.tabs.get(existing)
-      await chrome.tabs.update(existing, { url, active: true })
-      return tab.id ?? existing
-    } catch {
-      await chrome.storage.local.remove(CHAT_TAB_KEY)
-    }
+  const [existing] = await chrome.tabs.query({ url: '*://web.whatsapp.com/*' })
+  if (existing?.id !== undefined) {
+    await chrome.tabs.update(existing.id, { url, active: true })
+    await chrome.windows.update(existing.windowId, { focused: true })
+    return existing.id
   }
 
   const tab = await chrome.tabs.create({ url, active: true })
   if (tab.id === undefined) throw new Error('Chrome created a chat tab without an id')
-  await chrome.storage.local.set({ [CHAT_TAB_KEY]: tab.id })
   return tab.id
 }

@@ -7,7 +7,7 @@ import { signOutExtension } from '../../lib/session'
 import { Button } from '../../../src/ui/Button'
 
 const OPTIONS: { value: ChatMode; label: string; icon: LucideIcon }[] = [
-  { value: 'wa_me', label: 'wa.me', icon: MessageCircle },
+  { value: 'wa_me', label: 'WhatsApp Web', icon: MessageCircle },
   { value: 'desktop', label: 'Desktop', icon: Monitor },
 ]
 
@@ -55,8 +55,8 @@ export default function SettingsScreen() {
         })}
       </div>
       <p className="text-xs leading-relaxed text-fg-muted">
-        wa.me keeps the panel visible beside the chat; desktop mode is faster but switches you out
-        of the browser.
+        WhatsApp Web keeps the panel visible beside the chat; desktop mode switches you out of the
+        browser.
       </p>
       <Button variant="secondary" className="mt-2 min-h-11 w-full" onClick={() => void signOutExtension()}>
         <LogOut aria-hidden size={15} strokeWidth={1.9} />
