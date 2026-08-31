@@ -195,7 +195,7 @@ export function OutcomeBar({
             aria-label="Follow-up date"
           />
           {followUp && (
-            <Button variant="ghost" className="min-h-11" onClick={() => pickFollowUp('')}>
+            <Button variant="ghost" className="min-h-11" disabled={busy} onClick={() => pickFollowUp('')}>
               Clear
             </Button>
           )}

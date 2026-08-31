@@ -1,26 +1,21 @@
-import type { Cached, LeadDetail, QueueItem, Rebuttal, Snippet } from './contracts'
+import type { Cached, LeadDetail, QueueItem, Rebuttal } from './contracts'
 import type { LibraryScript } from '@app/lib/scripts-data'
 import type { ObjectionTaxonomyRow } from '@app/lib/objections-data'
-import type { TargetItem } from '@app/lib/targets-data'
 
 export const CACHE_KEYS = {
   queue: 'rep.cache.queue',
   leadDetails: 'rep.cache.leadDetails',
-  snippets: 'rep.cache.snippets',
   library: 'rep.cache.library',
-  target: 'rep.cache.target',
 } as const
 
 export type ExtensionCache = {
   [CACHE_KEYS.queue]: Cached<QueueItem[]>
   [CACHE_KEYS.leadDetails]: Cached<LeadDetail>[]
-  [CACHE_KEYS.snippets]: Cached<Snippet[]>
   [CACHE_KEYS.library]: Cached<{
     scripts: LibraryScript[]
     taxonomy: ObjectionTaxonomyRow[]
     rebuttals: Rebuttal[]
   }>
-  [CACHE_KEYS.target]: Cached<TargetItem | null>
 }
 
 export async function readCache<K extends keyof ExtensionCache>(key: K): Promise<ExtensionCache[K] | null> {
@@ -39,10 +34,6 @@ export async function cacheLeadDetail(value: Cached<LeadDetail>): Promise<void> 
   await writeCache(CACHE_KEYS.leadDetails, next)
 }
 
-export async function clearLeadDetails(): Promise<void> {
-  await chrome.storage.local.remove(CACHE_KEYS.leadDetails)
-}
-
 export async function clearPanelCaches(): Promise<void> {
   await chrome.storage.local.remove(Object.values(CACHE_KEYS))
 }
@@ -52,6 +43,4 @@ export function cached<T>(data: T, now = new Date(), scope?: string): Cached<T> 
 }
 
 export const cacheQueue = (value: ExtensionCache[typeof CACHE_KEYS.queue]) => writeCache(CACHE_KEYS.queue, value)
-export const cacheSnippets = (value: ExtensionCache[typeof CACHE_KEYS.snippets]) => writeCache(CACHE_KEYS.snippets, value)
 export const cacheLibrary = (value: ExtensionCache[typeof CACHE_KEYS.library]) => writeCache(CACHE_KEYS.library, value)
-export const cacheTarget = (value: ExtensionCache[typeof CACHE_KEYS.target]) => writeCache(CACHE_KEYS.target, value)
