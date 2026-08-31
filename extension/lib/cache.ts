@@ -43,8 +43,12 @@ export async function clearLeadDetails(): Promise<void> {
   await chrome.storage.local.remove(CACHE_KEYS.leadDetails)
 }
 
-export function cached<T>(data: T, now = new Date()): Cached<T> {
-  return { data, fetched_at: now.toISOString() }
+export async function clearPanelCaches(): Promise<void> {
+  await chrome.storage.local.remove(Object.values(CACHE_KEYS))
+}
+
+export function cached<T>(data: T, now = new Date(), scope?: string): Cached<T> {
+  return { data, fetched_at: now.toISOString(), ...(scope ? { scope } : {}) }
 }
 
 export const cacheQueue = (value: ExtensionCache[typeof CACHE_KEYS.queue]) => writeCache(CACHE_KEYS.queue, value)

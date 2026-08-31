@@ -231,14 +231,19 @@ export function useNotes(
   key: { conversationId?: string | null; leadId?: string | null },
 ) {
   const [items, setItems] = useState<NoteRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const conversationId = key.conversationId ?? null
   const leadId = key.leadId ?? null
 
   const load = useCallback(async () => {
     if (!clientId || (!conversationId && !leadId)) {
       setItems([])
+      setError(null)
+      setLoading(false)
       return
     }
+    setLoading(true)
     let q = supabase
       .from('conversation_notes')
       .select('id, conversation_id, lead_id, author, body, created_at')
@@ -246,15 +251,17 @@ export function useNotes(
       .order('created_at', { ascending: false })
       .limit(NOTE_LIMIT)
     q = conversationId ? q.eq('conversation_id', conversationId) : q.eq('lead_id', leadId!)
-    const { data } = await q
-    setItems((data ?? []) as NoteRow[])
+    const { data, error: readError } = await q
+    setError(readError?.message ?? null)
+    setItems(readError ? [] : (data ?? []) as NoteRow[])
+    setLoading(false)
   }, [clientId, conversationId, leadId])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  return { items, reload: load }
+  return { items, loading, error, reload: load }
 }
 
 /** Customer memory facts for a contact / lead in CRM drawer. */

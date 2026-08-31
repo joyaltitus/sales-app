@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { setSupabaseClient } from '@app/lib/supabase'
-import { clearLeadDetails } from './cache'
+import { clearPanelCaches } from './cache'
 import { panelSupabase } from './panel-client'
 import { AUTH_NEEDS_SIGNIN_KEY } from './storage'
 
@@ -22,7 +22,7 @@ export async function checkPanelSession(): Promise<SessionCheck> {
 export async function signOutExtension(): Promise<void> {
   await panelSupabase.auth.signOut()
   await Promise.all([
-    clearLeadDetails(),
+    clearPanelCaches(),
     chrome.storage.local.remove(AUTH_NEEDS_SIGNIN_KEY),
   ])
 }

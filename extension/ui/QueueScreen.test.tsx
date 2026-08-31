@@ -64,4 +64,16 @@ describe('QueueScreen', () => {
     expect(screen.getByLabelText(/^Target for Joyal:/)).toBeInTheDocument()
     expect(screen.getByText('Anjali Nair')).toBeInTheDocument()
   })
+
+  it('shows when cached queue data was fetched', () => {
+    render(
+      <QueueScreen
+        items={queueItems}
+        staleAt="2026-08-26T10:00:00.000Z"
+        onNext={vi.fn()}
+        onOpenLead={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/Cached/)).toBeInTheDocument()
+  })
 })

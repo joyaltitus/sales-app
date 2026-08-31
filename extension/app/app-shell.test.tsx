@@ -6,6 +6,7 @@ import { vi } from 'vitest'
 vi.mock('../lib/panel-client', () => ({ panelSupabase: { auth: {} } }))
 vi.mock('../lib/panel-data', () => ({
   useRepQueue: () => ({ items: [], loading: false, error: null, reload: vi.fn() }),
+  useCachedScriptLibrary: () => ({ scripts: [], loading: false, error: null, reload: vi.fn(), staleAt: null }),
 }))
 vi.mock('@app/lib/targets-data', () => ({
   firstOfMonth: () => '2026-08-01',

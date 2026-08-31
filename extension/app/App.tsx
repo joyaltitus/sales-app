@@ -7,15 +7,15 @@ import { drainOutbox } from '../lib/outbox-store'
 import { checkPanelSession } from '../lib/session'
 import { panelSupabase } from '../lib/panel-client'
 import { AUTH_NEEDS_SIGNIN_KEY } from '../lib/storage'
-import { loadPanelIdentity, useRepQueue, type PanelIdentity } from '../lib/panel-data'
+import { loadPanelIdentity, useCachedScriptLibrary, useRepQueue, type PanelIdentity } from '../lib/panel-data'
 import type { CallOutcome, LeadDetail, QueueItem } from '../lib/contracts'
+import { CACHE_KEYS, cacheLeadDetail, cached, readCache } from '../lib/cache'
 import { firstOfMonth, useOwnWonValue, useTarget } from '@app/lib/targets-data'
 import { useLeadStages, moveLeadStage } from '@app/lib/leads-data'
 import { addNote, saveLead } from '@app/lib/crm-actions'
 import { completeCall, startCallSession, useCallLogs } from '@app/lib/calls-data'
 import { useLeadMemory, useNotes } from '@app/lib/crm-data'
 import { logObjection, useObjectionLogs, useObjectionTaxonomy } from '@app/lib/objections-data'
-import { useScriptLibrary } from '@app/lib/scripts-data'
 import { chatLink } from '../lib/chat-link'
 import { loadChatMode } from './chat-mode'
 import { QueueScreen } from '../ui/QueueScreen'
@@ -29,6 +29,7 @@ import { EmptyState } from '../../src/ui/EmptyState'
 import { Input } from '../../src/ui/Input'
 import { ErrorState } from '../../src/ui/ErrorState'
 import { LibrarySkeleton, QueueSkeleton, TargetSkeleton } from '../ui/Skeletons'
+import { StaleChip } from '../ui/StaleChip'
 
 let rootMounts = 0
 
@@ -93,9 +94,25 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
   const [followUp, setFollowUp] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [cachedDetail, setCachedDetail] = useState<LeadDetail | null>(null)
+  const [cachedAt, setCachedAt] = useState<string | null>(null)
   const callRequestId = useRef(crypto.randomUUID())
 
-  useEffect(() => { setCurrent(lead); callRequestId.current = crypto.randomUUID() }, [lead])
+  useEffect(() => {
+    let alive = true
+    setCurrent(lead)
+    setCachedDetail(null)
+    setCachedAt(null)
+    callRequestId.current = crypto.randomUUID()
+    void readCache(CACHE_KEYS.leadDetails).then((entries) => {
+      const entry = entries?.find((item) => item.scope === identity.clientId && item.data.lead.lead_id === lead.lead_id)
+      if (alive && entry) {
+        setCachedDetail(entry.data)
+        setCachedAt(entry.fetched_at)
+      }
+    })
+    return () => { alive = false }
+  }, [identity.clientId, lead])
 
   async function outcome(value: CallOutcome, taxonomyKey?: string) {
     if (value === 'objection' && !taxonomyKey) {
@@ -157,6 +174,16 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
       source: facts.length > 0 && timeline.length > 0 ? 'both' : facts.length > 0 ? 'api' : 'rep',
     }
   }, [calls.items, current, identity.displayName, identity.userId, memory.facts, notes.items, objections.items])
+  const detailPending = memory.loading || objections.loading || calls.loading || notes.loading
+  const detailError = memory.error || objections.error || calls.error || notes.error
+  const visibleDetail = cachedDetail && detailPending ? { ...cachedDetail, lead: current } : detail
+
+  useEffect(() => {
+    if (detailPending || detailError) return
+    setCachedDetail(null)
+    setCachedAt(null)
+    void cacheLeadDetail(cached(detail, new Date(), identity.clientId))
+  }, [detail, detailError, detailPending, identity.clientId])
   const refreshDetail = () => {
     void Promise.all([memory.reload(), objections.reload(), calls.reload(), notes.reload()])
     onChanged()
@@ -166,12 +193,15 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
 
   return (
     <LeadScreen
-      detail={detail}
+      detail={visibleDetail}
       viewerId={identity.userId}
-      pending={memory.loading || objections.loading || calls.loading || notes.loading}
+      pending={detailPending && !cachedDetail}
       workspace={(
         <div className="space-y-3 px-3 pt-3">
-          {(memory.error || objections.error || calls.error) && (
+          {cachedAt && detailPending && (
+            <div className="flex min-h-8 items-center"><StaleChip fetched_at={cachedAt} /></div>
+          )}
+          {detailError && (
             <p role="alert" className="flex items-start gap-2 rounded-md bg-danger-subtle px-3 py-2 text-xs leading-relaxed text-danger">
               <CircleAlert aria-hidden size={14} strokeWidth={1.9} className="mt-0.5 shrink-0" />
               Some lead history could not be loaded. Retry by reopening this lead.
@@ -247,7 +277,7 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
 }
 
 function LibraryScreen({ clientId }: { clientId: string }) {
-  const { scripts, loading, error, reload } = useScriptLibrary(clientId)
+  const { scripts, loading, error, reload, staleAt } = useCachedScriptLibrary(clientId)
   if (loading) return <main><LibrarySkeleton /></main>
   if (error)
     return (
@@ -256,7 +286,7 @@ function LibraryScreen({ clientId }: { clientId: string }) {
       </main>
     )
   if (scripts.length === 0) return <EmptyState title="No scripts yet" body="Your manager’s approved scripts will appear here." />
-  return <main className="space-y-3 p-3">{scripts.map((script) => {
+  return <main className="space-y-3 p-3">{staleAt && <StaleChip fetched_at={staleAt} />}{scripts.map((script) => {
     const current = script.current
     const body = current?.body?.paragraphs.map((p) => `${p.before}${p.highlight ?? ''}${p.after ?? ''}`).join('\n\n') ?? 'No approved copy yet.'
     return <ScriptCard key={script.taxonomyId} title={script.taxonomyLabel} body={body} versionLabel={current ? `v${current.version} · ${current.status}` : undefined} />
@@ -271,9 +301,9 @@ function PanelRoutes({ identity }: { identity: PanelIdentity }) {
     <Routes>
       <Route path="/queue" element={queue.loading
         ? <QueueSkeleton />
-        : queue.error
-          ? <ErrorState title="Couldn’t load your queue" body={queue.error} onRetry={() => void queue.reload()} />
-          : <QueueScreen items={queue.items} target={<OwnTarget identity={identity} />} onNext={(item) => { setSelected(item); navigate('/lead') }} onOpenLead={(item) => { setSelected(item); navigate('/lead') }} />}
+        : queue.error && queue.items.length === 0
+          ? <ErrorState title="Couldn’t load your queue" body="Check your connection, then retry." onRetry={() => void queue.reload()} />
+          : <QueueScreen items={queue.items} staleAt={queue.staleAt} target={<OwnTarget identity={identity} />} onNext={(item) => { setSelected(item); navigate('/lead') }} onOpenLead={(item) => { setSelected(item); navigate('/lead') }} />}
       />
       <Route path="/lead" element={selected
         ? <LeadWorkspace identity={identity} lead={selected} onChanged={() => void queue.reload()} />
