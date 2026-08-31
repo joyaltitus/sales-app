@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { MemoryRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { MemoryRouter, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CircleAlert } from 'lucide-react'
 import SettingsScreen from './screens/SettingsScreen'
 import { drainOutbox } from '../lib/outbox-store'
@@ -39,10 +39,12 @@ export function getRootMounts() {
 
 const TABS = [
   { to: '/queue', label: 'Queue' },
-  { to: '/lead', label: 'Lead' },
   { to: '/library', label: 'Library' },
   { to: '/settings', label: 'Settings' },
 ]
+const PANEL_NAV_KEY = 'rep.panelNavigation'
+type PanelRoute = '/queue' | '/lead' | '/library' | '/settings'
+type PanelNavigation = { route: PanelRoute; selected: QueueItem | null }
 
 const navLinkStyle = (active: boolean): CSSProperties => ({
   display: 'flex',
@@ -56,10 +58,13 @@ const navLinkStyle = (active: boolean): CSSProperties => ({
   textDecoration: 'none',
 })
 
-function OwnTarget({ identity }: { identity: PanelIdentity }) {
+function OwnTarget({ identity, target, won }: {
+  identity: PanelIdentity
+  target: ReturnType<typeof useTarget>
+  won: ReturnType<typeof useOwnWonValue>
+}) {
   const month = firstOfMonth()
-  const { item, loading, error, reload } = useTarget(identity.clientId, identity.userId, month)
-  const won = useOwnWonValue(identity.clientId, identity.userId, month)
+  const { item, loading, error, reload } = target
   if (loading || won.loading) return <TargetSkeleton />
   if (error || won.error)
     return (
@@ -83,9 +88,15 @@ function OwnTarget({ identity }: { identity: PanelIdentity }) {
   )
 }
 
-function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity; lead: QueueItem; onChanged: () => void }) {
-  const { stages } = useLeadStages(identity.clientId)
-  const { items: taxonomy } = useObjectionTaxonomy(identity.clientId)
+function LeadWorkspace({ identity, lead, stages, taxonomy, onChanged, onRevenueChanged, onBack }: {
+  identity: PanelIdentity
+  lead: QueueItem
+  stages: ReturnType<typeof useLeadStages>['stages']
+  taxonomy: ReturnType<typeof useObjectionTaxonomy>['items']
+  onChanged: () => void
+  onRevenueChanged: () => void
+  onBack: () => void
+}) {
   const memory = useLeadMemory(identity.clientId, lead.contact_id, null)
   const objections = useObjectionLogs(identity.clientId, lead.contact_id)
   const calls = useCallLogs(identity.clientId, lead.contact_id)
@@ -140,7 +151,9 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
     if (!result.ok) setMessage(result.message)
     else {
       setMessage('Outcome logged.')
-      refreshDetail()
+      void calls.reload()
+      if (value === 'objection') void objections.reload()
+      onChanged()
     }
   }
 
@@ -184,10 +197,6 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
     setCachedAt(null)
     void cacheLeadDetail(cached(detail, new Date(), identity.clientId))
   }, [detail, detailError, detailPending, identity.clientId])
-  const refreshDetail = () => {
-    void Promise.all([memory.reload(), objections.reload(), calls.reload(), notes.reload()])
-    onChanged()
-  }
   const stageOptions = stages.map((stage) => ({ key: stage.stage_key, label: stage.label }))
   const taxonomyOptions = taxonomy.map((item) => ({ key: item.key, label: item.label }))
 
@@ -195,6 +204,7 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
     <LeadScreen
       detail={visibleDetail}
       viewerId={identity.userId}
+      onBack={onBack}
       pending={detailPending && !cachedDetail}
       workspace={(
         <div className="space-y-3 px-3 pt-3">
@@ -213,7 +223,7 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
           {message && (
             <p role="status" className="rounded-md border border-border bg-surface-sunk px-3 py-2 text-xs text-fg-muted">{message}</p>
           )}
-          <VoiceFlow clientId={identity.clientId} leadId={current.lead_id} onSaved={refreshDetail} />
+          <VoiceFlow clientId={identity.clientId} leadId={current.lead_id} onSaved={onChanged} />
           <section className="rounded-lg border border-border bg-surface-raised shadow-elev-1">
             <OutcomeBar
               stages={stageOptions}
@@ -239,7 +249,11 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
                 void saveLead(identity.clientId, current.lead_id, stage.id, { status }).then((result) => {
                   setBusy(false)
                   if (!result.ok) setMessage(result.message ?? 'Status change was denied.')
-                  else { setCurrent((item) => ({ ...item, status })); onChanged() }
+                  else {
+                    setCurrent((item) => ({ ...item, status }))
+                    onChanged()
+                    if (status === 'won') onRevenueChanged()
+                  }
                 })
               }}
               onFollowUpChange={setFollowUp}
@@ -248,7 +262,7 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
                 void addNote(identity.clientId, { conversation_id: null, lead_id: current.lead_id, author: identity.userId, body }).then((result) => {
                   setBusy(false)
                   setMessage(result.ok ? 'Note saved.' : result.message ?? 'Note could not be saved.')
-                  if (result.ok) refreshDetail()
+                  if (result.ok) { void notes.reload(); onChanged() }
                 })
               }}
               onObjection={(key) => {
@@ -258,7 +272,7 @@ function LeadWorkspace({ identity, lead, onChanged }: { identity: PanelIdentity;
                 void logObjection({ clientId: identity.clientId, contactId: current.contact_id, leadId: current.lead_id, taxonomyId: item.id, source: 'crm', actorId: identity.userId }).then((result) => {
                   setBusy(false)
                   setMessage(result.ok ? 'Objection logged.' : result.message)
-                  if (result.ok) refreshDetail()
+                  if (result.ok) { void objections.reload(); onChanged() }
                 })
               }}
             />
@@ -293,21 +307,35 @@ function LibraryScreen({ clientId }: { clientId: string }) {
   })}</main>
 }
 
-function PanelRoutes({ identity }: { identity: PanelIdentity }) {
+function PanelRoutes({ identity, initialSelected }: { identity: PanelIdentity; initialSelected: QueueItem | null }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const queue = useRepQueue(identity)
-  const [selected, setSelected] = useState<QueueItem | null>(null)
+  const [selected, setSelected] = useState<QueueItem | null>(initialSelected)
+  const stages = useLeadStages(identity.clientId)
+  const taxonomy = useObjectionTaxonomy(identity.clientId)
+  const month = firstOfMonth()
+  const target = useTarget(identity.clientId, identity.userId, month)
+  const won = useOwnWonValue(identity.clientId, identity.userId, month)
+
+  useEffect(() => {
+    void chrome.storage.session.set({
+      [PANEL_NAV_KEY]: { route: location.pathname as PanelRoute, selected },
+    })
+  }, [location.pathname, selected])
+
+  const openLead = (item: QueueItem) => { setSelected(item); navigate('/lead') }
   return (
     <Routes>
       <Route path="/queue" element={queue.loading
         ? <QueueSkeleton />
         : queue.error && queue.items.length === 0
           ? <ErrorState title="Couldn’t load your queue" body="Check your connection, then retry." onRetry={() => void queue.reload()} />
-          : <QueueScreen items={queue.items} staleAt={queue.staleAt} target={<OwnTarget identity={identity} />} onNext={(item) => { setSelected(item); navigate('/lead') }} onOpenLead={(item) => { setSelected(item); navigate('/lead') }} />}
+          : <QueueScreen items={queue.items} staleAt={queue.staleAt} target={<OwnTarget identity={identity} target={target} won={won} />} onNext={openLead} onOpenLead={openLead} />}
       />
       <Route path="/lead" element={selected
-        ? <LeadWorkspace identity={identity} lead={selected} onChanged={() => void queue.reload()} />
-        : <EmptyState title="Open a lead from your queue" body="Choose Queue below, then pick the next conversation." />}
+        ? <LeadWorkspace identity={identity} lead={selected} stages={stages.stages} taxonomy={taxonomy.items} onChanged={() => void queue.reload()} onRevenueChanged={() => void won.reload()} onBack={() => navigate('/queue')} />
+        : <QueueSkeleton />}
       />
       <Route path="/library" element={<LibraryScreen clientId={identity.clientId} />} />
       <Route path="/settings" element={<SettingsScreen />} />
@@ -315,27 +343,46 @@ function PanelRoutes({ identity }: { identity: PanelIdentity }) {
   )
 }
 
-export function AppShell({ identity }: { identity: PanelIdentity }) {
-  useEffect(() => {
-    rootMounts += 1
-  }, [])
+function PanelLayout({ identity, initial }: { identity: PanelIdentity; initial: PanelNavigation }) {
+  const location = useLocation()
+  const mainRef = useRef<HTMLElement>(null)
+
+  useEffect(() => { mainRef.current?.focus() }, [location.pathname])
 
   return (
-    <MemoryRouter initialEntries={['/queue']}>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--canvas)', color: 'var(--fg)' }}>
-        <main style={{ minHeight: 0, flex: 1, overflowY: 'auto' }}>
-          <PanelRoutes identity={identity} />
-        </main>
-        <nav style={{ display: 'flex', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
-          {TABS.map((tab) => (
-            <NavLink key={tab.to} to={tab.to}>
-              {({ isActive }) => (
-                <span style={{ ...navLinkStyle(isActive), width: '100%' }}>{tab.label}</span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--canvas)', color: 'var(--fg)' }}>
+      <main ref={mainRef} tabIndex={-1} style={{ minHeight: 0, flex: 1, overflowY: 'auto' }}>
+        <PanelRoutes identity={identity} initialSelected={initial.selected} />
+      </main>
+      <nav aria-label="Primary" style={{ display: 'flex', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+        {TABS.map((tab) => (
+          <NavLink key={tab.to} to={tab.to}>
+            {({ isActive }) => (
+              <span style={{ ...navLinkStyle(isActive), width: '100%' }}>{tab.label}</span>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+export function AppShell({ identity }: { identity: PanelIdentity }) {
+  const [initial, setInitial] = useState<PanelNavigation | null>(null)
+  useEffect(() => {
+    rootMounts += 1
+    void chrome.storage.session.get(PANEL_NAV_KEY).then((stored) => {
+      const saved = stored[PANEL_NAV_KEY] as PanelNavigation | undefined
+      const route = saved?.route === '/lead' && !saved.selected ? '/queue' : saved?.route
+      setInitial({ route: route ?? '/queue', selected: saved?.selected ?? null })
+    })
+  }, [])
+
+  if (!initial) return <QueueSkeleton />
+
+  return (
+    <MemoryRouter initialEntries={[initial.route]}>
+      <PanelLayout identity={identity} initial={initial} />
     </MemoryRouter>
   )
 }

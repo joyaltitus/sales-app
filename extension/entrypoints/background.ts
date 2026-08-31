@@ -1,46 +1,24 @@
 import { defineBackground } from '#imports'
-import { setSupabaseClient } from '@app/lib/supabase'
-import { readDueFollowUps } from '@app/lib/leads-data'
-import { readNewLeadNotifications } from '@app/lib/notifications-data'
 import { processAlarmTick, openChatTab } from '../lib/background'
-import { drainOutbox } from '../lib/outbox-store'
-import { workerSupabase } from '../lib/worker-client'
 import { AUTH_NEEDS_SIGNIN_KEY } from '../lib/storage'
+import { getWorkerSession, readWorkerNotices } from '../lib/worker-api'
 
 const ALARM = 'rep.poll'
-const POLL_MINUTES = 1
-
-async function activeClientIds(userId: string): Promise<string[]> {
-  const { data, error } = await workerSupabase
-    .from('user_client_memberships')
-    .select('client_id')
-    .eq('user_id', userId)
-  if (error) throw error
-  return (data ?? []).map((row) => (row as { client_id: string }).client_id)
-}
+export const POLL_MINUTES = 3
 
 async function poll(): Promise<void> {
-  const { data: sessionData, error: sessionError } = await workerSupabase.auth.getSession()
-  if (sessionError || !sessionData.session) {
+  const session = await getWorkerSession()
+  if (!session) {
     await chrome.storage.local.set({ [AUTH_NEEDS_SIGNIN_KEY]: true })
     return
   }
   await chrome.storage.local.remove(AUTH_NEEDS_SIGNIN_KEY)
-  const clientIds = await activeClientIds(sessionData.session.user.id)
-  if (clientIds.length === 0) {
-    await chrome.action.setBadgeText({ text: '' })
-    return
-  }
-
   const through = new Date(Date.now() + POLL_MINUTES * 60_000).toISOString()
-  const [followUps, leadNotices] = await Promise.all([
-    readDueFollowUps(clientIds, through),
-    readNewLeadNotifications(clientIds),
-  ])
+  const { due, newLeads } = await readWorkerNotices(session, through)
 
   await processAlarmTick({
-    due: followUps,
-    newLeads: leadNotices,
+    due,
+    newLeads,
     get: (keys) => chrome.storage.local.get(keys),
     set: (values) => chrome.storage.local.set(values),
     notify: async (id, title, message) => {
@@ -56,11 +34,9 @@ async function poll(): Promise<void> {
       await chrome.action.setBadgeBackgroundColor({ color: '#c2410c' })
     },
   })
-  await drainOutbox()
 }
 
 export default defineBackground(() => {
-  setSupabaseClient(workerSupabase)
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
   void chrome.alarms.create(ALARM, { periodInMinutes: POLL_MINUTES })
   chrome.alarms.onAlarm.addListener((alarm) => {

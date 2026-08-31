@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 // Targets data layer (WIRE session). Same conventions as leads-data.ts /
@@ -81,9 +81,10 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
   const [value, setValue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const request = useRef(0)
 
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async () => {
+    const generation = ++request.current
     if (!clientId || !userId) {
       setValue(0)
       setError(null)
@@ -96,7 +97,7 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
     const start = new Date(Date.UTC(y, m - 1, 1)).toISOString()
     const end = new Date(Date.UTC(y, m, 1)).toISOString()
     setLoading(true)
-    void supabase
+    await supabase
       .from('leads')
       .select('est_value')
       .eq('client_id', clientId)
@@ -107,15 +108,19 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
       .gte('updated_at', start)
       .lt('updated_at', end)
       .then(({ data, error: err }) => {
-        if (cancelled) return
+        if (generation !== request.current) return
         setError(err?.message ?? null)
         setValue(err ? 0 : (data ?? []).reduce((sum, row) => sum + Number((row as { est_value: number | null }).est_value ?? 0), 0))
         setLoading(false)
       })
-    return () => { cancelled = true }
   }, [clientId, month, userId])
 
-  return { value, loading, error }
+  useEffect(() => {
+    void load()
+    return () => { request.current += 1 }
+  }, [load])
+
+  return { value, loading, error, reload: load }
 }
 
 /** Every rep's target row for the client/month — feeds the manager set-target
