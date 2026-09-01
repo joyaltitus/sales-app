@@ -36,7 +36,7 @@ export async function loadPanelIdentity(session: Session): Promise<PanelIdentity
   }
 }
 
-export function useRepQueue(identity: PanelIdentity) {
+export function useRepQueue(identity: PanelIdentity, since: string | null = null) {
   const [items, setItems] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +47,9 @@ export function useRepQueue(identity: PanelIdentity) {
   const request = useRef(0)
 
   const load = useCallback(async (search: string, offset = 0, showLoading = true) => {
+    // `since` filters on the view's own last_activity_at rather than in the
+    // browser: paging 50 at a time means a client-side date filter would hide
+    // rows that simply had not been fetched yet, and quietly report a wrong count.
     const generation = ++request.current
     if (showLoading) setLoading(true)
     setSearching(true)
@@ -56,6 +59,7 @@ export function useRepQueue(identity: PanelIdentity) {
       .select('lead_id, contact_id, person_id, display_name, phone_e164, channel, stage_key, stage_label, status, owner, due_at, follow_up_id, last_activity_at, reason')
       .order('due_at', { ascending: true, nullsFirst: false })
     if (term) dbQuery = dbQuery.or(`display_name.ilike.%${term}%,phone_e164.ilike.%${term}%`)
+    if (since) dbQuery = dbQuery.gte('last_activity_at', since)
     const { data, error: readError } = await dbQuery.range(offset, offset + QUEUE_PAGE_SIZE - 1)
     if (generation !== request.current) return
     if (!readError) {
@@ -63,12 +67,14 @@ export function useRepQueue(identity: PanelIdentity) {
       setItems((current) => offset ? [...current, ...next] : next)
       setHasMore(next.length === QUEUE_PAGE_SIZE)
       setStaleAt(null)
-      if (!term && offset === 0) await cacheQueue(cached(next, new Date(), identity.clientId))
+      // Only the UNFILTERED first page is cached: caching a narrowed result
+      // would make the next cold open look like the rep's whole book had shrunk.
+      if (!term && !since && offset === 0) await cacheQueue(cached(next, new Date(), identity.clientId))
     }
     setError(readError?.message ?? null)
     setLoading(false)
     setSearching(false)
-  }, [identity.clientId])
+  }, [identity.clientId, since])
 
   useEffect(() => {
     let alive = true

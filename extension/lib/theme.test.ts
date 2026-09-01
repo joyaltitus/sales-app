@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { followSystemTheme } from './theme'
+import { followTheme, loadThemeChoice, saveThemeChoice } from './theme'
 
-/** One mutable media object, because followSystemTheme closes over the object it
- *  got at call time — swapping matchMedia afterwards would test nothing. */
+/** One mutable media object: followTheme closes over the object it got at call
+ *  time, so swapping matchMedia afterwards would test nothing. */
 function stubMedia(dark: boolean) {
   const listeners = new Set<() => void>()
   const media = {
@@ -14,32 +14,67 @@ function stubMedia(dark: boolean) {
   return { listeners, media }
 }
 
+const theme = () => document.documentElement.getAttribute('data-theme')
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+
 afterEach(() => document.documentElement.removeAttribute('data-theme'))
 
-describe('followSystemTheme', () => {
-  it('paints dark when the OS asks for dark', () => {
+describe('followTheme', () => {
+  it('paints from the OS synchronously, before the stored choice arrives', () => {
     stubMedia(true)
-    followSystemTheme()
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    followTheme()
+    // Not awaited on purpose: the storage read is async, and a frame of the
+    // wrong theme is a visible white flash in dark mode.
+    expect(theme()).toBe('dark')
   })
 
-  it('paints light otherwise — never leaves the attribute unset', () => {
+  it('never leaves the attribute unset', () => {
     stubMedia(false)
-    followSystemTheme()
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    followTheme()
+    expect(theme()).toBe('light')
   })
 
-  it('keeps following after the rep flips their OS theme mid-shift', () => {
+  it('keeps following the OS while the choice is "system"', async () => {
     const { listeners, media } = stubMedia(false)
-    followSystemTheme()
+    followTheme()
+    await settle()
     media.matches = true
     listeners.forEach((fn) => fn())
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(theme()).toBe('dark')
   })
 
-  it('stops listening once detached', () => {
+  it('lets an explicit choice override a contrary OS, and stops following it', async () => {
+    const { listeners, media } = stubMedia(true)
+    await saveThemeChoice('light')
+    followTheme()
+    await settle()
+    expect(theme()).toBe('light')
+
+    media.matches = false
+    listeners.forEach((fn) => fn())
+    expect(theme()).toBe('light')
+  })
+
+  it('repaints when another surface changes the choice', async () => {
+    stubMedia(false)
+    followTheme()
+    await settle()
+    expect(theme()).toBe('light')
+
+    // What the options TAB does; the side PANEL must follow without a reload.
+    await saveThemeChoice('dark')
+    expect(theme()).toBe('dark')
+  })
+
+  it('round-trips the stored choice and defaults to system', async () => {
+    expect(await loadThemeChoice()).toBe('system')
+    await saveThemeChoice('dark')
+    expect(await loadThemeChoice()).toBe('dark')
+  })
+
+  it('stops listening once detached', async () => {
     const { listeners } = stubMedia(false)
-    followSystemTheme()()
+    followTheme()()
     expect(listeners.size).toBe(0)
   })
 })

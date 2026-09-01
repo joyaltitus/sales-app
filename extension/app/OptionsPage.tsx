@@ -15,6 +15,7 @@ import {
   type SavedSnippet,
 } from '../lib/prefs'
 import { panelSupabase } from '../lib/panel-client'
+import { ThemeToggle } from '../ui/ThemeToggle'
 import { Button } from '../../src/ui/Button'
 import { Input } from '../../src/ui/Input'
 
@@ -111,6 +112,10 @@ export default function OptionsPage() {
             </button>
           ))}
         </div>
+      </Section>
+
+      <Section title="Appearance" hint="Applies to the side panel and this page. System follows your OS, including a scheduled switch.">
+        <ThemeToggle />
       </Section>
 
       <Section title="Follow the open chat" hint="When on, the panel opens the lead for whichever chat you have in front of you. It never reads a chat you aren’t looking at, and never reads groups.">

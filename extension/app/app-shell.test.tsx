@@ -57,11 +57,16 @@ it('lands on Home, pushes the lead as a view, and keeps Lead out of the tab bar'
   await user.click(screen.getByRole('button', { name: 'Back to queue' }))
   expect(await screen.findByText('Do this next')).toBeTruthy()
 
-  for (const label of ['Queue', 'Library', 'Settings', 'Home']) {
+  for (const label of ['CRM', 'Library', 'Settings', 'Home']) {
     await user.click(screen.getByRole('link', { name: label }))
     if (label === 'Settings') expect(screen.getByText(/keeps the panel visible beside the chat/)).toBeTruthy()
     else if (label === 'Library') expect(screen.getByText('No scripts yet')).toBeTruthy()
-    else if (label === 'Queue') expect(screen.getByRole('button', { name: /Open next lead/ })).toBeTruthy()
+    // The CRM is a book, not a queue: search and Add, never a "next lead" nudge.
+    else if (label === 'CRM') {
+      expect(screen.getByLabelText('Search leads')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: /Open next lead/ })).toBeNull()
+    }
     else expect(screen.getByText('Do this next')).toBeTruthy()
   }
 

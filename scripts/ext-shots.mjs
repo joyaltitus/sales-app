@@ -157,21 +157,28 @@ async function run() {
     }
     await shoot(page, '02-home', theme)
 
-    await page.getByRole('link', { name: 'Queue' }).click()
+    await page.getByRole('link', { name: 'CRM' }).click()
     await page.waitForSelector('text=Meera Krishnan')
-    await shoot(page, '03-queue', theme)
+    await shoot(page, '03-crm', theme)
 
-    await page.getByRole('button', { name: /Open next lead/ }).click()
+    // Search + a date window, which is what this tab is for.
+    await page.getByLabel('Search leads').fill('vikram')
+    await page.waitForTimeout(500)
+    await shoot(page, '04-crm-search', theme)
+    await page.getByLabel('Search leads').fill('')
+    await page.waitForTimeout(500)
+
+    await page.getByText('Meera Krishnan').click()
     await page.waitForSelector('text=Before the call')
-    await shoot(page, '04-lead', theme)
+    await shoot(page, '06-lead', theme)
 
     await page.getByRole('link', { name: 'Library' }).click()
     await page.waitForTimeout(400)
-    await shoot(page, '05-library', theme)
+    await shoot(page, '07-library', theme)
 
     await page.getByRole('link', { name: 'Settings' }).click()
     await page.waitForSelector('text=Open chats in')
-    await shoot(page, '06-settings', theme)
+    await shoot(page, '08-settings', theme)
 
     // A MATCHED chat. The panel pushes straight to that lead — this shot is F1's
     // whole point, so it is captured as the arrival rather than staged.
@@ -190,14 +197,14 @@ async function run() {
     await followed.goto(panel)
     await followed.waitForSelector('text=Following Anjali Rao', { timeout: 15000 })
     await followed.waitForSelector('text=Before the call')
-    await shoot(followed, '07-following-chat', theme)
+    await shoot(followed, '09-following-chat', theme)
 
     await followed.getByText('Snippets', { exact: true }).click()
-    await shoot(followed, '08-snippets', theme)
+    await shoot(followed, '10-snippets', theme)
 
     await followed.getByRole('button', { name: 'Save conversation to CRM' }).click()
     await followed.waitForSelector('text=Save this conversation')
-    await shoot(followed, '09-save-conversation', theme)
+    await shoot(followed, '11-save-conversation', theme)
     await followed.close()
 
     // An UNMATCHED chat: the Save-as-lead card on Home.
@@ -210,7 +217,14 @@ async function run() {
     })
     await unknown.goto(panel)
     await unknown.waitForSelector('text=Not in your CRM yet', { timeout: 15000 })
-    await shoot(unknown, '10-save-as-lead', theme)
+    await shoot(unknown, '12-save-as-lead', theme)
+
+    // Same chat, entered the other way: the CRM's own Add form, offering to
+    // copy whoever is open in WhatsApp.
+    await unknown.getByRole('link', { name: 'CRM' }).click()
+    await unknown.getByRole('button', { name: 'Add' }).click()
+    await unknown.waitForSelector('text=New lead')
+    await shoot(unknown, '05-crm-add-lead', theme)
     await unknown.close()
 
     // 10. Options page — wider, it is a full tab.
@@ -219,8 +233,8 @@ async function run() {
     await optionsPage.goto(options)
     await optionsPage.waitForSelector('text=Rep settings')
     await optionsPage.waitForTimeout(400)
-    await optionsPage.screenshot({ path: path.join(OUT, `11-options-${theme}.png`), fullPage: true })
-    process.stdout.write(`  ✓ 11-options-${theme}.png\n`)
+    await optionsPage.screenshot({ path: path.join(OUT, `13-options-${theme}.png`), fullPage: true })
+    process.stdout.write(`  ✓ 13-options-${theme}.png\n`)
 
     await context.close()
     await rm(userDataDir, { recursive: true, force: true })

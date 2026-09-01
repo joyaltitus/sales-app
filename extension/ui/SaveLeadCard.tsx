@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { UserPlus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { MessageCircle, UserPlus } from 'lucide-react'
 import type { OpenChat } from '../lib/wa-chat'
 import { Button } from '../../src/ui/Button'
 import { Input } from '../../src/ui/Input'
@@ -12,13 +12,27 @@ export type SaveLeadDraft = {
 }
 
 type Props = {
-  chat: OpenChat
+  /** The followed chat, when this card is answering one. Null = manual entry from the CRM. */
+  chat: OpenChat | null
   stages: { id: string; label: string }[]
   stagesLoading?: boolean
   busy?: boolean
   message?: string | null
+  /** Seed for manual entry — whatever the rep had typed in the CRM search box. */
+  initialQuery?: string
+  title?: string
+  hint?: string
+  /** Offered only when WhatsApp Web has a one-to-one chat open. */
+  openChat?: OpenChat | null
   onSave: (draft: SaveLeadDraft) => void
   onDismiss?: () => void
+}
+
+/** A bare number typed into search should land in Phone, a name in Name. */
+function seedFrom(query: string): { name: string; phone: string } {
+  const trimmed = query.trim()
+  if (!trimmed) return { name: '', phone: '' }
+  return /\p{L}/u.test(trimmed) ? { name: trimmed, phone: '' } : { name: '', phone: trimmed }
 }
 
 /**
@@ -30,11 +44,24 @@ type Props = {
  * captured in the background; a rep who ignores this card leaves no trace of
  * that conversation in the database.
  */
-export function SaveLeadCard({ chat, stages, stagesLoading, busy, message, onSave, onDismiss }: Props) {
-  const [name, setName] = useState(chat.displayName)
-  const [phone, setPhone] = useState(chat.phoneE164 ?? '')
+export function SaveLeadCard({
+  chat, stages, stagesLoading, busy, message, initialQuery, title, hint, openChat, onSave, onDismiss,
+}: Props) {
+  const seed = chat ? { name: chat.displayName, phone: chat.phoneE164 ?? '' } : seedFrom(initialQuery ?? '')
+  const [name, setName] = useState(seed.name)
+  const [phone, setPhone] = useState(seed.phone)
   const [interest, setInterest] = useState('')
   const [stageId, setStageId] = useState('')
+
+  // Manual entry re-seeds when the rep changes their search and reopens the
+  // form; the chat-answering card must NOT, or a header repaint would wipe an
+  // edit the rep was halfway through.
+  useEffect(() => {
+    if (chat) return
+    const next = seedFrom(initialQuery ?? '')
+    setName(next.name)
+    setPhone(next.phone)
+  }, [chat, initialQuery])
 
   const chosenStage = stageId || stages[0]?.id || ''
   const canSave = !!name.trim() && !!phone.trim() && !!chosenStage && !busy
@@ -43,7 +70,7 @@ export function SaveLeadCard({ chat, stages, stagesLoading, busy, message, onSav
     <section className="rounded-lg border border-border bg-surface-raised p-3 shadow-elev-1">
       <div className="flex items-center gap-2">
         <UserPlus aria-hidden size={15} strokeWidth={1.9} className="shrink-0 text-accent" />
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">Not in your CRM yet</h2>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{title ?? 'Not in your CRM yet'}</h2>
         {onDismiss && (
           <Button variant="ghost" size="sm" onClick={onDismiss}>
             Not now
@@ -51,8 +78,26 @@ export function SaveLeadCard({ chat, stages, stagesLoading, busy, message, onSav
         )}
       </div>
       <p className="mt-1 text-xs leading-relaxed text-fg-muted">
-        This chat isn’t linked to a lead. Check the details, then save them.
+        {hint ?? 'This chat isn’t linked to a lead. Check the details, then save them.'}
       </p>
+
+      {/* Manual entry, with WhatsApp Web open on somebody: one tap copies that
+          chat's name and number in. The name only lands when the number is
+          SAVED in the rep's phone — otherwise WhatsApp's header is the number
+          itself, and parseChat gives us that as the display name. */}
+      {!chat && openChat && (
+        <Button
+          variant="secondary"
+          className="mt-2 min-h-11 w-full"
+          onClick={() => {
+            setName(openChat.displayName)
+            setPhone(openChat.phoneE164 ?? '')
+          }}
+        >
+          <MessageCircle aria-hidden size={15} strokeWidth={1.9} />
+          Use open chat — {openChat.displayName}
+        </Button>
+      )}
 
       <div className="mt-3 grid gap-2.5">
         <label className="grid gap-1">

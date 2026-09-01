@@ -21,7 +21,7 @@ import { readChatMessages } from '../lib/wa-bridge'
 import type { ChatMessage } from '../lib/wa-chat'
 import { loadChatMode } from './chat-mode'
 import { queueWrite } from '../lib/outbox-store'
-import { QueueScreen } from '../ui/QueueScreen'
+import { CrmScreen, sinceFor, type DateFilterKey } from '../ui/CrmScreen'
 import { LeadScreen } from '../ui/LeadScreen'
 import { OutcomeBar } from '../ui/OutcomeBar'
 import { TargetBar } from '../ui/TargetBar'
@@ -43,12 +43,12 @@ export function getRootMounts() {
 
 const TABS = [
   { to: '/home', label: 'Home' },
-  { to: '/queue', label: 'Queue' },
+  { to: '/crm', label: 'CRM' },
   { to: '/library', label: 'Library' },
   { to: '/settings', label: 'Settings' },
 ]
 const PANEL_NAV_KEY = 'rep.panelNavigation'
-type PanelRoute = '/home' | '/queue' | '/lead' | '/library' | '/settings'
+type PanelRoute = '/home' | '/crm' | '/lead' | '/library' | '/settings'
 type PanelNavigation = { route: PanelRoute; selected: QueueItem | null }
 
 const navLinkStyle = (active: boolean): CSSProperties => ({
@@ -390,21 +390,17 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
   )
 }
 
-/** The Save-as-lead card, shown when the followed chat matched nothing. */
-function UnmatchedChat({ identity, follow, onSaved }: {
-  identity: PanelIdentity
-  follow: ReturnType<typeof useFollowedChat>
-  onSaved: () => void
-}) {
-  const stages = useLeadStages(identity.clientId)
+/**
+ * Create a lead through create_manual_lead, with the offline queue behind it.
+ *
+ * Shared by the Save-as-lead card (an unmatched chat) and the CRM's Add form,
+ * so the provenance note and the source decision are written once.
+ */
+function useCreateLead(identity: PanelIdentity, onSaved: () => void) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [dismissed, setDismissed] = useState<string | null>(null)
-  const chat = follow.chat
 
-  if (!chat || follow.match.lead || dismissed === chat.displayName) return null
-
-  async function save(draft: SaveLeadDraft) {
+  async function save(draft: SaveLeadDraft, fromChat: boolean): Promise<boolean> {
     setBusy(true)
     setMessage(null)
     // Provenance rides in the note create_manual_lead writes for us. It cannot
@@ -415,7 +411,7 @@ function UnmatchedChat({ identity, follow, onSaved }: {
     // in the PR.
     const note = [
       draft.interest ? `Interest: ${draft.interest}` : null,
-      'Saved from a WhatsApp Web chat by the rep.',
+      fromChat ? 'Saved from a WhatsApp Web chat by the rep.' : 'Added by the rep from the CRM.',
     ].filter(Boolean).join(' · ')
     const args = {
       client_id: identity.clientId,
@@ -436,13 +432,29 @@ function UnmatchedChat({ identity, follow, onSaved }: {
       const queued = await queueWrite('create_lead', args)
       setBusy(false)
       setMessage(queued.ok ? 'Saved offline — it will sync when you’re back.' : 'Couldn’t save. Try again.')
-      if (queued.ok) setDismissed(draft.name)
-      return
+      if (queued.ok) onSaved()
+      return queued.ok
     }
     setBusy(false)
     onSaved()
+    return true
   }
 
+  return { busy, message, save }
+}
+
+/** The Save-as-lead card, shown when the followed chat matched nothing. */
+function UnmatchedChat({ identity, follow, onSaved }: {
+  identity: PanelIdentity
+  follow: ReturnType<typeof useFollowedChat>
+  onSaved: () => void
+}) {
+  const stages = useLeadStages(identity.clientId)
+  const [dismissed, setDismissed] = useState<string | null>(null)
+  const chat = follow.chat
+  const { busy, message, save } = useCreateLead(identity, onSaved)
+
+  if (!chat || follow.match.lead || dismissed === chat.displayName) return null
   return (
     <div className="p-3">
       <SaveLeadCard
@@ -451,8 +463,38 @@ function UnmatchedChat({ identity, follow, onSaved }: {
         stagesLoading={stages.loading}
         busy={busy}
         message={message}
-        onSave={(draft) => void save(draft)}
+        onSave={(draft) => void save(draft, true)}
         onDismiss={() => setDismissed(chat.displayName)}
+      />
+    </div>
+  )
+}
+
+/** The CRM's Add-lead form: the same card, with no chat behind it. */
+function AddLead({ identity, query, openChat, onDone, onCancel }: {
+  identity: PanelIdentity
+  query: string
+  openChat: ReturnType<typeof useFollowedChat>['chat']
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const stages = useLeadStages(identity.clientId)
+  const { busy, message, save } = useCreateLead(identity, onDone)
+
+  return (
+    <div className="p-3">
+      <SaveLeadCard
+        chat={null}
+        initialQuery={query}
+        openChat={openChat}
+        title="New lead"
+        hint="Fill in what you know. Only the name, number and stage are required."
+        stages={stages.stages.map((stage) => ({ id: stage.id, label: stage.label }))}
+        stagesLoading={stages.loading}
+        busy={busy}
+        message={message}
+        onSave={(draft) => void save(draft, false)}
+        onDismiss={onCancel}
       />
     </div>
   )
@@ -465,7 +507,11 @@ function PanelRoutes({ identity, initialSelected, follow }: {
 }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const queue = useRepQueue(identity)
+  const [dateFilter, setDateFilter] = useState<DateFilterKey>('any')
+  const [crmQuery, setCrmQuery] = useState('')
+  const [adding, setAdding] = useState(false)
+  const since = useMemo(() => sinceFor(dateFilter), [dateFilter])
+  const queue = useRepQueue(identity, since)
   const [selected, setSelected] = useState<QueueItem | null>(initialSelected)
   const month = firstOfMonth()
   const target = useTarget(identity.clientId, identity.userId, month)
@@ -503,15 +549,36 @@ function PanelRoutes({ identity, initialSelected, follow }: {
             target={<OwnTarget identity={identity} target={target} won={won} />}
             onRetry={() => void queue.reload()}
             onOpenLead={openLead}
-            onSeeQueue={() => navigate('/queue')}
+            onSeeQueue={() => navigate('/crm')}
           />
         </>
       )} />
-      <Route path="/queue" element={queue.loading
-        ? <QueueSkeleton />
-        : queue.error && queue.items.length === 0
-          ? <ErrorState title="Couldn’t load your queue" body="Check your connection, then retry." onRetry={() => void queue.reload()} />
-          : <QueueScreen items={queue.items} staleAt={queue.staleAt} refreshError={queue.error} onRetry={() => void queue.reload()} searching={queue.searching} hasMore={queue.hasMore} onSearch={queue.search} onLoadMore={queue.loadMore} onNext={openLead} onOpenLead={openLead} />}
+      <Route path="/crm" element={adding
+        ? <AddLead
+            identity={identity}
+            query={crmQuery}
+            openChat={follow.chat}
+            onDone={() => { setAdding(false); void queue.reload() }}
+            onCancel={() => setAdding(false)}
+          />
+        : queue.loading
+          ? <QueueSkeleton />
+          : queue.error && queue.items.length === 0
+            ? <ErrorState title="Couldn’t load your leads" body="Check your connection, then retry." onRetry={() => void queue.reload()} />
+            : <CrmScreen
+                items={queue.items}
+                staleAt={queue.staleAt}
+                refreshError={queue.error}
+                onRetry={() => void queue.reload()}
+                searching={queue.searching}
+                hasMore={queue.hasMore}
+                dateFilter={dateFilter}
+                onDateFilter={setDateFilter}
+                onSearch={(next) => { setCrmQuery(next); queue.search(next) }}
+                onLoadMore={queue.loadMore}
+                onAddLead={() => setAdding(true)}
+                onOpenLead={openLead}
+              />}
       />
       <Route path="/lead" element={selected
         ? <LeadWorkspace identity={identity} lead={selected} onChanged={() => void queue.reload()} onRevenueChanged={() => void won.reload()} onBack={() => navigate('/home')} />

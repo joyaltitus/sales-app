@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { ChatMode } from '../../lib/contracts'
 import { loadChatMode, saveChatMode } from '../chat-mode'
 import { signOutExtension } from '../../lib/session'
+import { ThemeToggle } from '../../ui/ThemeToggle'
 import { Button } from '../../../src/ui/Button'
 
 const OPTIONS: { value: ChatMode; label: string; icon: LucideIcon }[] = [
@@ -58,6 +59,9 @@ export default function SettingsScreen() {
         WhatsApp Web keeps the panel visible beside the chat; desktop mode switches you out of the
         browser.
       </p>
+
+      <h1 className="label-caps mt-2">Appearance</h1>
+      <ThemeToggle />
       <Button variant="secondary" className="mt-2 min-h-11 w-full" onClick={() => void signOutExtension()}>
         <LogOut aria-hidden size={15} strokeWidth={1.9} />
         Sign out
