@@ -248,7 +248,7 @@ export function ObjectionCapture({
         </div>
       )}
 
-      <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5" role="group" aria-label="Log an objection">
+      <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto pb-0.5" role="group" aria-label="Log an objection">
         {taxonomy.map((item) => (
           <button
             key={item.id}

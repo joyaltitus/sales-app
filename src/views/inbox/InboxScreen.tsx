@@ -117,7 +117,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       if (!assignedTo) return null
       if (assignedTo === userId) return 'You'
       const t = teammates.find((x) => x.user_id === assignedTo)
-      return t ? teammateLabel(t) : 'Another member'
+      return t ? teammateLabel(t) : 'Assigned'
     },
     [userId, teammates],
   )
