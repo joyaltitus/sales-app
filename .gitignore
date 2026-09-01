@@ -26,3 +26,4 @@ scripts/__pycache__/
 # WXT build artifacts
 .output/
 .wxt/
+.quarantine-dist/

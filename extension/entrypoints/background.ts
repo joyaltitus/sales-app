@@ -1,5 +1,6 @@
 import { defineBackground } from '#imports'
 import { processAlarmTick, openChatTab } from '../lib/background'
+import { isQuietAt, loadPrefs } from '../lib/prefs'
 import { AUTH_NEEDS_SIGNIN_KEY } from '../lib/storage'
 import { getWorkerSession, hasStoredSession, readWorkerNotices } from '../lib/worker-api'
 
@@ -17,12 +18,20 @@ async function poll(): Promise<void> {
   const through = new Date(Date.now() + POLL_MINUTES * 60_000).toISOString()
   const { due, newLeads } = await readWorkerNotices(session, through)
 
+  // Quiet hours gate the NOTIFICATION, never the badge or the ledger: a rep who
+  // set 21:00–09:00 wants to stop being pinged at dinner, not to lose the count
+  // of what is waiting. processAlarmTick still records every id as seen, so a
+  // follow-up that came due at 22:00 does not re-fire the moment quiet ends.
+  const prefs = await loadPrefs()
+  const quiet = isQuietAt(prefs, new Date())
+
   await processAlarmTick({
     due,
     newLeads,
     get: (keys) => chrome.storage.local.get(keys),
     set: (values) => chrome.storage.local.set(values),
     notify: async (id, title, message) => {
+      if (quiet) return
       await chrome.notifications.create(id, {
         type: 'basic',
         iconUrl: chrome.runtime.getURL('/icons/icon-192.png'),

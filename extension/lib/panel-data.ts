@@ -4,19 +4,25 @@ import type { QueueItem } from './contracts'
 import { panelSupabase } from './panel-client'
 import { CACHE_KEYS, cacheLibrary, cacheQueue, cached, readCache } from './cache'
 import { useScriptLibrary } from '@app/lib/scripts-data'
+import { loadPrefs } from './prefs'
 
 export type PanelIdentity = { userId: string; clientId: string; displayName: string }
 const QUEUE_PAGE_SIZE = 50
 
 export async function loadPanelIdentity(session: Session): Promise<PanelIdentity | null> {
   const userId = session.user.id
+  // No .limit(1): a rep in several workspaces gets the one they chose in the
+  // options page. Limiting the read first would make the choice unreachable
+  // whenever the wanted membership was not the row Postgres happened to return.
   const { data: memberships, error } = await panelSupabase
     .from('user_client_memberships')
     .select('client_id')
     .eq('user_id', userId)
-    .limit(1)
   if (error || !memberships?.length) return null
-  const clientId = (memberships[0] as { client_id: string }).client_id
+  const rows = memberships as { client_id: string }[]
+  const preferred = (await loadPrefs()).activeClientId
+  const clientId = rows.find((row) => row.client_id === preferred)?.client_id
+    ?? (rows[0] as { client_id: string }).client_id
   const { data: profile } = await panelSupabase
     .from('profiles')
     .select('display_name')
@@ -30,7 +36,7 @@ export async function loadPanelIdentity(session: Session): Promise<PanelIdentity
   }
 }
 
-export function useRepQueue(identity: PanelIdentity) {
+export function useRepQueue(identity: PanelIdentity, since: string | null = null) {
   const [items, setItems] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +47,9 @@ export function useRepQueue(identity: PanelIdentity) {
   const request = useRef(0)
 
   const load = useCallback(async (search: string, offset = 0, showLoading = true) => {
+    // `since` filters on the view's own last_activity_at rather than in the
+    // browser: paging 50 at a time means a client-side date filter would hide
+    // rows that simply had not been fetched yet, and quietly report a wrong count.
     const generation = ++request.current
     if (showLoading) setLoading(true)
     setSearching(true)
@@ -50,6 +59,7 @@ export function useRepQueue(identity: PanelIdentity) {
       .select('lead_id, contact_id, person_id, display_name, phone_e164, channel, stage_key, stage_label, status, owner, due_at, follow_up_id, last_activity_at, reason')
       .order('due_at', { ascending: true, nullsFirst: false })
     if (term) dbQuery = dbQuery.or(`display_name.ilike.%${term}%,phone_e164.ilike.%${term}%`)
+    if (since) dbQuery = dbQuery.gte('last_activity_at', since)
     const { data, error: readError } = await dbQuery.range(offset, offset + QUEUE_PAGE_SIZE - 1)
     if (generation !== request.current) return
     if (!readError) {
@@ -57,12 +67,14 @@ export function useRepQueue(identity: PanelIdentity) {
       setItems((current) => offset ? [...current, ...next] : next)
       setHasMore(next.length === QUEUE_PAGE_SIZE)
       setStaleAt(null)
-      if (!term && offset === 0) await cacheQueue(cached(next, new Date(), identity.clientId))
+      // Only the UNFILTERED first page is cached: caching a narrowed result
+      // would make the next cold open look like the rep's whole book had shrunk.
+      if (!term && !since && offset === 0) await cacheQueue(cached(next, new Date(), identity.clientId))
     }
     setError(readError?.message ?? null)
     setLoading(false)
     setSearching(false)
-  }, [identity.clientId])
+  }, [identity.clientId, since])
 
   useEffect(() => {
     let alive = true

@@ -31,6 +31,10 @@ window.matchMedia = ((query: string) => ({
 // `restoreMocks` would strip the implementation after the first test in a file.
 const chromeLocalStore = new Map<string, unknown>()
 const chromeSessionStore = new Map<string, unknown>()
+// extension/lib/prefs.ts keeps the rep's snippet library in storage.sync, which
+// is a distinct area from local — stubbing only `local` makes loadSnippets()
+// throw on a property that is simply absent.
+const chromeSyncStore = new Map<string, unknown>()
 const storageArea = (store: Map<string, unknown>) => ({
   get: async (key?: string | string[] | null) => {
     const keys = key === null || key === undefined ? [...store.keys()] : Array.isArray(key) ? key : [key]
@@ -48,7 +52,25 @@ const storageArea = (store: Map<string, unknown>) => ({
   storage: {
     local: storageArea(chromeLocalStore),
     session: storageArea(chromeSessionStore),
+    sync: storageArea(chromeSyncStore),
     onChanged: {
+      addListener: () => {},
+      removeListener: () => {},
+    },
+  },
+  // The panel asks the WhatsApp tab questions through these two. Default to
+  // "no WhatsApp tab open", which is the state most tests want and the state
+  // the panel must stay usable in.
+  tabs: {
+    query: async () => [],
+    sendMessage: async () => undefined,
+    create: async () => ({ id: 1 }),
+    update: async () => ({ id: 1 }),
+  },
+  runtime: {
+    sendMessage: async () => undefined,
+    getURL: (path: string) => `chrome-extension://test${path}`,
+    onMessage: {
       addListener: () => {},
       removeListener: () => {},
     },

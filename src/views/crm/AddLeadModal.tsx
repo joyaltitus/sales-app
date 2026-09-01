@@ -4,6 +4,7 @@ import type { LeadStage } from '../../lib/leads-data'
 import { createLead } from '../../lib/crm-actions'
 import { useAuth } from '../../auth/AuthProvider'
 import { formatPhone } from '../../lib/phone'
+import { CHANNELS, VALUE_PRESETS } from '../../lib/lead-fields'
 import { Button } from '../../ui/Button'
 
 type Props = {
@@ -14,24 +15,6 @@ type Props = {
   stages: LeadStage[]
   defaultStageId?: string
 }
-
-const CHANNELS = [
-  { value: 'phone', label: 'Phone Call' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'walkin', label: 'Walk-in / In-person' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'website', label: 'Website inquiry' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'email', label: 'Email' },
-] as const
-
-const VALUE_PRESETS = [
-  { label: '₹25K', value: 25000 },
-  { label: '₹50K', value: 50000 },
-  { label: '₹60K', value: 60000 },
-  { label: '₹1L', value: 100000 },
-  { label: '₹1.5L', value: 150000 },
-] as const
 
 export function AddLeadModal({
   open,

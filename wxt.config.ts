@@ -34,6 +34,10 @@ export default defineConfig({
     const hostPermissions = [
       hostPermission('VITE_SUPABASE_URL', env.VITE_SUPABASE_URL),
       hostPermission('VITE_HUB_API_BASE', env.VITE_HUB_API_BASE),
+      // The ONE page this extension reads. Listed explicitly rather than via a
+      // broad pattern so a review — human or store — can see the whole surface
+      // in one line. Nothing else is requested, now or by wildcard.
+      'https://web.whatsapp.com/*',
     ]
     return {
       // Pins the extension ID to this public key instead of letting Chrome derive
@@ -49,6 +53,16 @@ export default defineConfig({
       version: '0.1.0',
       permissions: ['sidePanel', 'storage', 'alarms', 'notifications', 'tabs'],
       host_permissions: hostPermissions,
+      // Ctrl on Windows/Linux, Command on Mac. Chrome resolves "Ctrl" to the
+      // platform modifier ONLY when a separate "mac" key is absent, so both are
+      // spelled out; hardcoding Meta would leave Windows reps — who are most of
+      // them — with a shortcut that does nothing.
+      commands: {
+        _execute_action: {
+          suggested_key: { default: 'Ctrl+Shift+9', mac: 'Command+Shift+9' },
+          description: 'Open the Rep panel',
+        },
+      },
     }
   },
   vite: () => ({
