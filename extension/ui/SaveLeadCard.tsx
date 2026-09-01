@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, UserPlus } from 'lucide-react'
 import type { OpenChat } from '../lib/wa-chat'
-import type { Product } from '@app/lib/products-data'
 import { CHANNELS, VALUE_PRESETS, hasDialableDigits, withPhonePrefix } from '@app/lib/lead-fields'
 import { Button } from '../../src/ui/Button'
 import { Input } from '../../src/ui/Input'
@@ -10,10 +9,6 @@ export type SaveLeadDraft = {
   name: string
   phone: string
   channel: string
-  /** Catalogue item name, or whatever the rep typed. Never empty — it is required. */
-  product: string
-  /** Set only when the product came from the catalogue, so the lead can price itself. */
-  productId: string | null
   estValue: number | null
   nextAction: string
   note: string
@@ -25,8 +20,6 @@ type Props = {
   chat: OpenChat | null
   stages: { id: string; label: string }[]
   stagesLoading?: boolean
-  products: Product[]
-  productsLoading?: boolean
   busy?: boolean
   message?: string | null
   /** Seed for manual entry — whatever the rep had typed in the CRM search box. */
@@ -38,8 +31,6 @@ type Props = {
   onSave: (draft: SaveLeadDraft) => void
   onDismiss?: () => void
 }
-
-const OTHER = '__other__'
 
 const selectClass =
   'min-h-11 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-fg disabled:text-fg-subtle'
@@ -71,23 +62,15 @@ function Field({ label, required, children }: {
 /**
  * The extension's new-lead form — the same fields as the web AddLeadModal, in a
  * 400px column, and writing through the same create_manual_lead RPC.
- *
- * Product is REQUIRED here (the web modal has no product field at all yet).
- * Reps can pick from the client's catalogue or type their own: `items` is
- * readable by any member but writable only by a client_admin, so a rep's own
- * product is a value carried on this lead, never a new catalogue row — offering
- * them a "create product" button would be offering a guaranteed RLS denial.
  */
 export function SaveLeadCard({
-  chat, stages, stagesLoading, products, productsLoading, busy, message,
+  chat, stages, stagesLoading, busy, message,
   initialQuery, title, hint, openChat, onSave, onDismiss,
 }: Props) {
   const seed = chat ? { name: chat.displayName, phone: chat.phoneE164 ?? '' } : seedFrom(initialQuery ?? '')
   const [name, setName] = useState(seed.name)
   const [phone, setPhone] = useState(withPhonePrefix(seed.phone))
   const [channel, setChannel] = useState(chat ? 'whatsapp' : 'phone')
-  const [productId, setProductId] = useState('')
-  const [ownProduct, setOwnProduct] = useState('')
   const [estValue, setEstValue] = useState('')
   const [nextAction, setNextAction] = useState('')
   const [note, setNote] = useState('')
@@ -104,17 +87,7 @@ export function SaveLeadCard({
   }, [chat, initialQuery])
 
   const chosenStage = stageId || stages[0]?.id || ''
-  const catalogue = products.find((item) => item.id === productId) ?? null
-  const product = productId === OTHER ? ownProduct.trim() : catalogue?.name ?? ''
-  const canSave = !!hasDialableDigits(phone) && !!product && !!chosenStage && !busy
-
-  function chooseProduct(value: string) {
-    setProductId(value)
-    // A catalogue price is a better default than a blank box, and the rep can
-    // still overwrite it — but never clobber a figure they already typed.
-    const picked = products.find((item) => item.id === value)
-    if (picked && !estValue.trim()) setEstValue(String(picked.price))
-  }
+  const canSave = !!hasDialableDigits(phone) && !!chosenStage && !busy
 
   return (
     <section className="rounded-lg border border-border bg-surface-raised p-3 shadow-elev-1">
@@ -172,32 +145,6 @@ export function SaveLeadCard({
             ))}
           </select>
         </Field>
-
-        <Field label="Course or product" required>
-          <select
-            value={productId}
-            disabled={productsLoading}
-            onChange={(event) => chooseProduct(event.target.value)}
-            className={selectClass}
-          >
-            <option value="">{productsLoading ? 'Loading…' : 'Choose one…'}</option>
-            {products.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
-            ))}
-            <option value={OTHER}>Something else…</option>
-          </select>
-        </Field>
-
-        {productId === OTHER && (
-          <Field label="Which product" required>
-            <Input
-              value={ownProduct}
-              onChange={(event) => setOwnProduct(event.target.value)}
-              autoComplete="off"
-              placeholder="Type the course or product"
-            />
-          </Field>
-        )}
 
         <Field label="Stage" required>
           <select
@@ -265,8 +212,6 @@ export function SaveLeadCard({
         <dd className="min-w-0 truncate text-fg-muted">{name.trim() || '—'}</dd>
         <dt className="text-fg-subtle">Number</dt>
         <dd className="min-w-0 truncate text-fg-muted tnum">{hasDialableDigits(phone) ? phone.trim() : '—'}</dd>
-        <dt className="text-fg-subtle">Product</dt>
-        <dd className="min-w-0 truncate text-fg-muted">{product || '—'}</dd>
         <dt className="text-fg-subtle">Source</dt>
         <dd className="text-fg-muted">{CHANNELS.find((item) => item.value === channel)?.label ?? channel}</dd>
       </dl>
@@ -287,8 +232,6 @@ export function SaveLeadCard({
             name: name.trim(),
             phone: phone.trim(),
             channel,
-            product,
-            productId: catalogue?.id ?? null,
             estValue: estValue.trim() && Number.isFinite(parsed) ? parsed : null,
             nextAction: nextAction.trim(),
             note: note.trim(),

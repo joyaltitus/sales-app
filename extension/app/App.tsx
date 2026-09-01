@@ -12,7 +12,6 @@ import type { CallOutcome, LeadDetail, QueueItem, Snippet } from '../lib/contrac
 import { CACHE_KEYS, cacheLeadDetail, cached, readCache } from '../lib/cache'
 import { firstOfMonth, useOwnWonValue, useTarget } from '@app/lib/targets-data'
 import { useLeadStages, moveLeadStage } from '@app/lib/leads-data'
-import { useProducts } from '@app/lib/products-data'
 import { addNote, createLead, saveLead } from '@app/lib/crm-actions'
 import { completeCall, startCallSession, useCallLogs } from '@app/lib/calls-data'
 import { useLeadMemory, useNotes } from '@app/lib/crm-data'
@@ -404,15 +403,13 @@ function useCreateLead(identity: PanelIdentity, onSaved: () => void) {
   async function save(draft: SaveLeadDraft, fromChat: boolean): Promise<boolean> {
     setBusy(true)
     setMessage(null)
-    // Product, and the rep's own note, ride in the note create_manual_lead
-    // writes for us. Product cannot go on the lead itself yet — `leads` has no
-    // item column — and provenance cannot go in leads.source: the agent RLS
+    // The rep's own note, and provenance, ride in the note create_manual_lead
+    // writes for us. Provenance cannot go in leads.source: the agent RLS
     // branch that lets a rep create AND later edit their own lead is gated on
     // source = 'manual' (leads_agent_insert / leads_agent_update), so another
     // value is denied on the way in and would strip the rep's update rights on
     // the way out. Both migrations are proposed in the PR.
     const note = [
-      `Product: ${draft.product}`,
       draft.note || null,
       fromChat ? 'Saved from a WhatsApp Web chat by the rep.' : 'Added by the rep from the CRM.',
     ].filter(Boolean).join(' · ')
@@ -457,7 +454,6 @@ function UnmatchedChat({ identity, follow, onSaved }: {
   onSaved: () => void
 }) {
   const stages = useLeadStages(identity.clientId)
-  const products = useProducts(identity.clientId)
   const [dismissed, setDismissed] = useState<string | null>(null)
   const chat = follow.chat
   const { busy, message, save } = useCreateLead(identity, onSaved)
@@ -469,8 +465,6 @@ function UnmatchedChat({ identity, follow, onSaved }: {
         chat={chat}
         stages={stages.stages.map((stage) => ({ id: stage.id, label: stage.label }))}
         stagesLoading={stages.loading}
-        products={products.items}
-        productsLoading={products.loading}
         busy={busy}
         message={message}
         onSave={(draft) => void save(draft, true)}
@@ -489,7 +483,6 @@ function AddLead({ identity, query, openChat, onDone, onCancel }: {
   onCancel: () => void
 }) {
   const stages = useLeadStages(identity.clientId)
-  const products = useProducts(identity.clientId)
   const { busy, message, save } = useCreateLead(identity, onDone)
 
   return (
@@ -499,11 +492,9 @@ function AddLead({ identity, query, openChat, onDone, onCancel }: {
         initialQuery={query}
         openChat={openChat}
         title="New lead"
-        hint="Number, source, course and stage are required. The rest helps later."
+        hint="Number, source and stage are required. The rest helps later."
         stages={stages.stages.map((stage) => ({ id: stage.id, label: stage.label }))}
         stagesLoading={stages.loading}
-        products={products.items}
-        productsLoading={products.loading}
         busy={busy}
         message={message}
         onSave={(draft) => void save(draft, false)}

@@ -54,11 +54,6 @@ const TABLES = {
     { id: 'sv-2', script_id: 'sc-2', version: 2, status: 'approved', headline: 'Next batch', change_note: null, created_by: USER, created_at: iso(0), scripts: { id: 'sc-2', taxonomy_id: 'ot-2' }, body: { paragraphs: [{ before: 'Hi {{name}}, the next batch starts Monday and two seats are open. ', highlight: 'Shall I hold one?', after: '' }] } },
     { id: 'sv-3', script_id: 'sc-3', version: 1, status: 'approved', headline: 'Family decision', change_note: null, created_by: USER, created_at: iso(0), scripts: { id: 'sc-3', taxonomy_id: 'ot-3' }, body: { paragraphs: [{ before: 'Totally fair, {{name}}. Would it help if I sent a one-page summary you can share at home?', highlight: null, after: '' }] } },
   ],
-  items: [
-    { id: 'i-1', name: 'NEET Crash Course', price: 48000, category: 'course' },
-    { id: 'i-2', name: 'Foundation Batch — Class 11', price: 62000, category: 'course' },
-    { id: 'i-3', name: 'Weekend Revision Batch', price: 22000, category: 'course' },
-  ],
   lead_stages: [
     { id: 's-1', stage_key: 'new', label: 'New', sort_order: 1, is_won: false },
     { id: 's-2', stage_key: 'contacted', label: 'Contacted', sort_order: 2, is_won: false },
@@ -175,15 +170,15 @@ async function run() {
 
     await page.getByText('Meera Krishnan').click()
     await page.waitForSelector('text=Before the call')
-    await shoot(page, '07-lead', theme)
+    await shoot(page, '06-lead', theme)
 
     await page.getByRole('link', { name: 'Library' }).click()
     await page.waitForTimeout(400)
-    await shoot(page, '08-library', theme)
+    await shoot(page, '07-library', theme)
 
     await page.getByRole('link', { name: 'Settings' }).click()
     await page.waitForSelector('text=Open chats in')
-    await shoot(page, '09-settings', theme)
+    await shoot(page, '08-settings', theme)
 
     // A MATCHED chat. The panel pushes straight to that lead — this shot is F1's
     // whole point, so it is captured as the arrival rather than staged.
@@ -202,14 +197,14 @@ async function run() {
     await followed.goto(panel)
     await followed.waitForSelector('text=Following Anjali Rao', { timeout: 15000 })
     await followed.waitForSelector('text=Before the call')
-    await shoot(followed, '10-following-chat', theme)
+    await shoot(followed, '09-following-chat', theme)
 
     await followed.getByText('Snippets', { exact: true }).click()
-    await shoot(followed, '11-snippets', theme)
+    await shoot(followed, '10-snippets', theme)
 
     await followed.getByRole('button', { name: 'Save conversation to CRM' }).click()
     await followed.waitForSelector('text=Save this conversation')
-    await shoot(followed, '12-save-conversation', theme)
+    await shoot(followed, '11-save-conversation', theme)
     await followed.close()
 
     // An UNMATCHED chat: the Save-as-lead card on Home.
@@ -222,7 +217,7 @@ async function run() {
     })
     await unknown.goto(panel)
     await unknown.waitForSelector('text=Not in your CRM yet', { timeout: 15000 })
-    await shoot(unknown, '13-save-as-lead', theme)
+    await shoot(unknown, '12-save-as-lead', theme)
 
     // Same chat, entered the other way: the CRM's own Add form, offering to
     // copy whoever is open in WhatsApp.
@@ -230,10 +225,7 @@ async function run() {
     await unknown.getByRole('button', { name: 'Add' }).click()
     await unknown.waitForSelector('text=New lead')
     await unknown.getByRole('button', { name: /Use open chat/ }).click()
-    await unknown.getByLabel(/^Course or product/).selectOption({ label: 'NEET Crash Course' })
     await shoot(unknown, '05-crm-add-lead', theme)
-    await unknown.getByLabel(/^Course or product/).selectOption({ label: 'Something else…' })
-    await shoot(unknown, '06-crm-add-lead-own-product', theme)
     await unknown.close()
 
     // 10. Options page — wider, it is a full tab.
@@ -242,7 +234,7 @@ async function run() {
     await optionsPage.goto(options)
     await optionsPage.waitForSelector('text=Rep settings')
     await optionsPage.waitForTimeout(400)
-    await optionsPage.screenshot({ path: path.join(OUT, `14-options-${theme}.png`), fullPage: true })
+    await optionsPage.screenshot({ path: path.join(OUT, `13-options-${theme}.png`), fullPage: true })
     process.stdout.write(`  ✓ 13-options-${theme}.png\n`)
 
     await context.close()
