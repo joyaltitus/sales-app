@@ -19,7 +19,10 @@ vi.mock('@app/lib/targets-data', () => ({
   useTarget: () => ({ item: null, loading: false, error: null, reload: vi.fn() }),
   useOwnWonValue: () => ({ value: 0, loading: false, error: null, reload: vi.fn() }),
 }))
-vi.mock('@app/lib/leads-data', () => ({ useLeadStages: () => ({ stages: [] }), moveLeadStage: vi.fn() }))
+vi.mock('@app/lib/leads-data', () => ({
+  useLeadStages: () => ({ stages: [], loading: false }),
+  moveLeadStage: vi.fn(),
+}))
 vi.mock('@app/lib/objections-data', () => ({
   useObjectionTaxonomy: () => ({ items: [] }),
   useObjectionLogs: () => ({ items: [], loading: false, error: null, reload: vi.fn() }),
@@ -33,7 +36,7 @@ vi.mock('@app/lib/crm-data', () => ({
   useLeadMemory: () => ({ facts: [], loading: false, error: null, reload: vi.fn() }),
   useNotes: () => ({ items: [], loading: false, error: null, reload: vi.fn() }),
 }))
-vi.mock('@app/lib/crm-actions', () => ({ addNote: vi.fn(), saveLead: vi.fn() }))
+vi.mock('@app/lib/crm-actions', () => ({ addNote: vi.fn(), saveLead: vi.fn(), createLead: vi.fn() }))
 
 import { AppShell, getRootMounts } from './App'
 
@@ -41,25 +44,42 @@ const identity = { userId: 'user-1', clientId: 'client-1', displayName: 'Rep' }
 
 beforeEach(() => vi.clearAllMocks())
 
-it('uses queue → lead as a pushed view and keeps only secondary destinations in the tab bar', async () => {
+it('lands on Home, pushes the lead as a view, and keeps Lead out of the tab bar', async () => {
   const user = userEvent.setup()
   render(<AppShell identity={identity} />)
 
-  expect(await screen.findByText('Anjali Nair')).toBeTruthy()
+  // Home is the landing route: the one next action, not the whole queue.
+  expect(await screen.findByText('Do this next')).toBeTruthy()
   expect(screen.queryByRole('link', { name: 'Lead' })).toBeNull()
-  await user.click(screen.getByText('Anjali Nair'))
+
+  await user.click(screen.getByRole('button', { name: /Open Anjali Nair/ }))
   expect(await screen.findByRole('button', { name: 'Back to queue' })).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Back to queue' }))
-  expect(await screen.findByRole('button', { name: /Open next lead/ })).toBeTruthy()
+  expect(await screen.findByText('Do this next')).toBeTruthy()
 
-  for (const label of ['Library', 'Settings', 'Queue']) {
+  for (const label of ['Queue', 'Library', 'Settings', 'Home']) {
     await user.click(screen.getByRole('link', { name: label }))
     if (label === 'Settings') expect(screen.getByText(/keeps the panel visible beside the chat/)).toBeTruthy()
     else if (label === 'Library') expect(screen.getByText('No scripts yet')).toBeTruthy()
-    else expect(screen.getByText('Anjali Nair')).toBeTruthy()
+    else if (label === 'Queue') expect(screen.getByRole('button', { name: /Open next lead/ })).toBeTruthy()
+    else expect(screen.getByText('Do this next')).toBeTruthy()
   }
 
   expect(getRootMounts()).toBe(1)
+})
+
+it('does not read the WhatsApp page while following is off', async () => {
+  const query = vi.spyOn(chrome.tabs, 'query')
+  render(<AppShell identity={identity} />)
+  await screen.findByText('Do this next')
+
+  // The Following switch defaults ON, so the panel asks for the tab; what must
+  // never happen is a read while the rep has turned it off.
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('switch', { name: /Following|Not following/ }))
+  query.mockClear()
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  expect(query).not.toHaveBeenCalled()
 })
 
 it('restores the selected lead and pushed route from session storage', async () => {

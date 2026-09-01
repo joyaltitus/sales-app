@@ -38,7 +38,7 @@ export type LeadDetail = {
 
 export type OutboxEntry = {
   id: string                        // client-minted uuid; this IS the idempotency handle
-  kind: 'log_outcome' | 'save_lead' | 'add_note' | 'add_follow_up' | 'update_follow_up' | 'log_objection'
+  kind: 'log_outcome' | 'save_lead' | 'add_note' | 'add_follow_up' | 'update_follow_up' | 'log_objection' | 'create_lead'
   args: Record<string, unknown>
   created_at: string
   attempts: number
