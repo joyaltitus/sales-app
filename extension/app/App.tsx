@@ -334,7 +334,7 @@ function PanelLayout({ identity, initial }: { identity: PanelIdentity; initial: 
       </main>
       <nav aria-label="Primary" style={{ display: 'flex', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
         {TABS.map((tab) => (
-          <NavLink key={tab.to} to={tab.to}>
+          <NavLink key={tab.to} to={tab.to} style={{ flex: 1, textDecoration: 'none' }}>
             {({ isActive }) => (
               <span style={{ ...navLinkStyle(isActive), width: '100%' }}>{tab.label}</span>
             )}

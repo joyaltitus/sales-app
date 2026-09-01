@@ -1,7 +1,7 @@
 import { defineBackground } from '#imports'
 import { processAlarmTick, openChatTab } from '../lib/background'
 import { AUTH_NEEDS_SIGNIN_KEY } from '../lib/storage'
-import { getWorkerSession, readWorkerNotices } from '../lib/worker-api'
+import { getWorkerSession, hasStoredSession, readWorkerNotices } from '../lib/worker-api'
 
 const ALARM = 'rep.poll'
 export const POLL_MINUTES = 3
@@ -9,7 +9,8 @@ export const POLL_MINUTES = 3
 async function poll(): Promise<void> {
   const session = await getWorkerSession()
   if (!session) {
-    await chrome.storage.local.set({ [AUTH_NEEDS_SIGNIN_KEY]: true })
+    // A fresh install has no token yet; that is "sign in", not "sign in again".
+    if (await hasStoredSession()) await chrome.storage.local.set({ [AUTH_NEEDS_SIGNIN_KEY]: true })
     return
   }
   await chrome.storage.local.remove(AUTH_NEEDS_SIGNIN_KEY)

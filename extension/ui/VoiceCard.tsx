@@ -58,7 +58,7 @@ export function VoiceCard({
         </button>
         <div className="min-w-0 flex-1">
           <span className="label-caps block">{recording ? 'Recording…' : transcribing ? 'Transcribing…' : 'Talk to log'}</span>
-          <p className="text-2xs leading-snug text-fg-muted">The model proposes. You approve. Nothing saves by itself.</p>
+          <p className="text-2xs leading-snug text-fg-muted">Describe the call. You review the draft before anything is saved.</p>
         </div>
         {recording && (
           <span className="flex h-4 shrink-0 items-end gap-0.5" aria-hidden>

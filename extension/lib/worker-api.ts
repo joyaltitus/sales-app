@@ -23,6 +23,12 @@ async function refreshSession(session: WorkerSession): Promise<WorkerSession | n
   return refreshed
 }
 
+/** True when a session was ever stored — lets the worker tell "never signed in"
+ *  apart from "signed in, refresh failed". */
+export async function hasStoredSession(): Promise<boolean> {
+  return typeof (await chrome.storage.local.get(AUTH_KEY))[AUTH_KEY] === 'string'
+}
+
 export async function getWorkerSession(now = Date.now()): Promise<WorkerSession | null> {
   const stored = (await chrome.storage.local.get(AUTH_KEY))[AUTH_KEY]
   if (typeof stored !== 'string') return null
