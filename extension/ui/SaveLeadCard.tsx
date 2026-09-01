@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { MessageCircle, UserPlus } from 'lucide-react'
 import type { OpenChat } from '../lib/wa-chat'
+import type { Product } from '@app/lib/products-data'
+import { CHANNELS, VALUE_PRESETS, hasDialableDigits, withPhonePrefix } from '@app/lib/lead-fields'
 import { Button } from '../../src/ui/Button'
 import { Input } from '../../src/ui/Input'
 
 export type SaveLeadDraft = {
   name: string
   phone: string
-  interest: string
+  channel: string
+  /** Catalogue item name, or whatever the rep typed. Never empty — it is required. */
+  product: string
+  /** Set only when the product came from the catalogue, so the lead can price itself. */
+  productId: string | null
+  estValue: number | null
+  nextAction: string
+  note: string
   stageId: string
 }
 
@@ -16,6 +25,8 @@ type Props = {
   chat: OpenChat | null
   stages: { id: string; label: string }[]
   stagesLoading?: boolean
+  products: Product[]
+  productsLoading?: boolean
   busy?: boolean
   message?: string | null
   /** Seed for manual entry — whatever the rep had typed in the CRM search box. */
@@ -28,6 +39,11 @@ type Props = {
   onDismiss?: () => void
 }
 
+const OTHER = '__other__'
+
+const selectClass =
+  'min-h-11 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-fg disabled:text-fg-subtle'
+
 /** A bare number typed into search should land in Phone, a name in Name. */
 function seedFrom(query: string): { name: string; phone: string } {
   const trimmed = query.trim()
@@ -35,22 +51,46 @@ function seedFrom(query: string): { name: string; phone: string } {
   return /\p{L}/u.test(trimmed) ? { name: trimmed, phone: '' } : { name: '', phone: trimmed }
 }
 
+function Field({ label, required, children }: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <label className="grid gap-1">
+      <span className="label-caps">
+        {label}
+        {required && <span aria-hidden className="ml-0.5 text-danger">*</span>}
+        {required && <span className="sr-only"> (required)</span>}
+      </span>
+      {children}
+    </label>
+  )
+}
+
 /**
- * Save-as-lead for a chat that matched nothing in the book.
+ * The extension's new-lead form — the same fields as the web AddLeadModal, in a
+ * 400px column, and writing through the same create_manual_lead RPC.
  *
- * The rep is the accountable party for what lands in the CRM, so this card
- * shows every field it will write, pre-filled from the chat header and fully
- * editable, and writes nothing until "Save to CRM" is clicked. Nothing is
- * captured in the background; a rep who ignores this card leaves no trace of
- * that conversation in the database.
+ * Product is REQUIRED here (the web modal has no product field at all yet).
+ * Reps can pick from the client's catalogue or type their own: `items` is
+ * readable by any member but writable only by a client_admin, so a rep's own
+ * product is a value carried on this lead, never a new catalogue row — offering
+ * them a "create product" button would be offering a guaranteed RLS denial.
  */
 export function SaveLeadCard({
-  chat, stages, stagesLoading, busy, message, initialQuery, title, hint, openChat, onSave, onDismiss,
+  chat, stages, stagesLoading, products, productsLoading, busy, message,
+  initialQuery, title, hint, openChat, onSave, onDismiss,
 }: Props) {
   const seed = chat ? { name: chat.displayName, phone: chat.phoneE164 ?? '' } : seedFrom(initialQuery ?? '')
   const [name, setName] = useState(seed.name)
-  const [phone, setPhone] = useState(seed.phone)
-  const [interest, setInterest] = useState('')
+  const [phone, setPhone] = useState(withPhonePrefix(seed.phone))
+  const [channel, setChannel] = useState(chat ? 'whatsapp' : 'phone')
+  const [productId, setProductId] = useState('')
+  const [ownProduct, setOwnProduct] = useState('')
+  const [estValue, setEstValue] = useState('')
+  const [nextAction, setNextAction] = useState('')
+  const [note, setNote] = useState('')
   const [stageId, setStageId] = useState('')
 
   // Manual entry re-seeds when the rep changes their search and reopens the
@@ -60,11 +100,21 @@ export function SaveLeadCard({
     if (chat) return
     const next = seedFrom(initialQuery ?? '')
     setName(next.name)
-    setPhone(next.phone)
+    setPhone(withPhonePrefix(next.phone))
   }, [chat, initialQuery])
 
   const chosenStage = stageId || stages[0]?.id || ''
-  const canSave = !!name.trim() && !!phone.trim() && !!chosenStage && !busy
+  const catalogue = products.find((item) => item.id === productId) ?? null
+  const product = productId === OTHER ? ownProduct.trim() : catalogue?.name ?? ''
+  const canSave = !!hasDialableDigits(phone) && !!product && !!chosenStage && !busy
+
+  function chooseProduct(value: string) {
+    setProductId(value)
+    // A catalogue price is a better default than a blank box, and the rep can
+    // still overwrite it — but never clobber a figure they already typed.
+    const picked = products.find((item) => item.id === value)
+    if (picked && !estValue.trim()) setEstValue(String(picked.price))
+  }
 
   return (
     <section className="rounded-lg border border-border bg-surface-raised p-3 shadow-elev-1">
@@ -91,7 +141,8 @@ export function SaveLeadCard({
           className="mt-2 min-h-11 w-full"
           onClick={() => {
             setName(openChat.displayName)
-            setPhone(openChat.phoneE164 ?? '')
+            setPhone(withPhonePrefix(openChat.phoneE164 ?? ''))
+            setChannel('whatsapp')
           }}
         >
           <MessageCircle aria-hidden size={15} strokeWidth={1.9} />
@@ -100,55 +151,124 @@ export function SaveLeadCard({
       )}
 
       <div className="mt-3 grid gap-2.5">
-        <label className="grid gap-1">
-          <span className="label-caps">Name</span>
-          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" />
-        </label>
-        <label className="grid gap-1">
-          <span className="label-caps">Phone</span>
+        <Field label="Name">
+          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="e.g. Rahul Sharma" />
+        </Field>
+
+        <Field label="Phone" required>
           <Input
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             inputMode="tel"
             autoComplete="off"
-            placeholder="+91…"
+            placeholder="+91 98765 43210"
           />
-        </label>
-        <label className="grid gap-1">
-          <span className="label-caps">Course or interest</span>
-          <Input
-            value={interest}
-            onChange={(event) => setInterest(event.target.value)}
-            placeholder="Optional"
-            autoComplete="off"
-          />
-        </label>
-        <label className="grid gap-1">
-          <span className="label-caps">Stage</span>
+        </Field>
+
+        <Field label="Source" required>
+          <select value={channel} onChange={(event) => setChannel(event.target.value)} className={selectClass}>
+            {CHANNELS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Course or product" required>
+          <select
+            value={productId}
+            disabled={productsLoading}
+            onChange={(event) => chooseProduct(event.target.value)}
+            className={selectClass}
+          >
+            <option value="">{productsLoading ? 'Loading…' : 'Choose one…'}</option>
+            {products.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+            <option value={OTHER}>Something else…</option>
+          </select>
+        </Field>
+
+        {productId === OTHER && (
+          <Field label="Which product" required>
+            <Input
+              value={ownProduct}
+              onChange={(event) => setOwnProduct(event.target.value)}
+              autoComplete="off"
+              placeholder="Type the course or product"
+            />
+          </Field>
+        )}
+
+        <Field label="Stage" required>
           <select
             value={chosenStage}
             disabled={stagesLoading || stages.length === 0}
             onChange={(event) => setStageId(event.target.value)}
-            className="min-h-11 w-full rounded-md border border-border bg-surface px-2.5 text-sm text-fg disabled:text-fg-subtle"
+            className={selectClass}
           >
             {stages.length === 0 && <option value="">{stagesLoading ? 'Loading stages…' : 'No stages set up'}</option>}
             {stages.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.label}
-              </option>
+              <option key={stage.id} value={stage.id}>{stage.label}</option>
             ))}
           </select>
-        </label>
+        </Field>
+
+        <div className="grid gap-1">
+          <span className="label-caps">Estimated value</span>
+          {/* Their own row: sharing a line with the label squeezed both, and the
+              last preset fell off the edge of a 400px panel. */}
+          <div className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5">
+            {VALUE_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => setEstValue(String(preset.value))}
+                className="min-h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-2xs font-semibold text-fg-muted transition-colors hover:border-accent hover:text-accent"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <Input
+            value={estValue}
+            onChange={(event) => setEstValue(event.target.value)}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="₹60,000"
+            aria-label="Estimated value"
+          />
+        </div>
+
+        <Field label="Next action">
+          <Input
+            value={nextAction}
+            onChange={(event) => setNextAction(event.target.value)}
+            autoComplete="off"
+            placeholder="e.g. Send the fee structure"
+          />
+        </Field>
+
+        <Field label="Note">
+          <textarea
+            rows={2}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="What they asked for"
+            className="w-full resize-none rounded-md border border-border bg-surface p-2.5 text-sm text-fg placeholder:text-fg-subtle"
+          />
+        </Field>
       </div>
 
       {/* Rule 3 in the interface: the rep reads the exact row before it exists. */}
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md bg-surface-sunk px-3 py-2 text-2xs">
+      <dl aria-label="What will be saved" className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md bg-surface-sunk px-3 py-2 text-2xs">
         <dt className="text-fg-subtle">Saves as</dt>
         <dd className="min-w-0 truncate text-fg-muted">{name.trim() || '—'}</dd>
         <dt className="text-fg-subtle">Number</dt>
-        <dd className="min-w-0 truncate text-fg-muted tnum">{phone.trim() || '—'}</dd>
+        <dd className="min-w-0 truncate text-fg-muted tnum">{hasDialableDigits(phone) ? phone.trim() : '—'}</dd>
+        <dt className="text-fg-subtle">Product</dt>
+        <dd className="min-w-0 truncate text-fg-muted">{product || '—'}</dd>
         <dt className="text-fg-subtle">Source</dt>
-        <dd className="text-fg-muted">WhatsApp (personal)</dd>
+        <dd className="text-fg-muted">{CHANNELS.find((item) => item.value === channel)?.label ?? channel}</dd>
       </dl>
 
       {message && (
@@ -161,7 +281,20 @@ export function SaveLeadCard({
         className="mt-3 min-h-11 w-full"
         loading={busy}
         disabled={!canSave}
-        onClick={() => onSave({ name: name.trim(), phone: phone.trim(), interest: interest.trim(), stageId: chosenStage })}
+        onClick={() => {
+          const parsed = Number(estValue.replace(/[^0-9.]/g, ''))
+          onSave({
+            name: name.trim(),
+            phone: phone.trim(),
+            channel,
+            product,
+            productId: catalogue?.id ?? null,
+            estValue: estValue.trim() && Number.isFinite(parsed) ? parsed : null,
+            nextAction: nextAction.trim(),
+            note: note.trim(),
+            stageId: chosenStage,
+          })
+        }}
       >
         Save to CRM
       </Button>

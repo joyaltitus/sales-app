@@ -99,11 +99,14 @@ export const WRITE_REGISTRY: Record<OutboxEntry['kind'], (entry: OutboxEntry) =>
    */
   async create_lead(entry) {
     const args = entry.args
+    const estValue = args.est_value
     const result = await createLead(text(args, 'client_id'), {
       profileName: text(args, 'profile_name'),
       phone: text(args, 'phone'),
       channel: optionalText(args, 'channel') ?? 'whatsapp',
       stageId: text(args, 'stage_id'),
+      estValue: typeof estValue === 'number' ? estValue : null,
+      nextAction: optionalText(args, 'next_action'),
       note: optionalText(args, 'note'),
     })
     assertOk(result)

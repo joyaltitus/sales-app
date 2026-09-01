@@ -12,6 +12,7 @@ import type { CallOutcome, LeadDetail, QueueItem, Snippet } from '../lib/contrac
 import { CACHE_KEYS, cacheLeadDetail, cached, readCache } from '../lib/cache'
 import { firstOfMonth, useOwnWonValue, useTarget } from '@app/lib/targets-data'
 import { useLeadStages, moveLeadStage } from '@app/lib/leads-data'
+import { useProducts } from '@app/lib/products-data'
 import { addNote, createLead, saveLead } from '@app/lib/crm-actions'
 import { completeCall, startCallSession, useCallLogs } from '@app/lib/calls-data'
 import { useLeadMemory, useNotes } from '@app/lib/crm-data'
@@ -403,29 +404,35 @@ function useCreateLead(identity: PanelIdentity, onSaved: () => void) {
   async function save(draft: SaveLeadDraft, fromChat: boolean): Promise<boolean> {
     setBusy(true)
     setMessage(null)
-    // Provenance rides in the note create_manual_lead writes for us. It cannot
-    // ride in leads.source: the agent RLS branch that lets a rep create AND
-    // later edit their own lead is gated on source = 'manual' (leads_agent_insert
-    // / leads_agent_update), so a different value is denied on the way in and
-    // would strip the rep's own update rights on the way out. Migration proposed
-    // in the PR.
+    // Product, and the rep's own note, ride in the note create_manual_lead
+    // writes for us. Product cannot go on the lead itself yet — `leads` has no
+    // item column — and provenance cannot go in leads.source: the agent RLS
+    // branch that lets a rep create AND later edit their own lead is gated on
+    // source = 'manual' (leads_agent_insert / leads_agent_update), so another
+    // value is denied on the way in and would strip the rep's update rights on
+    // the way out. Both migrations are proposed in the PR.
     const note = [
-      draft.interest ? `Interest: ${draft.interest}` : null,
+      `Product: ${draft.product}`,
+      draft.note || null,
       fromChat ? 'Saved from a WhatsApp Web chat by the rep.' : 'Added by the rep from the CRM.',
     ].filter(Boolean).join(' · ')
     const args = {
       client_id: identity.clientId,
       profile_name: draft.name,
       phone: draft.phone,
-      channel: 'whatsapp',
+      channel: draft.channel,
       stage_id: draft.stageId,
+      est_value: draft.estValue,
+      next_action: draft.nextAction || null,
       note,
     }
     const result = await createLead(identity.clientId, {
       profileName: draft.name,
       phone: draft.phone,
-      channel: 'whatsapp',
+      channel: draft.channel,
       stageId: draft.stageId,
+      estValue: draft.estValue,
+      nextAction: draft.nextAction || null,
       note,
     })
     if (!result.ok) {
@@ -450,6 +457,7 @@ function UnmatchedChat({ identity, follow, onSaved }: {
   onSaved: () => void
 }) {
   const stages = useLeadStages(identity.clientId)
+  const products = useProducts(identity.clientId)
   const [dismissed, setDismissed] = useState<string | null>(null)
   const chat = follow.chat
   const { busy, message, save } = useCreateLead(identity, onSaved)
@@ -461,6 +469,8 @@ function UnmatchedChat({ identity, follow, onSaved }: {
         chat={chat}
         stages={stages.stages.map((stage) => ({ id: stage.id, label: stage.label }))}
         stagesLoading={stages.loading}
+        products={products.items}
+        productsLoading={products.loading}
         busy={busy}
         message={message}
         onSave={(draft) => void save(draft, true)}
@@ -479,6 +489,7 @@ function AddLead({ identity, query, openChat, onDone, onCancel }: {
   onCancel: () => void
 }) {
   const stages = useLeadStages(identity.clientId)
+  const products = useProducts(identity.clientId)
   const { busy, message, save } = useCreateLead(identity, onDone)
 
   return (
@@ -488,9 +499,11 @@ function AddLead({ identity, query, openChat, onDone, onCancel }: {
         initialQuery={query}
         openChat={openChat}
         title="New lead"
-        hint="Fill in what you know. Only the name, number and stage are required."
+        hint="Number, source, course and stage are required. The rest helps later."
         stages={stages.stages.map((stage) => ({ id: stage.id, label: stage.label }))}
         stagesLoading={stages.loading}
+        products={products.items}
+        productsLoading={products.loading}
         busy={busy}
         message={message}
         onSave={(draft) => void save(draft, false)}
