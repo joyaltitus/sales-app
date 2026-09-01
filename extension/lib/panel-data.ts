@@ -4,19 +4,25 @@ import type { QueueItem } from './contracts'
 import { panelSupabase } from './panel-client'
 import { CACHE_KEYS, cacheLibrary, cacheQueue, cached, readCache } from './cache'
 import { useScriptLibrary } from '@app/lib/scripts-data'
+import { loadPrefs } from './prefs'
 
 export type PanelIdentity = { userId: string; clientId: string; displayName: string }
 const QUEUE_PAGE_SIZE = 50
 
 export async function loadPanelIdentity(session: Session): Promise<PanelIdentity | null> {
   const userId = session.user.id
+  // No .limit(1): a rep in several workspaces gets the one they chose in the
+  // options page. Limiting the read first would make the choice unreachable
+  // whenever the wanted membership was not the row Postgres happened to return.
   const { data: memberships, error } = await panelSupabase
     .from('user_client_memberships')
     .select('client_id')
     .eq('user_id', userId)
-    .limit(1)
   if (error || !memberships?.length) return null
-  const clientId = (memberships[0] as { client_id: string }).client_id
+  const rows = memberships as { client_id: string }[]
+  const preferred = (await loadPrefs()).activeClientId
+  const clientId = rows.find((row) => row.client_id === preferred)?.client_id
+    ?? (rows[0] as { client_id: string }).client_id
   const { data: profile } = await panelSupabase
     .from('profiles')
     .select('display_name')
