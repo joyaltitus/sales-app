@@ -12,7 +12,7 @@ describe('VoiceCard', () => {
   it('renders idle state with record button', () => {
     render(<VoiceCard proposedFields={fields} transcript={null} onApprove={vi.fn()} onDiscard={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Start recording' })).toBeInTheDocument()
-    expect(screen.getByText(/The model proposes/)).toBeInTheDocument()
+    expect(screen.getByText(/You review the draft before anything is saved/)).toBeInTheDocument()
   })
 
   it('shows recording state and toggles the aria-pressed button', async () => {

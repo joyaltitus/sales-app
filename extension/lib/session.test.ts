@@ -32,18 +32,22 @@ describe('session failure and sign-out boundaries', () => {
     console.info(`forced refresh failure: outbox before=${before}; after=${after}`)
   })
 
-  it('sign-out removes all cached lead details without clearing the outbox', async () => {
+  it('sign-out removes all panel caches without clearing the outbox', async () => {
     await chrome.storage.local.set({
       [CACHE_KEYS.leadDetails]: [{ data: { lead: { lead_id: 'lead-1' } }, fetched_at: '2026-08-26T10:00:00Z' }],
+      [CACHE_KEYS.queue]: { data: [], fetched_at: '2026-08-26T10:00:00Z' },
+      [CACHE_KEYS.library]: { data: { scripts: [], taxonomy: [], rebuttals: [] }, fetched_at: '2026-08-26T10:00:00Z' },
       [OUTBOX_KEY]: [{ id: 'offline-note' }],
       'sb-shared-auth-token': 'session-one',
     })
     const { signOutExtension } = await import('./session')
     await signOutExtension()
 
-    const stored = await chrome.storage.local.get([CACHE_KEYS.leadDetails, OUTBOX_KEY, 'sb-shared-auth-token'])
+    const stored = await chrome.storage.local.get([...Object.values(CACHE_KEYS), OUTBOX_KEY, 'sb-shared-auth-token'])
     expect(auth.signOut).toHaveBeenCalledTimes(1)
     expect(stored[CACHE_KEYS.leadDetails]).toBeUndefined()
+    expect(stored[CACHE_KEYS.queue]).toBeUndefined()
+    expect(stored[CACHE_KEYS.library]).toBeUndefined()
     expect(stored['sb-shared-auth-token']).toBeUndefined()
     expect(stored[OUTBOX_KEY]).toHaveLength(1)
   })

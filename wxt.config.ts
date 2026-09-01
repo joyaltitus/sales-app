@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'wxt'
 import { loadEnv } from 'vite'
 
@@ -51,6 +52,12 @@ export default defineConfig({
     }
   },
   vite: () => ({
-    plugins: [react()],
+    // Tailwind must be registered HERE too, not just in vite.config.ts — wxt
+    // builds the panel with its own Vite instance and inherits none of that
+    // config. Without it `@import 'tailwindcss'` resolves to the raw package
+    // source: preflight and the theme land, every generated utility does not,
+    // and the panel renders as an unstyled stack of text that still looks
+    // plausibly "themed" because tokens.css is a separate import.
+    plugins: [react(), tailwindcss()],
   }),
 })

@@ -64,4 +64,37 @@ describe('QueueScreen', () => {
     expect(screen.getByLabelText(/^Target for Joyal:/)).toBeInTheDocument()
     expect(screen.getByText('Anjali Nair')).toBeInTheDocument()
   })
+
+  it('shows when cached queue data was fetched', () => {
+    render(
+      <QueueScreen
+        items={queueItems}
+        staleAt="2026-08-26T10:00:00.000Z"
+        onNext={vi.fn()}
+        onOpenLead={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/Cached/)).toBeInTheDocument()
+  })
+
+  it('debounces search to the server and can request another page', async () => {
+    const onSearch = vi.fn()
+    const onLoadMore = vi.fn()
+    render(
+      <QueueScreen
+        items={queueItems}
+        onSearch={onSearch}
+        hasMore
+        onLoadMore={onLoadMore}
+        onNext={vi.fn()}
+        onOpenLead={vi.fn()}
+      />,
+    )
+
+    await userEvent.type(screen.getByLabelText('Search leads'), 'outside page')
+    await new Promise((resolve) => window.setTimeout(resolve, 350))
+    expect(onSearch).toHaveBeenLastCalledWith('outside page')
+    await userEvent.click(screen.getByRole('button', { name: 'Load more' }))
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
 })

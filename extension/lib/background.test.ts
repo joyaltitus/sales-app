@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  CHAT_TAB_KEY,
   NOTIFIED_FOLLOW_UPS_KEY,
   openChatTab,
   processAlarmTick,
@@ -56,32 +55,63 @@ describe('alarm tick', () => {
 describe('chat tab reuse', () => {
   beforeEach(() => vi.unstubAllGlobals())
 
-  it('updates the stored tab for the second lead', async () => {
-    const store = new Map<string, unknown>()
-    let nextId = 73
+  it('navigates an open WhatsApp Web tab and focuses its window', async () => {
     const tabs = {
-      create: vi.fn(async () => ({ id: nextId })),
-      get: vi.fn(async (id: number) => ({ id })),
+      query: vi.fn(async () => [{ id: 73, windowId: 9 }]),
+      create: vi.fn(async () => ({ id: 74 })),
       update: vi.fn(async () => ({})),
     }
+    const windows = { update: vi.fn(async () => ({})) }
     vi.stubGlobal('chrome', {
-      storage: { local: {
-        get: async (key: string) => store.has(key) ? { [key]: store.get(key) } : {},
-        set: async (values: Record<string, unknown>) => { Object.entries(values).forEach(([key, value]) => store.set(key, value)) },
-        remove: async (key: string) => { store.delete(key) },
-      } },
       tabs,
+      windows,
     })
 
-    const first = await openChatTab('https://wa.me/911111111111', 'wa_me')
-    nextId = 74
-    const second = await openChatTab('https://wa.me/922222222222', 'wa_me')
+    const result = await openChatTab('https://web.whatsapp.com/send?phone=911111111111', 'wa_me')
 
-    expect(first).toBe(73)
-    expect(second).toBe(73)
-    expect(store.get(CHAT_TAB_KEY)).toBe(73)
-    expect(tabs.create).toHaveBeenCalledTimes(1)
-    expect(tabs.update).toHaveBeenCalledWith(73, { url: 'https://wa.me/922222222222', active: true })
-    console.info(`tab reuse: first=${first}; second=${second}`)
+    expect(result).toBe(73)
+    expect(tabs.query).toHaveBeenCalledWith({ url: '*://web.whatsapp.com/*' })
+    expect(tabs.update).toHaveBeenCalledWith(73, {
+      url: 'https://web.whatsapp.com/send?phone=911111111111',
+      active: true,
+    })
+    expect(windows.update).toHaveBeenCalledWith(9, { focused: true })
+    expect(tabs.create).not.toHaveBeenCalled()
+  })
+
+  it('creates an active tab when WhatsApp Web is not already open', async () => {
+    const tabs = {
+      query: vi.fn(async () => []),
+      create: vi.fn(async () => ({ id: 74 })),
+      update: vi.fn(async () => ({})),
+    }
+    const windows = { update: vi.fn(async () => ({})) }
+    vi.stubGlobal('chrome', { tabs, windows })
+
+    const result = await openChatTab('https://web.whatsapp.com/send?phone=922222222222', 'wa_me')
+
+    expect(result).toBe(74)
+    expect(tabs.create).toHaveBeenCalledWith({
+      url: 'https://web.whatsapp.com/send?phone=922222222222',
+      active: true,
+    })
+    expect(tabs.update).not.toHaveBeenCalled()
+    expect(windows.update).not.toHaveBeenCalled()
+  })
+
+  it('keeps desktop mode as an explicit protocol handoff', async () => {
+    const tabs = {
+      query: vi.fn(async () => []),
+      create: vi.fn(async () => ({ id: 74 })),
+      update: vi.fn(async () => ({})),
+    }
+    vi.stubGlobal('chrome', { tabs })
+
+    const result = await openChatTab('whatsapp://send?phone=933333333333', 'desktop')
+
+    expect(result).toBeNull()
+    expect(tabs.update).toHaveBeenCalledWith({ url: 'whatsapp://send?phone=933333333333' })
+    expect(tabs.query).not.toHaveBeenCalled()
+    expect(tabs.create).not.toHaveBeenCalled()
   })
 })

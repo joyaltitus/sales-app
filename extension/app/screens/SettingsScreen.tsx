@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
+import { LogOut, MessageCircle, Monitor } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { ChatMode } from '../../lib/contracts'
 import { loadChatMode, saveChatMode } from '../chat-mode'
 import { signOutExtension } from '../../lib/session'
+import { Button } from '../../../src/ui/Button'
 
-const OPTIONS: { value: ChatMode; label: string }[] = [
-  { value: 'wa_me', label: 'wa.me' },
-  { value: 'desktop', label: 'Desktop' },
+const OPTIONS: { value: ChatMode; label: string; icon: LucideIcon }[] = [
+  { value: 'wa_me', label: 'WhatsApp Web', icon: MessageCircle },
+  { value: 'desktop', label: 'Desktop', icon: Monitor },
 ]
 
 export default function SettingsScreen() {
@@ -27,50 +30,38 @@ export default function SettingsScreen() {
   }
 
   return (
-    <section style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h1 className="label-caps" style={{ margin: 0 }}>Open chats in</h1>
-      <div
-        role="group"
-        aria-label="Chat mode"
-        style={{
-          display: 'flex',
-          gap: 4,
-          padding: 4,
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-md)',
-          background: 'var(--surface-sunk)',
-        }}
-      >
-        {OPTIONS.map((option) => {
-          const active = mode === option.value
+    <section className="flex flex-col gap-3 p-4">
+      <h1 className="label-caps">Open chats in</h1>
+      <div role="group" aria-label="Chat mode" className="flex gap-1 rounded-md border border-border bg-surface-sunk p-1">
+        {OPTIONS.map(({ value, label, icon: Icon }) => {
+          const active = mode === value
           return (
             <button
-              key={option.value}
+              key={value}
               type="button"
               aria-pressed={active}
-              onClick={() => choose(option.value)}
-              style={{
-                height: 44,
-                flex: 1,
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: active ? 650 : 500,
-                cursor: 'pointer',
-                background: active ? 'var(--accent)' : 'transparent',
-                color: active ? 'var(--accent-fg)' : 'var(--fg-muted)',
-              }}
+              onClick={() => void choose(value)}
+              className={[
+                'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm border border-transparent text-sm transition-colors select-none',
+                active
+                  ? 'bg-accent font-semibold text-accent-fg'
+                  : 'font-medium text-fg-muted hover:bg-surface hover:text-fg',
+              ].join(' ')}
             >
-              {option.label}
+              <Icon aria-hidden size={15} strokeWidth={1.9} />
+              {label}
             </button>
           )
         })}
       </div>
-      <p style={{ margin: 0, fontSize: 'var(--text-xs)', lineHeight: 1.65, color: 'var(--fg-muted)' }}>
-        wa.me keeps the panel visible beside the chat; desktop mode is faster but switches you out
-        of the browser.
+      <p className="text-xs leading-relaxed text-fg-muted">
+        WhatsApp Web keeps the panel visible beside the chat; desktop mode switches you out of the
+        browser.
       </p>
-      <button type="button" onClick={() => void signOutExtension()}>Sign out</button>
+      <Button variant="secondary" className="mt-2 min-h-11 w-full" onClick={() => void signOutExtension()}>
+        <LogOut aria-hidden size={15} strokeWidth={1.9} />
+        Sign out
+      </Button>
     </section>
   )
 }

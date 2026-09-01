@@ -191,7 +191,7 @@ export function DashboardScreen() {
           <p className="mt-1 text-sm text-fg-muted">{viewCopy[view].detail}</p>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunk p-1" aria-label="Dashboard views">
+        <nav className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunk p-1" aria-label="Dashboard views">
           {DASHBOARD_VIEWS.map((item) => <button key={item.key} onClick={() => setView(item.key)} aria-current={view === item.key ? 'page' : undefined} className={['flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold sm:flex-1', view === item.key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}><item.icon aria-hidden size={15} />{item.label}</button>)}
         </nav>
 

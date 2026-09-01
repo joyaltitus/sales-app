@@ -38,10 +38,10 @@ describe('phone utility', () => {
   })
 
   describe('getWhatsAppUrl', () => {
-    it('generates valid wa.me URL', () => {
-      expect(getWhatsAppUrl('919947638424')).toBe('https://wa.me/919947638424')
-      expect(getWhatsAppUrl('9947638424')).toBe('https://wa.me/919947638424')
-      expect(getWhatsAppUrl('919947638424', 'Hello Asha')).toBe('https://wa.me/919947638424?text=Hello%20Asha')
+    it('generates a direct WhatsApp Web URL', () => {
+      expect(getWhatsAppUrl('919947638424')).toBe('https://web.whatsapp.com/send?phone=919947638424')
+      expect(getWhatsAppUrl('9947638424')).toBe('https://web.whatsapp.com/send?phone=919947638424')
+      expect(getWhatsAppUrl('919947638424', 'Hello Asha')).toBe('https://web.whatsapp.com/send?phone=919947638424&text=Hello%20Asha')
     })
 
     it('returns null for empty phone', () => {

@@ -88,10 +88,6 @@ export function RepShell() {
                 </NavLink>
               ))}
             </nav>
-            <div className="mt-auto w-[192px] rounded-lg border border-border bg-surface-sunk p-3">
-              <p className="text-xs font-semibold text-fg">Laptop view</p>
-              <p className="mt-1 text-2xs leading-relaxed text-fg-muted">Use Inbox and CRM side by side without losing Today.</p>
-            </div>
           </aside>
 
           <button

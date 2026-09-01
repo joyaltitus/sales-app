@@ -30,30 +30,24 @@ window.matchMedia = ((query: string) => ({
 // Deliberately PLAIN functions, not vi.fn(), for the same reason as matchMedia above:
 // `restoreMocks` would strip the implementation after the first test in a file.
 const chromeLocalStore = new Map<string, unknown>()
+const chromeSessionStore = new Map<string, unknown>()
+const storageArea = (store: Map<string, unknown>) => ({
+  get: async (key?: string | string[] | null) => {
+    const keys = key === null || key === undefined ? [...store.keys()] : Array.isArray(key) ? key : [key]
+    return Object.fromEntries(keys.filter((k) => store.has(k)).map((k) => [k, store.get(k)]))
+  },
+  set: async (items: Record<string, unknown>) => {
+    for (const [k, v] of Object.entries(items)) store.set(k, v)
+  },
+  remove: async (key: string | string[]) => {
+    for (const k of Array.isArray(key) ? key : [key]) store.delete(k)
+  },
+  clear: async () => { store.clear() },
+})
 ;(globalThis as { chrome?: unknown }).chrome = {
   storage: {
-    local: {
-      get: async (key?: string | string[] | null) => {
-        const keys =
-          key === null || key === undefined
-            ? [...chromeLocalStore.keys()]
-            : Array.isArray(key)
-              ? key
-              : [key]
-        return Object.fromEntries(
-          keys.filter((k) => chromeLocalStore.has(k)).map((k) => [k, chromeLocalStore.get(k)]),
-        )
-      },
-      set: async (items: Record<string, unknown>) => {
-        for (const [k, v] of Object.entries(items)) chromeLocalStore.set(k, v)
-      },
-      remove: async (key: string | string[]) => {
-        for (const k of Array.isArray(key) ? key : [key]) chromeLocalStore.delete(k)
-      },
-      clear: async () => {
-        chromeLocalStore.clear()
-      },
-    },
+    local: storageArea(chromeLocalStore),
+    session: storageArea(chromeSessionStore),
     onChanged: {
       addListener: () => {},
       removeListener: () => {},
@@ -67,4 +61,5 @@ const chromeLocalStore = new Map<string, unknown>()
 afterEach(() => {
   cleanup()
   chromeLocalStore.clear()
+  chromeSessionStore.clear()
 })

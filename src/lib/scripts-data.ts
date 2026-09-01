@@ -86,7 +86,7 @@ export function useScriptLibrary(clientId: string | null) {
       supabase
         .from('script_versions')
         .select(
-          'id, script_id, version, status, headline, body, change_note, created_by, created_at, scripts!inner(id, taxonomy_id)',
+          'id, script_id, version, status, headline, body, change_note, created_by, created_at, scripts!script_versions_script_id_fkey!inner(id, taxonomy_id)',
         )
         .eq('client_id', clientId)
         .order('version', { ascending: false })
@@ -398,7 +398,7 @@ export function useActiveScript(clientId: string | null, taxonomyId: string | nu
     setLoading(true)
     const { data, error } = await supabase
       .from('script_versions')
-      .select('id, script_id, version, status, headline, body, scripts!inner(taxonomy_id)')
+      .select('id, script_id, version, status, headline, body, scripts!script_versions_script_id_fkey!inner(taxonomy_id)')
       .eq('client_id', clientId)
       .eq('scripts.taxonomy_id', taxonomyId)
       .in('status', ['standard', 'testing'])

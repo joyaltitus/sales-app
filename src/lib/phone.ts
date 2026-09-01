@@ -2,7 +2,7 @@
  * Phone number and WhatsApp URL helpers for Indian sales operations.
  */
 
-/** Strip symbols, WhatsApp JID suffixes, and format as clean digits for wa.me URL. */
+/** Strip symbols, WhatsApp JID suffixes, and format as clean digits for a WhatsApp URL. */
 export function cleanPhoneForWhatsApp(raw: string | null | undefined): string {
   if (!raw) return ''
   // Remove whatsapp JID suffix if present (e.g. 919947638424@c.us or @s.whatsapp.net)
@@ -42,10 +42,10 @@ export function formatPhone(raw: string | null | undefined): string {
   return raw
 }
 
-/** Build official WhatsApp Click-to-Chat URL. */
+/** Build a WhatsApp Web chat URL. */
 export function getWhatsAppUrl(phone: string | null | undefined, text?: string): string | null {
   const digits = cleanPhoneForWhatsApp(phone)
   if (!digits) return null
-  const encodedText = text ? `?text=${encodeURIComponent(text)}` : ''
-  return `https://wa.me/${digits}${encodedText}`
+  const encodedText = text ? `&text=${encodeURIComponent(text)}` : ''
+  return `https://web.whatsapp.com/send?phone=${digits}${encodedText}`
 }

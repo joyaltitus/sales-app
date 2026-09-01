@@ -117,7 +117,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       if (!assignedTo) return null
       if (assignedTo === userId) return 'You'
       const t = teammates.find((x) => x.user_id === assignedTo)
-      return t ? teammateLabel(t) : `External (${assignedTo.slice(0, 4)})`
+      return t ? teammateLabel(t) : 'Assigned'
     },
     [userId, teammates],
   )
@@ -324,7 +324,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         {needsHumanCount > 0 && <span className="tnum rounded-pill bg-danger-subtle px-2 py-1 text-2xs font-semibold text-danger">{needsHumanCount} need you</span>}
       </div>
       {/* Scope + channel controls. */}
-      <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
         <div
           role="tablist"
           aria-label="Inbox scope"
@@ -417,7 +417,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         />
       </div>
       {/* Status chips — horizontal scroll on phone, wraps nowhere. */}
-      <div className="flex gap-1.5 overflow-x-auto" role="group" aria-label="Status filter">
+      <div className="no-scrollbar flex gap-1.5 overflow-x-auto" role="group" aria-label="Status filter">
         {STATUS_CHIPS.map((c) => (
           <button
             key={c.key}
@@ -531,7 +531,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         </div>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {!channelLive && (
-            <span className="text-2xs text-fg-subtle">Checking for updates</span>
+            <span className="hidden text-2xs text-fg-subtle sm:inline">Checking for updates</span>
           )}
           {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" contactId={selected.contact_id} conversationId={selectedId} />}
           {/* Rail toggle — sheet below xl, inline pane at xl+. Same button
@@ -540,10 +540,11 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           {selected && clientId && (
             <button
               onClick={() => setRailOpen((v) => !v)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg"
+              aria-label={railOpen ? 'Hide details' : 'Show details'}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-semibold text-fg-muted hover:border-border-strong hover:bg-surface-sunk hover:text-fg sm:px-3"
             >
               {railOpen ? <X aria-hidden size={15} /> : <PanelRight aria-hidden size={15} />}
-              {railOpen ? 'Hide details' : 'Details'}
+              <span className="hidden sm:inline">{railOpen ? 'Hide details' : 'Details'}</span>
             </button>
           )}
         </span>

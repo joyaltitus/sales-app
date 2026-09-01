@@ -242,8 +242,8 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
             activeStageId={stageFilter}
             onStageClick={(id) => setStageFilter((cur) => (cur === id ? null : id))}
           />
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <div className="relative min-w-0 flex-1">
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+            <div className="relative min-w-[200px] flex-1">
               <Search
                 aria-hidden
                 size={14}

@@ -238,7 +238,7 @@ describe('ContextRail Customer Memory (sales-app#21 S2)', () => {
 
     const link = screen.getByRole('link', { name: 'Open in WhatsApp' })
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', 'https://wa.me/919947638424')
+    expect(link).toHaveAttribute('href', 'https://web.whatsapp.com/send?phone=919947638424')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })

@@ -45,7 +45,7 @@ export type OutboxEntry = {
   last_error: string | null
 }
 
-export type Cached<T> = { data: T; fetched_at: string }
+export type Cached<T> = { data: T; fetched_at: string; scope?: string }
 export type Snippet = { id: string; title: string; body: string; scope: 'personal' | 'shared' }
 export type Rebuttal = { script_version_id: string; taxonomy_key: string; headline: string | null
                          body: unknown; uses: number; won: number }

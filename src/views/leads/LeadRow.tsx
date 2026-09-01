@@ -208,7 +208,8 @@ export function LeadRow({
               hold state for the session and write nowhere. */}
           {crm && (
             <span className="ml-auto flex shrink-0 items-center gap-2">
-              <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
+              {/* Phone cards already carry a full-width Call button below; the icon would be a second one. */}
+              <span className="hidden sm:inline-flex"><CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} /></span>
               <AssignSelect leadName={name} />
             </span>
           )}

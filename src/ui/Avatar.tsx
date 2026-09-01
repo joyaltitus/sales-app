@@ -17,6 +17,14 @@ export function profilePicUrl(profile: unknown): string | null {
   return typeof candidate === 'string' && candidate.startsWith('http') ? candidate : null
 }
 
+/** First letter of the first word that has one. Phone-number names (+91…)
+ *  and emoji names get a neutral mark instead of '+', '1' or a broken half of
+ *  a surrogate pair. */
+export function avatarInitial(name: string | null): string {
+  const letters = (name ?? '').match(/\p{L}/u)
+  return letters ? letters[0].toUpperCase() : '·'
+}
+
 const SIZE = {
   sm: 'h-7 w-7 text-2xs',
   md: 'h-9 w-9 text-xs',
@@ -34,7 +42,7 @@ export function Avatar({
 }) {
   const [broken, setBroken] = useState(false)
   const url = profilePicUrl(profile)
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?'
+  const initial = avatarInitial(name)
 
   if (url && !broken) {
     return (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { QueueItem } from '../lib/contracts'
@@ -9,11 +9,18 @@ import { Input } from '../../src/ui/Input'
 import { ListRow } from '../../src/ui/ListRow'
 import { StaleChip } from './StaleChip'
 import { formatClock } from './time'
+import { searchLeads } from '../lib/search-leads'
 
 type Props = {
   items: QueueItem[]
   target?: ReactNode
   staleAt?: string | null
+  refreshError?: string | null
+  searching?: boolean
+  hasMore?: boolean
+  onSearch?: (query: string) => void
+  onLoadMore?: () => void
+  onRetry?: () => void
   onNext: (item: QueueItem) => void
   onOpenLead: (item: QueueItem) => void
 }
@@ -27,18 +34,18 @@ const REASON_TONE: Record<QueueItem['reason'], 'neutral' | 'accent' | 'success' 
 
 const LIST_CHANNEL = { whatsapp: 'WA', instagram: 'IG' } as const
 
-function matches(item: QueueItem, query: string): boolean {
-  if (!query) return true
-  const q = query.trim().toLowerCase()
-  return [item.display_name, item.phone_e164 ?? '', item.stage_label].some((field) =>
-    field.toLowerCase().includes(q),
-  )
-}
-
-export function QueueScreen({ items, target, staleAt, onNext, onOpenLead }: Props) {
+export function QueueScreen({ items, target, staleAt, refreshError, searching, hasMore, onSearch, onLoadMore, onRetry, onNext, onOpenLead }: Props) {
   const [query, setQuery] = useState('')
+  const firstSearch = useRef(true)
 
-  const filtered = useMemo(() => items.filter((item) => matches(item, query)), [items, query])
+  useEffect(() => {
+    if (!onSearch) return
+    if (firstSearch.current) { firstSearch.current = false; return }
+    const timer = window.setTimeout(() => onSearch(query.trim()), 300)
+    return () => window.clearTimeout(timer)
+  }, [onSearch, query])
+
+  const filtered = useMemo(() => onSearch ? items : searchLeads(items, query), [items, onSearch, query])
   const top = filtered[0] ?? null
 
   return (
@@ -54,6 +61,17 @@ export function QueueScreen({ items, target, staleAt, onNext, onOpenLead }: Prop
       </div>
 
       {target}
+
+      {refreshError && items.length > 0 && (
+        <div role="alert" className="flex min-h-10 items-center gap-2 bg-warn-subtle px-3 py-2 text-xs text-warn">
+          <span className="min-w-0 flex-1">Cached leads are shown. Check your connection, then retry.</span>
+          <Button variant="ghost" size="sm" onClick={onRetry}>Retry</Button>
+        </div>
+      )}
+
+      <div className="min-h-5 px-3 pt-1 text-2xs text-fg-subtle" role="status">
+        {searching ? 'Searching all leads…' : query.trim() && onSearch ? `${filtered.length} matching leads` : ''}
+      </div>
 
       {staleAt && (
         <div className="flex min-h-8 flex-wrap items-center gap-2 px-3 pt-2">
@@ -107,6 +125,13 @@ export function QueueScreen({ items, target, staleAt, onNext, onOpenLead }: Prop
             </li>
           ))}
         </ul>
+      )}
+      {hasMore && filtered.length > 0 && (
+        <div className="p-3">
+          <Button variant="secondary" className="min-h-11 w-full" disabled={searching} onClick={onLoadMore}>
+            Load more
+          </Button>
+        </div>
       )}
     </div>
   )

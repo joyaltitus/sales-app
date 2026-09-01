@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import '@fontsource-variable/geist'
-import '../../../src/index.css'
+import '../../app/panel.css'
 import App from '../../app/App'
 import { installPanelClient } from '../../lib/session'
 

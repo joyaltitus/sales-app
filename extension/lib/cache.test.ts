@@ -24,4 +24,12 @@ describe('lead detail cache', () => {
     expect(stored?.[0].fetched_at).toBe('2026-08-26T10:20:00.000Z')
     expect(stored?.some((item) => item.data.lead.lead_id === 'lead-0')).toBe(false)
   })
+
+  it('records the client scope with cached data', () => {
+    expect(cached([], new Date('2026-08-26T10:00:00Z'), 'client-1')).toEqual({
+      data: [],
+      fetched_at: '2026-08-26T10:00:00.000Z',
+      scope: 'client-1',
+    })
+  })
 })
