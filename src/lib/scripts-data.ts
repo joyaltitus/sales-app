@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import type { ScriptBody, ScriptParagraph } from './script-body'
 
 // Script serve + usage + playbook governance data layer (WIRE-A2 part 2 +
 // part 3). script_versions carries its own client_id (migration 048, hard
 // law 8), so every filter here is direct — no embedded-table filter needed
 // for tenant scoping. The taxonomy join goes through `scripts` (a real FK).
 export type ScriptStatus = 'draft' | 'testing' | 'standard'
-export type ScriptParagraph = { before: string; highlight?: string; after?: string }
 export type TaxonomyStatus = 'active' | 'archived'
+/** Migration 068: stages are taxonomy rows of another kind, ordered by
+ *  position. Rows at position >= 90 are composed templates (the seat-reservation
+ *  and callback texts), not steps on the call roadmap. */
+export type TaxonomyKind = 'objection' | 'stage'
+export const COMPOSED_FROM_POSITION = 90
+
+// Re-exported so existing importers (and the extension) keep resolving these
+// from here after the body helpers moved to ./script-body.
+export type { ScriptBody, ScriptParagraph }
 
 const TAXONOMY_LIMIT = 200
 const VERSION_LIMIT = 1000
@@ -20,6 +29,9 @@ export type TaxonomyRow = {
   label: string
   aliases: string[]
   status: TaxonomyStatus
+  kind: TaxonomyKind
+  position: number
+  icon: string | null
 }
 
 export type ScriptVersionSummary = {
@@ -28,7 +40,7 @@ export type ScriptVersionSummary = {
   version: number
   status: ScriptStatus
   headline: string | null
-  body: { paragraphs: ScriptParagraph[] } | null
+  body: ScriptBody | null
   changeNote: string | null
   createdBy: string
   createdByName: string | null
@@ -48,6 +60,9 @@ export type LibraryScript = {
   taxonomyKey: string
   taxonomyLabel: string
   taxonomyStatus: TaxonomyStatus
+  kind: TaxonomyKind
+  position: number
+  icon: string | null
   scriptId: string | null
   versions: ScriptVersionSummary[]
   current: ScriptVersionSummary | null
@@ -79,8 +94,12 @@ export function useScriptLibrary(clientId: string | null) {
     const [taxRes, verRes, profilesRes] = await Promise.all([
       supabase
         .from('objection_taxonomy')
-        .select('id, key, label, aliases, status')
+        .select('id, key, label, aliases, status, kind, position, icon')
         .eq('client_id', clientId)
+        // Stages before objections, each by its own position — the order the
+        // call actually runs in. `label` is only the tiebreak now.
+        .order('kind', { ascending: false })
+        .order('position', { ascending: true })
         .order('label', { ascending: true })
         .limit(TAXONOMY_LIMIT),
       supabase
@@ -109,7 +128,12 @@ export function useScriptLibrary(clientId: string | null) {
     const nameByUser = new Map(
       ((profilesRes.data ?? []) as { user_id: string; display_name: string }[]).map((p) => [p.user_id, p.display_name]),
     )
-    const taxRows = (taxRes.data ?? []) as TaxonomyRow[]
+    // 068 columns are NOT NULL with defaults, but a row read through an older
+    // cached schema (or a fixture) can still arrive without them — default
+    // rather than render `undefined` into a sort comparator.
+    const taxRows: TaxonomyRow[] = (
+      (taxRes.data ?? []) as (Omit<TaxonomyRow, 'kind' | 'position' | 'icon'> & Partial<TaxonomyRow>)[]
+    ).map((t) => ({ ...t, kind: t.kind ?? 'objection', position: t.position ?? 0, icon: t.icon ?? null }))
     setTaxonomy(taxRows)
 
     const verRows = (verRes.data ?? []) as unknown as {
@@ -118,7 +142,7 @@ export function useScriptLibrary(clientId: string | null) {
       version: number
       status: ScriptStatus
       headline: string | null
-      body: { paragraphs: ScriptParagraph[] } | null
+      body: ScriptBody | null
       change_note: string | null
       created_by: string
       created_at: string
@@ -161,6 +185,9 @@ export function useScriptLibrary(clientId: string | null) {
           taxonomyKey: t.key,
           taxonomyLabel: t.label,
           taxonomyStatus: t.status,
+          kind: t.kind,
+          position: t.position,
+          icon: t.icon,
           scriptId: versions[0]?.scriptId ?? null,
           versions,
           current,
@@ -212,6 +239,46 @@ export function useScriptUsageCounts(clientId: string | null) {
   return { counts, loading, reload: load }
 }
 
+export type WinRate = { uses: number; rated: number; won: number }
+
+/** Win rates from script_win_rates_v (migration 068). The view is
+ *  security_invoker, so RLS on script_usage remains the only wall — this adds
+ *  no reach, it just saves counting 500 rows in the browser.
+ *
+ *  `rated` is the honest denominator: a version used 40 times but rated twice
+ *  has no win rate worth printing, and the UI leans on that to say "early"
+ *  instead of "50%". */
+export function useWinRates(clientId: string | null) {
+  const [rates, setRates] = useState<Map<string, WinRate>>(new Map())
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!clientId) {
+      setRates(new Map())
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const { data } = await supabase
+      .from('script_win_rates_v')
+      .select('script_version_id, uses, rated, won')
+      .eq('client_id', clientId)
+      .limit(VERSION_LIMIT)
+    const map = new Map<string, WinRate>()
+    for (const row of (data ?? []) as { script_version_id: string; uses: number; rated: number; won: number }[]) {
+      map.set(row.script_version_id, { uses: row.uses ?? 0, rated: row.rated ?? 0, won: row.won ?? 0 })
+    }
+    setRates(map)
+    setLoading(false)
+  }, [clientId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  return { rates, loading, reload: load }
+}
+
 /** Get-or-create the one `scripts` row for (client, taxonomy) — UNIQUE
  *  constraint means a taxonomy tag with no authored script yet has no
  *  `scripts` row at all. The editor needs this before its first draft
@@ -254,7 +321,7 @@ export async function createDraftVersion({
   clientId: string
   scriptId: string
   headline: string | null
-  body: { paragraphs: ScriptParagraph[] }
+  body: ScriptBody
   changeNote?: string | null
   createdBy: string
   status?: 'draft' | 'testing'
@@ -324,18 +391,47 @@ export function slugifyTaxonomyKey(label: string): string {
   )
 }
 
+/** `kind` and `position` are optional so the pre-068 three-argument call still
+ *  compiles and still means "an objection at the end of the list". */
 export async function createTaxonomy(
   clientId: string,
   label: string,
   createdBy: string,
+  options: { kind?: TaxonomyKind; position?: number } = {},
 ): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
   const { data, error } = await supabase
     .from('objection_taxonomy')
-    .insert({ client_id: clientId, key: slugifyTaxonomyKey(label), label: label.trim(), created_by: createdBy })
+    .insert({
+      client_id: clientId,
+      key: slugifyTaxonomyKey(label),
+      label: label.trim(),
+      created_by: createdBy,
+      kind: options.kind ?? 'objection',
+      position: options.position ?? 0,
+    })
     .select('id')
     .single()
   if (error) return { ok: false, message: error.message }
   return { ok: true, id: (data as { id: string }).id }
+}
+
+/** Reorder / re-kind a taxonomy row. Taxonomy rows are manager-updatable by
+ *  RLS (048), so this is a plain UPDATE — no RPC. An empty result means the
+ *  policy refused, which the caller shows as a role problem, not an outage. */
+export async function updateTaxonomyPlacement(
+  clientId: string,
+  id: string,
+  patch: { kind?: TaxonomyKind; position?: number },
+): Promise<{ ok: true } | { ok: false; reason: 'denied' | 'error'; message?: string }> {
+  const { data, error } = await supabase
+    .from('objection_taxonomy')
+    .update(patch)
+    .eq('client_id', clientId)
+    .eq('id', id)
+    .select('id')
+  if (error) return { ok: false, reason: 'error', message: error.message }
+  if (!data || data.length === 0) return { ok: false, reason: 'denied' }
+  return { ok: true }
 }
 
 export async function renameTaxonomy(
@@ -415,7 +511,7 @@ export function useActiveScript(clientId: string | null, taxonomyId: string | nu
       version: number
       status: ScriptStatus
       headline: string | null
-      body: { paragraphs: ScriptParagraph[] } | null
+      body: ScriptBody | null
     }[]
     const standard = rows.find((r) => r.status === 'standard')
     const chosen = standard ?? rows[0]
