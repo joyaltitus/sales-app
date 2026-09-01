@@ -240,7 +240,6 @@ export function ContextRail({
     : Infinity
   const windowClosed = sinceLast > (isIG ? IG_HUMAN_WINDOW_MS : WINDOW_MS)
 
-  const stageLabel = stages.find((s) => s.id === lead?.stage_id)?.label
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
@@ -340,7 +339,7 @@ export function ContextRail({
           <p className="mt-3 rounded-md bg-surface-sunk px-2.5 py-2 text-2xs text-fg-muted">
             {isIG
               ? 'Instagram reply window closed (7 days since their last message).'
-              : 'WhatsApp 24h window closed — replies need an approved template, which isn’t wired yet.'}
+              : 'WhatsApp 24-hour reply window closed. It reopens when the customer messages again.'}
           </p>
         )}
       </div>
@@ -376,11 +375,6 @@ export function ContextRail({
               {lead.est_value != null && (
                 <span className="tnum text-xs text-fg-muted" style={monoStyle}>
                   {formatINR(Number(lead.est_value))}
-                </span>
-              )}
-              {stageLabel && (
-                <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
-                  {stageLabel}
                 </span>
               )}
             </div>

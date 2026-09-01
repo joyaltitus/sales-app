@@ -50,7 +50,7 @@ export function PipelineStrip({
   }, [stages, items])
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Pipeline by stage">
+    <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Pipeline by stage">
       {stages.map((s) => {
         const cell = byStage.m.get(s.id) ?? { count: 0, value: 0 }
         const active = activeStageId === s.id

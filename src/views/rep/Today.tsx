@@ -176,10 +176,10 @@ function OverviewMetric({
 
   return (
     <article className="min-w-0 rounded-lg border border-border bg-surface-raised p-3 shadow-elev-1">
-      <div className={['flex h-8 w-8 items-center justify-center rounded-md', toneClass].join(' ')}>
+      <div className={['flex h-7 w-7 items-center justify-center rounded-md sm:h-8 sm:w-8', toneClass].join(' ')}>
         <Icon aria-hidden size={15} />
       </div>
-      <p className="tnum mt-3 text-2xl font-semibold tracking-[-0.04em] text-fg">{value}</p>
+      <p className="tnum mt-2 text-xl font-semibold tracking-[-0.04em] text-fg sm:mt-3 sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-xs font-semibold text-fg">{label}</p>
       <p className="mt-1 text-2xs leading-relaxed text-fg-muted">{detail}</p>
     </article>

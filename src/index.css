@@ -108,6 +108,15 @@ a {
   scrollbar-width: thin;
 }
 
+/* Horizontal chip/tab rows scroll by touch or trackpad; a visible track under a
+ * row of pills reads as a layout bug on Windows and Android. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* tabular figures on every number/₹/phone/timestamp (§C) */
 .tnum {
   font-variant-numeric: tabular-nums;

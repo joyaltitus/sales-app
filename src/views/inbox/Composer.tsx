@@ -290,7 +290,7 @@ export function Composer({
         contactId={contactId}
         conversationId={conversationId}
         source="chat"
-        detected="price"
+        detected={null}
         compact
         onInsertScript={(script) => {
           setText(script)

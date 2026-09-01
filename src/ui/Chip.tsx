@@ -21,7 +21,7 @@ export function Chip({ tone = 'neutral', className = '', children, ...rest }: Pr
   return (
     <span
       className={[
-        'inline-flex min-h-5 items-center gap-1 rounded-pill border px-2 py-0.5 text-2xs leading-none font-semibold',
+        'inline-flex min-h-5 items-center gap-1 whitespace-nowrap rounded-pill border px-2 py-0.5 text-2xs leading-none font-semibold',
         tones[tone],
         className,
       ].join(' ')}
