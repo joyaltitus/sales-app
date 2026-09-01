@@ -28,12 +28,27 @@ function queryDigits(query: string): string {
   return cleanPhoneForWhatsApp(query).replace(/^0+/, '')
 }
 
+/** Suffix comparison of two already-normalized digit strings. */
+function digitsMatch(own: string, other: string): boolean {
+  if (!own || !other) return false
+  return own === other || own.endsWith(other) || other.endsWith(own)
+}
+
+/**
+ * Whether two raw phone strings name the same person, in the one place that
+ * decides it. wa-chat's chat-to-lead match reuses this rather than growing a
+ * second normalizer: the WhatsApp jid gives bare digits, the CRM stores
+ * +E.164, and a mismatch between those two rules would silently open the
+ * wrong lead beside a live chat.
+ */
+export function samePhone(a: string | null | undefined, b: string | null | undefined): boolean {
+  return digitsMatch(contactDigits(a ?? null), contactDigits(b ?? null))
+}
+
 function matches(lead: SearchableLead, foldedQuery: string, digits: string): boolean {
   if (foldedQuery && foldText(lead.display_name).includes(foldedQuery)) return true
   if (!digits) return false
-  const own = contactDigits(lead.phone_e164)
-  if (!own) return false
-  return own === digits || own.endsWith(digits) || digits.endsWith(own)
+  return digitsMatch(contactDigits(lead.phone_e164), digits)
 }
 
 /**
