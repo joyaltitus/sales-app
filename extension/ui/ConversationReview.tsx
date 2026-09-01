@@ -12,9 +12,6 @@ type Props = {
   loading?: boolean
   busy?: boolean
   message?: string | null
-  /** Present only when transcription is available; called for one voice row. */
-  onTranscribe?: (message: ChatMessage) => void
-  transcribingId?: string | null
   onSave: (selected: ChatMessage[], body: string) => void
   onCancel: () => void
 }
@@ -33,8 +30,6 @@ export function ConversationReview({
   loading,
   busy,
   message,
-  onTranscribe,
-  transcribingId,
   onSave,
   onCancel,
 }: Props) {
@@ -110,24 +105,9 @@ export function ConversationReview({
                     {item.at && <span className="text-2xs text-fg-subtle tnum">{item.at}</span>}
                   </span>
                   {item.voice ? (
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-xs text-fg-muted">
-                        <Mic aria-hidden size={12} strokeWidth={1.9} />
-                        voice note, {item.voice}
-                      </span>
-                      {onTranscribe && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!transcribingId}
-                          onClick={(event) => {
-                            event.preventDefault()
-                            onTranscribe(item)
-                          }}
-                        >
-                          {transcribingId === item.id ? 'Transcribing…' : 'Transcribe'}
-                        </Button>
-                      )}
+                    <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-fg-muted">
+                      <Mic aria-hidden size={12} strokeWidth={1.9} />
+                      voice note, {item.voice}
                     </span>
                   ) : (
                     <span className={['mt-0.5 block text-xs leading-relaxed', on ? 'text-fg-muted' : 'text-fg-subtle line-through'].join(' ')}>
