@@ -8,6 +8,7 @@ const writes = vi.hoisted(() => ({
   saveLeadLastWriteWins: vi.fn(),
   updateFollowUp: vi.fn(),
   logObjection: vi.fn(),
+  createLead: vi.fn(),
 }))
 
 vi.mock('@app/lib/calls-data', () => ({ completeCall: writes.completeCall }))
@@ -16,6 +17,7 @@ vi.mock('@app/lib/crm-actions', () => ({
   addNote: writes.addNote,
   saveLeadLastWriteWins: writes.saveLeadLastWriteWins,
   updateFollowUp: writes.updateFollowUp,
+  createLead: writes.createLead,
 }))
 vi.mock('@app/lib/objections-data', () => ({ logObjection: writes.logObjection }))
 
@@ -30,7 +32,8 @@ describe('closed write registry', () => {
 
   it('contains exactly the frozen safe kinds and no send operation', () => {
     expect(Object.keys(WRITE_REGISTRY).sort()).toEqual([
-      'add_follow_up', 'add_note', 'log_objection', 'log_outcome', 'save_lead', 'update_follow_up',
+      'add_follow_up', 'add_note', 'create_lead', 'log_objection', 'log_outcome', 'save_lead',
+      'update_follow_up',
     ])
   })
 
@@ -40,6 +43,17 @@ describe('closed write registry', () => {
       client_id: 'client-a', conversation_id: null, lead_id: 'lead-a', author: 'user-a', body: 'Called back',
     }))).resolves.toBeUndefined()
     expect(writes.addNote).toHaveBeenCalledWith('client-a', expect.objectContaining({ id: 'client-uuid' }))
+  })
+
+  it('replays a save-as-lead through create_manual_lead, never a direct leads insert', async () => {
+    writes.createLead.mockResolvedValue({ ok: true, leadId: 'lead-new' })
+    await expect(WRITE_REGISTRY.create_lead(entry('create_lead', {
+      client_id: 'client-a', profile_name: 'Anjali Rao', phone: '+919876543210',
+      channel: 'whatsapp', stage_id: 'stage-a', note: 'Saved from a WhatsApp Web chat by the rep.',
+    }))).resolves.toBeUndefined()
+    expect(writes.createLead).toHaveBeenCalledWith('client-a', expect.objectContaining({
+      profileName: 'Anjali Rao', phone: '+919876543210', channel: 'whatsapp', stageId: 'stage-a',
+    }))
   })
 
   it('does not swallow an ordinary first failure', async () => {

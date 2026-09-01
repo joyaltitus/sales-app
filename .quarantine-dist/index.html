@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Pre-paint theme resolve (audit A2): stored choice, else OS preference.
+      // Runs before CSS paints so a dark-theme user never sees a light flash.
+      try {
+        var t = localStorage.getItem('sales-app.theme')
+        if (t !== 'light' && t !== 'dark')
+          t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1211" />
+    <!-- Neutral placeholder title — no brand decided (MASTER-PLAN §A). -->
+    <title>Sales App</title>
+    <script type="module" crossorigin src="/assets/index-qm67cte5.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-D9CheE3k.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-YY-YlRwC.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-CEIP6ZHu.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-CY5LpdST.js">
+    <link rel="stylesheet" crossorigin href="/assets/vendor-DUrBTMtq.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-BKWpUM2W.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

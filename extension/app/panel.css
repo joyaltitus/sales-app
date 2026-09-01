@@ -58,6 +58,11 @@ button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 * { scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
 .tnum { font-variant-numeric: tabular-nums; font-feature-settings: var(--font-feature-tnum); }
+/* Windows ships CLASSIC scrollbars, so a horizontal chip row that scrolls gets a
+   permanent grey bar eating 15px of a 360px panel. Defined here and not inherited:
+   the panel imports tokens.css, never src/index.css, where the app's copy lives. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 .label-caps {
   font-size: var(--text-2xs);
   font-weight: 600;

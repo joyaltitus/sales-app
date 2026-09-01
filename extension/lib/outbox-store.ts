@@ -2,6 +2,7 @@ import { completeCall } from '@app/lib/calls-data'
 import {
   addFollowUp,
   addNote,
+  createLead,
   saveLeadLastWriteWins,
   updateFollowUp,
   type LeadPatch,
@@ -88,6 +89,23 @@ export const WRITE_REGISTRY: Record<OutboxEntry['kind'], (entry: OutboxEntry) =>
       text(args, 'expected_status'),
       text(args, 'action') as 'done' | 'snooze1d' | 'snooze3d' | 'cancel',
     )
+    assertOk(result)
+  },
+  /**
+   * Save-as-lead from the open chat. Safe to replay: create_manual_lead takes an
+   * advisory lock on (client, channel, identity) and RETURNS the existing open
+   * lead rather than making a second one, so a queued entry that already landed
+   * before the panel went offline replays to the same lead id.
+   */
+  async create_lead(entry) {
+    const args = entry.args
+    const result = await createLead(text(args, 'client_id'), {
+      profileName: text(args, 'profile_name'),
+      phone: text(args, 'phone'),
+      channel: optionalText(args, 'channel') ?? 'whatsapp',
+      stageId: text(args, 'stage_id'),
+      note: optionalText(args, 'note'),
+    })
     assertOk(result)
   },
   async log_objection(entry) {
