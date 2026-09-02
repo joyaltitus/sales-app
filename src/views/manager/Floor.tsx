@@ -6,25 +6,17 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
-  Flame,
   MessageSquareWarning,
-  MessageCircleQuestion,
-  ShieldCheck,
   Sparkles,
   TrendingUp,
-  UserRoundCheck,
-  Users,
 } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue, usePreviews, useLiveRefresh } from '../../lib/inbox-data'
 import { waitingLongest, unpickedEscalations } from '../../lib/landing-data'
-import { MOCK_MANAGER } from '../../lib/mock-wave3'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
-import { Avatar } from '../../ui/Avatar'
 import { Button } from '../../ui/Button'
 import { Chip } from '../../ui/Chip'
-import { ManagerIntel } from './ManagerIntel'
 import { Sheet } from '../../ui/Sheet'
 
 function Metric({ label, value, detail, tone = 'neutral' }: { label: string; value: string; detail: string; tone?: 'neutral' | 'danger' | 'success' }) {
@@ -79,12 +71,6 @@ function ExceptionRow({
   )
 }
 
-const PRESENCE = [
-  { name: 'Anil', note: '12 replies · 2 closes', state: 'on customer call' },
-  { name: 'Meera', note: '8 replies · inbox clear', state: 'available' },
-  { name: 'Priya', note: '5 replies · 1 overdue', state: 'following up' },
-]
-
 export function Floor() {
   const [copilotAsk, setCopilotAsk] = useState<string | null>(null)
   const { activeClient } = useClient()
@@ -102,14 +88,13 @@ export function Floor() {
     if (!item.last_customer_message_at) return false
     return Date.now() - new Date(item.last_customer_message_at).getTime() > 15 * 60_000
   })
-  const compliance = Math.round(MOCK_MANAGER.followUpCompletion * 100)
 
   if (loading) {
     return (
       <div className="page-frame space-y-4">
         <Skeleton className="h-10 w-60" />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-24" /><Skeleton className="h-24" />
         </div>
         <Skeleton className="h-64" />
       </div>
@@ -145,8 +130,7 @@ export function Floor() {
 
       <section aria-labelledby="floor-health">
         <h2 id="floor-health" className="sr-only">Floor health</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Metric label="Follow-ups on time" value={`${compliance}%`} detail="team today" tone={compliance >= 85 ? 'success' : 'danger'} />
+        <div className="grid gap-3 sm:grid-cols-2">
           <Metric label="Customers waiting" value={String(waiting.length)} detail={`${overdue15m.length} over 15m`} tone={overdue15m.length ? 'danger' : 'neutral'} />
           <Metric label="Human handovers" value={String(unpicked.length)} detail="not picked up" tone={unpicked.length ? 'danger' : 'success'} />
         </div>
@@ -198,57 +182,6 @@ export function Floor() {
         )}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]">
-        <section className="rounded-xl border border-border bg-surface shadow-elev-1" aria-labelledby="team-now">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
-            <div>
-              <p className="label-caps">Team now</p>
-              <h2 id="team-now" className="mt-1 text-md font-semibold text-fg">Presence with useful context</h2>
-            </div>
-            <span className="flex items-center gap-1.5 text-2xs font-semibold text-success"><Users aria-hidden size={13} /> 3 active</span>
-          </div>
-          <div className="divide-y divide-border">
-            {PRESENCE.map((person, index) => (
-              <div key={person.name} className="flex items-center gap-3 px-4 py-3.5">
-                <span className="relative">
-                  <Avatar name={person.name} size="md" />
-                  <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-pill border-2 border-surface bg-success" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-fg">{person.name}</p>
-                    {index === 0 && <span className="inline-flex items-center gap-1 text-2xs font-semibold text-accent"><Flame aria-hidden size={11} /> personal best pace</span>}
-                  </div>
-                  <p className="mt-0.5 text-xs text-fg-muted">{person.note}</p>
-                </div>
-                <button onClick={() => setCopilotAsk(`${person.name} is ${person.state}. ${person.note}. Ask about the current deal mix before changing their queue.`)} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><MessageCircleQuestion aria-hidden size={13} /> Ask copilot</button>
-                <span className="text-2xs text-fg-subtle">{person.state}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-1" aria-labelledby="floor-signal">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-accent shadow-elev-1"><Sparkles aria-hidden size={19} /></div>
-          <p className="label-caps mt-4 text-accent">Pattern worth acting on</p>
-          <h2 id="floor-signal" className="mt-2 text-lg font-semibold tracking-[-0.025em] text-fg">Fast replies are creating visits.</h2>
-          <p className="mt-2 text-sm leading-relaxed text-fg-muted">{MOCK_MANAGER.winning}</p>
-          <div className="mt-4 flex items-center gap-2 text-xs font-medium text-fg">
-            <ShieldCheck aria-hidden size={15} className="text-success" /> Coaching suggestion, not a scorecard
-          </div>
-        </section>
-      </div>
-
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="label-caps">Deeper readout</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">Pipeline and coaching signals</h2>
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-2xs text-fg-muted"><UserRoundCheck aria-hidden size={13} /> Personal-best-first</span>
-        </div>
-        <ManagerIntel />
-      </section>
       <Sheet open={!!copilotAsk} onClose={() => setCopilotAsk(null)} title="Copilot explanation">
         <p className="label-caps text-accent">Why this needs attention · Preview</p><h3 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-fg">Act on the constraint, not the noise.</h3><p className="mt-3 text-sm leading-7 text-fg-muted">{copilotAsk}</p><div className="mt-5 rounded-lg border border-border bg-surface-sunk p-4"><p className="label-caps">Recommended next</p><p className="mt-2 text-sm font-semibold text-fg">Open the deal, verify the last promise, then approve or assign one owner.</p></div><p className="mt-3 text-2xs text-fg-subtle">Explanation uses sample signals and never changes work automatically.</p>
       </Sheet>

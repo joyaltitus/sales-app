@@ -21,7 +21,6 @@ vi.mock('../../lib/supabase', () => ({ supabase: { from } }))
 vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ session: { user: { id: 'user-1' } } }) }))
 vi.mock('../../shell/ClientProvider', () => ({ useClient: () => ({ activeClient: { id: 'pixelledu' } }) }))
 vi.mock('../objections/ObjectionCapture', () => ({ ObjectionCapture: () => null }))
-vi.mock('../../ui/agent/VoiceButton', () => ({ VoiceButton: () => null }))
 
 const { Composer } = await import('./Composer')
 

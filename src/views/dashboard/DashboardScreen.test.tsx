@@ -54,7 +54,7 @@ describe('DashboardScreen', () => {
     expect(screen.getByText('Pipeline by stage')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Business report' }))
-    expect(await screen.findByText('The business, at a glance.')).toBeInTheDocument()
+    expect(await screen.findByText('Owner report — coming with campaign ROI')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'What needs attention today' })).not.toBeInTheDocument()
   })
 })

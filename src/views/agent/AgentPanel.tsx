@@ -4,7 +4,6 @@ import { Button } from '../../ui/Button'
 import { AnchorChip, ToolProgress } from '../../ui/agent/primitives'
 import { ApprovalCard } from '../../ui/agent/ApprovalCard'
 import { VoiceButton } from '../../ui/agent/VoiceButton'
-import { AGENT_STARTERS } from '../../lib/mock-wave3'
 import {
   approveChecklist,
   sendAgentChat,
@@ -21,6 +20,12 @@ import { useClient } from '../../shell/ClientProvider'
 // /api/agent-approve. Every run ends in tool receipts and, when the model
 // proposed a write, one batched checklist — approving anything only ever
 // happens through that second request (C-R5), never inline.
+
+const AGENT_STARTERS = [
+  'Summarise this customer',
+  'Draft a reply about instalments',
+  'Which leads should I revive today?',
+]
 
 type PanelMsg =
   | { id: string; role: 'user'; text: string }

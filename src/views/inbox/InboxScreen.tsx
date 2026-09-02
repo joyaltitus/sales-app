@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio, X } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
@@ -14,13 +14,10 @@ import { Thread } from './Thread'
 import { Composer } from './Composer'
 import { ContextRail } from './ContextRail'
 import { Sheet } from '../../ui/Sheet'
-import { EmailQueueRow } from '../email/EmailQueueRow'
 import { CallButton } from '../calls/CallButton'
 import { ErrorState } from '../../ui/ErrorState'
 import { ErrorBoundary } from '../../ui/ErrorBoundary'
 import { formatPhone } from '../../lib/phone'
-
-const EmailConversation = lazy(() => import('../email/EmailConversation'))
 
 // SA-04 Inbox parity (real, not mock — §S6 item 2): channel tabs, status
 // chips, search. ALL of it is client-side filtering over the already-fetched
@@ -32,7 +29,7 @@ const EmailConversation = lazy(() => import('../email/EmailConversation'))
 //   closed      → status !== 'open'
 // Channel matches on contacts.channel ?? 'whatsapp' (same fallback).
 type StatusFilter = 'open' | 'needs_human' | 'unread' | 'closed' | 'all'
-type ChannelFilter = '' | 'whatsapp' | 'instagram' | 'email'
+type ChannelFilter = '' | 'whatsapp' | 'instagram'
 
 const STATUS_CHIPS: { key: StatusFilter; label: string }[] = [
   { key: 'open', label: 'Open' },
@@ -46,7 +43,6 @@ const CHANNEL_TABS: { key: ChannelFilter; label: string }[] = [
   { key: '', label: 'All' },
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'instagram', label: 'Instagram' },
-  { key: 'email', label: 'Email' },
 ]
 
 function matchesStatus(item: QueueItem, f: StatusFilter): boolean {
@@ -90,14 +86,13 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const deepLinkId = searchParams.get('c')
   const [selectedId, setSelectedId] = useState<string | null>(() => deepLinkId)
-  const [emailOpen, setEmailOpen] = useState(false)
 
   // Channel tab is URL-backed (§S6 item 2, same param Workbench uses) so a
   // filtered view survives refresh and can be linked. Status + search stay
   // local — they are working state, not an address.
   const rawChannel = searchParams.get('channel')
   const channel: ChannelFilter =
-    rawChannel === 'whatsapp' || rawChannel === 'instagram' || rawChannel === 'email' ? rawChannel : ''
+    rawChannel === 'whatsapp' || rawChannel === 'instagram' ? rawChannel : ''
   const setChannel = (next: ChannelFilter) => {
     const params = new URLSearchParams(searchParams)
     if (next) params.set('channel', next)
@@ -236,7 +231,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const channelItems = useMemo(
     () =>
       channel
-        ? channel === 'email' ? [] : scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
+        ? scopedItems.filter((i) => (i.contact?.channel ?? 'whatsapp') === channel)
         : scopedItems,
     [scopedItems, channel],
   )
@@ -258,13 +253,6 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       return name.includes(q) || ext.includes(q)
     })
   }, [channelItems, status, query])
-  const emailVisible = useMemo(() => {
-    if (scope === 'my') return false
-    if (channel && channel !== 'email') return false
-    if (status === 'closed' || status === 'needs_human') return false
-    const q = query.trim().toLowerCase()
-    return !q || 'kavya menon corporate wellness proposal mumbai clinic'.includes(q)
-  }, [scope, channel, status, query])
 
   const myUnreadCount = useMemo(
     () => items.filter((i) => i.assigned_to === userId && i.unread_count > 0).length,
@@ -278,11 +266,6 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     () => scopedItems.filter((i) => i.contact?.channel === 'instagram' && i.unread_count > 0).length,
     [scopedItems],
   )
-  const emailUnreadCount = useMemo(
-    () => (emailVisible ? 1 : 0),
-    [emailVisible],
-  )
-
   // Mark open conversation as read when actively viewed
   useEffect(() => {
     if (!clientId || !selectedId) return
@@ -331,7 +314,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <h1 className="text-lg font-semibold tracking-[-0.025em] text-fg">Inbox</h1>
             {channelLive && <span className="flex items-center gap-1 text-2xs font-semibold text-success"><Radio aria-hidden size={11} /> Live</span>}
           </div>
-          <p className="mt-0.5 text-2xs text-fg-muted">{visibleItems.length + (emailVisible ? 1 : 0)} conversations in view</p>
+          <p className="mt-0.5 text-2xs text-fg-muted">{visibleItems.length} conversations in view</p>
         </div>
         {needsHumanCount > 0 && <span className="tnum rounded-pill bg-danger-subtle px-2 py-1 text-2xs font-semibold text-danger">{needsHumanCount} need you</span>}
       </div>
@@ -382,9 +365,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
                 ? waUnreadCount > 0
                 : t.key === 'instagram'
                   ? igUnreadCount > 0
-                  : t.key === 'email'
-                    ? emailUnreadCount > 0
-                    : false
+                  : false
 
             return (
               <button
@@ -467,16 +448,16 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const queue = (
     <div className="flex min-h-0 flex-col bg-surface">
       {filterBar}
-      {items.length === 0 && !emailVisible ? (
+      {items.length === 0 ? (
         <div className="p-6">
           {/* §1.9: empty is an invitation, not a mood. */}
           <EmptyState
             icon={InboxIcon}
             title="Nothing waiting."
-            body="New WhatsApp, Instagram and email conversations land here as they arrive."
+            body="New WhatsApp and Instagram conversations land here as they arrive."
           />
         </div>
-      ) : visibleItems.length === 0 && !emailVisible ? (
+      ) : visibleItems.length === 0 ? (
         <div className="p-6">
           {scope === 'my' && scopedItems.length === 0 ? (
             <EmptyState
@@ -494,7 +475,6 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {emailVisible && <EmailQueueRow selected={emailOpen} onSelect={() => { setSelectedId(null); setEmailOpen(true) }} />}
           {visibleItems.map((item) => (
             <QueueRow
               key={item.id}
@@ -502,10 +482,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
               preview={previews.get(item.id)?.text ?? '—'}
               previewKind={previews.get(item.id)?.kind ?? 'text'}
               selected={item.id === selectedId}
-              onSelect={() => {
-                setEmailOpen(false)
-                setSelectedId(item.id)
-              }}
+              onSelect={() => setSelectedId(item.id)}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
             />
           ))}
@@ -606,9 +583,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     />
   )
 
-  const emailThread = emailOpen ? <Suspense fallback={<div className="flex flex-1 flex-col gap-3 p-4"><Skeleton className="h-20" /><Skeleton className="h-48" /><Skeleton className="h-40" /></div>}><EmailConversation canSend={canSend} onBack={() => setEmailOpen(false)} /></Suspense> : null
-  const activeThread = emailThread ?? thread
-  const hasSelection = emailOpen || !!selectedId
+  const activeThread = thread
+  const hasSelection = !!selectedId
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-canvas md:p-3 md:pt-0">
