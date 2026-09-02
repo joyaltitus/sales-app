@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Button } from '../../ui/Button'
 import { SampleTag, StatusBadge } from '../../ui/agent/primitives'
 import { MOCK_MANAGER } from '../../lib/mock-wave3'
@@ -80,7 +81,17 @@ export function ManagerIntel() {
         </div>
       </Card>
 
-      <Card title="Coaching">
+      <Card
+        title="Coaching"
+        action={
+          <Link
+            to="/teardown"
+            className="rounded-md px-2 py-1 text-2xs font-semibold text-accent hover:bg-accent-subtle"
+          >
+            Weekly teardown →
+          </Link>
+        }
+      >
         <div className="space-y-2">
           {m.coaching.map((c) => (
             <p key={c.who} className="text-xs text-fg-muted">
