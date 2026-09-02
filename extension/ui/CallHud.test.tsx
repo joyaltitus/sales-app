@@ -244,8 +244,11 @@ describe('CallHud', () => {
     await user.type(screen.getByLabelText('Callback time'), '16:00')
     await user.click(screen.getByRole('button', { name: 'Lock' }))
 
-    await waitFor(() => expect(onLockCallback).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(insertSnippet.mock.calls.at(-1)![0]).toMatch(/I will call you (Fri|tomorrow|today) 4:00 pm/))
+    // The rep typed the CUSTOMER's clock, and the fixture's client is on
+    // Asia/Kolkata — so 16:00 is 10:30Z wherever this suite happens to run.
+    await waitFor(() => expect(onLockCallback).toHaveBeenCalledWith('2026-09-04T10:30:00.000Z'))
+    expect(onLockCallback).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(insertSnippet.mock.calls.at(-1)![0]).toContain('I will call you Fri 4:00 pm'))
   })
 
   it('hides Mine when the rep has no spins, and offers it when they do', async () => {

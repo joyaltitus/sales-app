@@ -8,7 +8,7 @@ import {
   pickScript, toText, type HookKey, type PickedScript, type RoadmapStep,
 } from '../lib/script-text'
 import { courseVars, needsCourse } from '../lib/course-vars'
-import { buildUpiIntent, callbackWhen, canCollect, payVars, tokenAmount } from '../lib/pay-link'
+import { buildUpiIntent, callbackWhen, canCollect, payVars, tokenAmount, zonedIso } from '../lib/pay-link'
 import { renderSnippet } from '../lib/snippet'
 import { loadPrefs, loadSnippets, rememberCourse, rememberStage, savePrefs, type SavedSnippet } from '../lib/prefs'
 import { queueWrite } from '../lib/outbox-store'
@@ -259,9 +259,9 @@ export function CallHud({
 
   async function lockCallback() {
     if (!callbackAt?.date || !callbackAt.time) return
-    const at = new Date(`${callbackAt.date}T${callbackAt.time}`)
-    if (Number.isNaN(at.getTime())) return
-    const iso = at.toISOString()
+    // Read in the client's clock, not the laptop's — see zonedIso.
+    const iso = zonedIso(callbackAt.date, callbackAt.time, identity.timezone)
+    if (!iso) return
     const ok = await onLockCallback(iso)
     if (!ok) return
     const when = callbackWhen(iso, identity.timezone)

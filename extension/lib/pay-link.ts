@@ -63,6 +63,55 @@ function dayIn(at: Date, timezone: string): string {
   return at.toLocaleDateString('en-CA', { timeZone: timezone })
 }
 
+/** How far `timezone` is from UTC at this instant, in ms. Read the instant back
+ *  as wall-clock in the zone, re-read that as if it were UTC, subtract. */
+function offsetMsAt(at: Date, timezone: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(at).map((part) => [part.type, part.value]),
+  )
+  // hour12:false renders midnight as "24" in some ICU builds.
+  const asUtc = Date.UTC(
+    Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+    Number(parts.hour) % 24, Number(parts.minute), Number(parts.second),
+  )
+  return asUtc - at.getTime()
+}
+
+/**
+ * The date and time the rep typed, read as the CLIENT's wall clock.
+ *
+ * `new Date('2026-09-04T16:00')` parses in the BROWSER's zone, and the
+ * confirmation is rendered in the client's — so a rep on a laptop set to UTC
+ * types 4:00 pm and the customer is told 9:30 pm. The rep and the customer
+ * agreed on the customer's clock; that is the only clock in this flow.
+ *
+ * Two passes because an offset is itself a function of the instant: the first
+ * guess can land on the wrong side of a DST change, the second cannot.
+ * Returns null when the pieces are not a real date — the caller must never
+ * insert a confirmation with a blank in it.
+ */
+export function zonedIso(
+  date: string,
+  time: string,
+  timezone: string | null | undefined = DEFAULT_TZ,
+): string | null {
+  if (!date || !time) return null
+  const naive = new Date(`${date}T${time}${time.length === 5 ? ':00' : ''}Z`)
+  if (Number.isNaN(naive.getTime())) return null
+  const tz = timezone || DEFAULT_TZ
+  try {
+    let ms = naive.getTime() - offsetMsAt(naive, tz)
+    ms = naive.getTime() - offsetMsAt(new Date(ms), tz)
+    return new Date(ms).toISOString()
+  } catch {
+    return null
+  }
+}
+
 /**
  * "tomorrow 5:00 pm" / "Fri 4:00 pm", in the CLIENT's timezone — a rep on a
  * laptop still set to UTC must not confirm a callback an hour off.
