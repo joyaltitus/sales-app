@@ -9,10 +9,17 @@ const lead: QueueItem = {
   status: 'open', owner: null, due_at: null, follow_up_id: null, last_activity_at: null, reason: 'new',
 }
 
-vi.mock('../lib/panel-client', () => ({ panelSupabase: { auth: {} } }))
+vi.mock('../lib/panel-client', () => ({
+  panelSupabase: { auth: {} },
+  HUB_URL: 'https://hub.test',
+  hubPlaybookUrl: (id: string) => `https://hub.test/docs?workspace=playbook&taxonomy=${id}`,
+}))
 vi.mock('../lib/panel-data', () => ({
   useRepQueue: () => ({ items: [lead], loading: false, error: null, staleAt: null, reload: vi.fn() }),
-  useCachedScriptLibrary: () => ({ scripts: [], loading: false, error: null, reload: vi.fn(), staleAt: null }),
+  usePlaybookLibrary: () => ({
+    scripts: [], courses: [], config: null, spins: [], loading: false, error: null, staleAt: null, reload: vi.fn(),
+  }),
+  spinsFor: () => new Map(),
 }))
 vi.mock('@app/lib/targets-data', () => ({
   firstOfMonth: () => '2026-08-01',
@@ -40,7 +47,10 @@ vi.mock('@app/lib/crm-actions', () => ({ addNote: vi.fn(), saveLead: vi.fn(), cr
 
 import { AppShell, getRootMounts } from './App'
 
-const identity = { userId: 'user-1', clientId: 'client-1', displayName: 'Rep' }
+const identity = {
+  userId: 'user-1', clientId: 'client-1', displayName: 'Rep',
+  clientName: 'Bright Academy', role: 'agent', timezone: 'Asia/Kolkata',
+}
 
 beforeEach(() => vi.clearAllMocks())
 

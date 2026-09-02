@@ -7,8 +7,8 @@ import LibraryScreen from './screens/LibraryScreen'
 import HomeScreen from './screens/HomeScreen'
 import { AuthGate } from './AuthGate'
 import { useFollowedChat } from './follow-chat'
-import { useCachedScriptLibrary, useRepQueue, type PanelIdentity } from '../lib/panel-data'
-import type { CallOutcome, LeadDetail, QueueItem, Snippet } from '../lib/contracts'
+import { usePlaybookLibrary, useRepQueue, type PanelIdentity } from '../lib/panel-data'
+import type { CallOutcome, LeadDetail, QueueItem } from '../lib/contracts'
 import { CACHE_KEYS, cacheLeadDetail, cached, readCache } from '../lib/cache'
 import { firstOfMonth, useOwnWonValue, useTarget } from '@app/lib/targets-data'
 import { useLeadStages, moveLeadStage } from '@app/lib/leads-data'
@@ -29,7 +29,7 @@ import { VoiceFlow } from '../ui/VoiceFlow'
 import { FollowingChip } from '../ui/FollowingChip'
 import { SaveLeadCard, type SaveLeadDraft } from '../ui/SaveLeadCard'
 import { ConversationReview } from '../ui/ConversationReview'
-import { SnippetBar } from '../ui/SnippetBar'
+import { CallHud } from '../ui/CallHud'
 import { Button } from '../../src/ui/Button'
 import { ErrorState } from '../../src/ui/ErrorState'
 import { QueueSkeleton, TargetSkeleton } from '../ui/Skeletons'
@@ -181,7 +181,7 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
   // anything the rep could see.
   const stages = useLeadStages(identity.clientId).stages
   const taxonomy = useObjectionTaxonomy(identity.clientId).items
-  const library = useCachedScriptLibrary(identity.clientId)
+  const library = usePlaybookLibrary(identity.clientId, identity.userId)
 
   const memory = useLeadMemory(identity.clientId, lead.contact_id, null)
   const objections = useObjectionLogs(identity.clientId, lead.contact_id)
@@ -193,6 +193,10 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
   const [message, setMessage] = useState<string | null>(null)
   const [cachedDetail, setCachedDetail] = useState<LeadDetail | null>(null)
   const [cachedAt, setCachedAt] = useState<string | null>(null)
+  // The session id only exists once an outcome has opened one; inserts before
+  // that carry null, which is what script_usage expects for a chat-only nudge.
+  const [callSessionId, setCallSessionId] = useState<string | null>(null)
+  const [ratingOpen, setRatingOpen] = useState(false)
   const callRequestId = useRef(crypto.randomUUID())
 
   useEffect(() => {
@@ -200,6 +204,8 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     setCurrent(lead)
     setCachedDetail(null)
     setCachedAt(null)
+    setCallSessionId(null)
+    setRatingOpen(false)
     callRequestId.current = crypto.randomUUID()
     void readCache(CACHE_KEYS.leadDetails).then((entries) => {
       const entry = entries?.find((item) => item.scope === identity.clientId && item.data.lead.lead_id === lead.lead_id)
@@ -211,10 +217,12 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     return () => { alive = false }
   }, [identity.clientId, lead])
 
-  async function outcome(value: CallOutcome, taxonomyKey?: string) {
+  /** `callbackAtIso` comes from the HUD's Lock callback, which asks for a time;
+   *  OutcomeBar still passes nothing and keeps its date-at-09:00 behaviour. */
+  async function outcome(value: CallOutcome, taxonomyKey?: string, callbackAtIso?: string): Promise<boolean> {
     if (value === 'objection' && !taxonomyKey) {
       setMessage('Choose an objection type before logging this outcome.')
-      return
+      return false
     }
     setBusy(true)
     setMessage(null)
@@ -227,20 +235,24 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
       requestedNumber: current.phone_e164,
       clientRequestId: callRequestId.current,
     })
+    if (started.ok) setCallSessionId(started.id)
     const result = started.ok
       ? await completeCall(started.id, value, {
           taxonomyKey: value === 'objection' ? taxonomyKey : null,
-          callbackAt: value === 'callback' && followUp ? `${followUp}T09:00:00.000Z` : null,
+          callbackAt: value === 'callback' ? callbackAtIso ?? (followUp ? `${followUp}T09:00:00.000Z` : null) : null,
         })
       : started
     setBusy(false)
-    if (!result.ok) setMessage(result.message)
-    else {
-      setMessage('Outcome logged.')
-      void calls.reload()
-      if (value === 'objection') void objections.reload()
-      onChanged()
+    if (!result.ok) {
+      setMessage(result.message)
+      return false
     }
+    setMessage('Outcome logged.')
+    setRatingOpen(true)
+    void calls.reload()
+    if (value === 'objection') void objections.reload()
+    onChanged()
+    return true
   }
 
   const detail: LeadDetail = useMemo(() => {
@@ -285,14 +297,9 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
   }, [detail, detailError, detailPending, identity.clientId])
   const stageOptions = stages.map((stage) => ({ key: stage.stage_key, label: stage.label }))
   const taxonomyOptions = taxonomy.map((item) => ({ key: item.key, label: item.label }))
-  const snippets: Snippet[] = library.scripts.map((script) => ({
-    id: script.taxonomyId,
-    title: script.taxonomyLabel,
-    body: script.current?.body?.paragraphs
-      .map((paragraph) => `${paragraph.before}${paragraph.highlight ?? ''}${paragraph.after ?? ''}`)
-      .join('\n\n') ?? '',
-    scope: 'shared' as const,
-  })).filter((snippet) => snippet.body)
+  // One chip for the whole workspace: the lead's own history if that is what is
+  // stale, otherwise the playbook the HUD is reading from.
+  const staleAt = (cachedAt && (detailPending || detailError)) ? cachedAt : library.staleAt
 
   return (
     <LeadScreen
@@ -302,8 +309,8 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
       pending={detailPending && !cachedDetail}
       workspace={(
         <div className="space-y-3 px-3 pt-3">
-          {cachedAt && (detailPending || detailError) && (
-            <div className="flex min-h-8 items-center"><StaleChip fetched_at={cachedAt} /></div>
+          {staleAt && (
+            <div className="flex min-h-8 items-center"><StaleChip fetched_at={staleAt} /></div>
           )}
           {detailError && (
             <p role="alert" className="flex items-start gap-2 rounded-md bg-danger-subtle px-3 py-2 text-xs leading-relaxed text-danger">
@@ -317,10 +324,16 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
           {message && (
             <p role="status" className="rounded-md border border-border bg-surface-sunk px-3 py-2 text-xs text-fg-muted">{message}</p>
           )}
-          <SnippetBar
-            scripts={snippets}
-            vars={{ name: current.display_name, rep: identity.displayName }}
+          <CallHud
+            identity={identity}
+            lead={current}
+            library={library}
+            calls={calls.items}
+            callSessionId={callSessionId}
+            ratingOpen={ratingOpen}
+            busy={busy}
             onResult={setMessage}
+            onLockCallback={(atIso) => outcome('callback', undefined, atIso)}
           />
           <SaveConversation identity={identity} lead={current} onSaved={() => { void notes.reload(); onChanged() }} />
           <VoiceFlow clientId={identity.clientId} leadId={current.lead_id} onSaved={onChanged} />
@@ -588,8 +601,8 @@ function PanelRoutes({ identity, initialSelected, follow }: {
         ? <LeadWorkspace identity={identity} lead={selected} onChanged={() => void queue.reload()} onRevenueChanged={() => void won.reload()} onBack={() => navigate('/home')} />
         : <QueueSkeleton />}
       />
-      <Route path="/library" element={<LibraryScreen clientId={identity.clientId} />} />
-      <Route path="/settings" element={<SettingsScreen />} />
+      <Route path="/library" element={<LibraryScreen identity={identity} />} />
+      <Route path="/settings" element={<SettingsScreen clientId={identity.clientId} />} />
     </Routes>
   )
 }
