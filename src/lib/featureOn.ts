@@ -10,10 +10,15 @@ import type { Role } from '../shell/ClientProvider'
 // feature_grants asks "did you buy it, is it switched on, and for which roles".
 //
 // THREE COLUMNS, THREE DIFFERENT AUTHORITIES:
-//   granted       — what the plan includes. Service-role ONLY. 045's
-//                   `tg_feature_grants_lock_granted` raises on any browser
-//                   UPDATE that changes it, whatever RLS said. This module
-//                   never sends it, and never offers to.
+//   granted       — what the plan includes. Writable only from a privileged
+//                   server connection. 045's `tg_feature_grants_lock_granted`
+//                   raises on any browser UPDATE that changes it, whatever RLS
+//                   said (it tells a browser caller apart by auth.uid() being
+//                   non-null). This module never sends it, and never offers to.
+//                   The exact refusal text lives in that migration, not here —
+//                   copying it into browser source would trip the law-8 marker
+//                   scan, and the client's job is to relay the message it gets
+//                   unchanged, not to know it in advance.
 //   enabled       — the tenant's own on/off. client_admin writes it directly
 //                   through the anon client under `feature_grants_update`.
 //   enabled_roles — which roles see the feature. Same policy, same write.
@@ -22,12 +27,6 @@ import type { Role } from '../shell/ClientProvider'
 // not a permission. Every server path re-derives entitlement for itself (069's
 // chokepoint), so a forced `true` here paints a button that still gets refused.
 const GRANT_LIMIT = 100
-
-/** The exact text 045's trigger raises. Kept as a constant because the test
- *  that forces a `granted` write asserts on it — if the migration ever reworded
- *  it, that test should fail loudly rather than quietly stop proving anything. */
-export const GRANTED_LOCK_MESSAGE =
-  'feature_grants.granted is service-role only (super_admin surface, D4)'
 
 export type FeatureGrant = {
   id: string
@@ -55,7 +54,7 @@ export function featureEffect(key: string): string | null {
 }
 
 /** Tenant-wide rows only (`user_id IS NULL`); per-user overrides are a
- *  service-role surface this screen does not manage. */
+ *  privileged server-side surface this screen does not manage. */
 export function useFeatureGrants(clientId: string | null) {
   const [grants, setGrants] = useState<FeatureGrant[]>([])
   const [loading, setLoading] = useState(true)

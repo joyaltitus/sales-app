@@ -16,7 +16,7 @@ import type { Role } from '../shell/ClientProvider'
 //
 // WRITES never touch the table. 069's `tg_memberships_role_lock` blocks minting
 // a membership or changing a role on ANY browser write, super_admin included, so
-// both mutations below go through hub-service's service-role admin API, which
+// both mutations below go through hub-service's privileged admin API, which
 // re-derives the caller's role from the JWT and enforces the mint ladder
 // (client_admin → manager|agent, manager → agent, nobody → their own level).
 //

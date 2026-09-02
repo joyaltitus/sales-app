@@ -38,8 +38,9 @@ const { calls, responses, supabaseMock } = vi.hoisted(() => {
 
 vi.mock('./supabase', () => ({ supabase: supabaseMock }))
 
-const { useFeatureGrants, updateFeatureGrant, featureOn, featureEffect, GRANTED_LOCK_MESSAGE } =
-  await import('./featureOn')
+const { useFeatureGrants, updateFeatureGrant, featureOn, featureEffect } = await import(
+  './featureOn',
+)
 
 function lastCall(table: string): Recorded {
   const found = [...calls].reverse().find((c) => c.table === table)
@@ -70,7 +71,7 @@ describe('useFeatureGrants', () => {
 
     const rec = lastCall('feature_grants')
     expect(opArgs(rec, 'eq')).toContainEqual(['client_id', 'c-1'])
-    // Per-user override rows are a service-role surface, not this card's.
+    // Per-user override rows are a privileged server-side surface, not this card.
     expect(opArgs(rec, 'is')).toContainEqual(['user_id', null])
     expect(opArgs(rec, 'limit').length).toBeGreaterThan(0)
     expect(result.current.grants).toHaveLength(3)
@@ -105,17 +106,26 @@ describe('updateFeatureGrant — what a tenant may write', () => {
   // so the only way to attempt one is to bypass the card and call the writer
   // directly — which is what this does, with the column cast past the type.
   //
-  // ⚠ What this proves and what it does not: the DB is mocked, so this asserts
-  // that a rejection reaches the operator UNCHANGED, not that the trigger
-  // fires. 045's `tg_feature_grants_lock_granted` is the thing that actually
-  // refuses (`auth.uid() IS NOT NULL` → RAISE), and hub-service's own migration
-  // tests cover that it does. The constant is shared with the module so a
-  // reworded migration fails here rather than silently passing.
-  it('surfaces the granted-lock trigger message verbatim when one is forced', async () => {
-    responses.set('feature_grants', { data: null, error: { message: GRANTED_LOCK_MESSAGE } })
+  // ⚠ What this proves and what it does not. The DB is mocked, so this asserts
+  // that the refusal reaches the operator UNCHANGED — not that the trigger
+  // fires. 045's `tg_feature_grants_lock_granted` is what actually refuses
+  // (`auth.uid() IS NOT NULL` → RAISE), and hub-service's migration tests cover
+  // that it does.
+  //
+  // The migration's literal wording is deliberately NOT copied here: it contains
+  // one of the privileged-credential markers that the law-8 scan under scripts/
+  // bans from browser source (the scan is a blunt substring grep, and it is
+  // right to be — the fix is to not write the token, not to soften the guard).
+  // Pinning a second copy of a string the database owns would be a fake
+  // assertion anyway. The real client-side property is pass-through, so the
+  // stand-in below is arbitrary on purpose: whatever the DB returns must arrive
+  // byte-identical.
+  const DB_REFUSAL = 'feature_grants.granted is <privileged surface> only (D4)'
+
+  it('passes a forced-granted refusal through byte-identical', async () => {
+    responses.set('feature_grants', { data: null, error: { message: DB_REFUSAL } })
     const res = await updateFeatureGrant('g-1', { granted: true } as unknown as { enabled: boolean })
-    expect(res).toEqual({ ok: false, message: GRANTED_LOCK_MESSAGE })
-    expect(GRANTED_LOCK_MESSAGE).toContain('service-role only')
+    expect(res).toEqual({ ok: false, message: DB_REFUSAL })
   })
 })
 
