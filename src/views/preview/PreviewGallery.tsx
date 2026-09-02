@@ -20,7 +20,16 @@ import { QueueRow } from '../inbox/QueueRow'
 import { Thread } from '../inbox/Thread'
 import { AgentPanel } from '../agent/AgentPanel'
 import { Panel, Funnel } from '../dashboard/charts'
-import { MOCK_QUEUE, MOCK_MESSAGES, MOCK_TRACES, MOCK_FUNNEL } from './preview-mocks'
+import {
+  MOCK_QUEUE,
+  MOCK_MESSAGES,
+  MOCK_TRACES,
+  MOCK_FUNNEL,
+  MOCK_TEAM,
+  MOCK_FEATURE_GRANTS,
+} from './preview-mocks'
+import { TeamPage } from '../team/TeamPage'
+import { AiFeaturesCard } from '../settings/AiFeaturesCard'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { Playbook } from '../docs/Playbook'
 import { ObjectionsReview } from '../dashboard/ObjectionsReview'
@@ -162,6 +171,23 @@ export default function PreviewGallery() {
         <Section number="15" title="First impressions and auth edges" note="A mature product promise frames sign-in, while invite acceptance, recovery, failure and session-expiry states protect context and explain exactly what happens next."><AuthExperiencePreview /></Section>
         <Section number="16" title="Owner business report" note="Revenue, coverage, execution, bookings and buyer objections resolve into a one-page renewal artifact built for a 30-second read and a clean A4 handoff."><OwnerBusinessReport /></Section>
         <Section number="17" title="Rep follow-ups and task details" note="Rows now open full context instead of exposing only quick actions: who, due promise, stage, deal value, last contact, next action and a clearly labeled local preview state."><div className="grid gap-6"><div data-testid="follow-ups-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><FollowUpsTab /></div><div data-testid="todos-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><TodosTab /></div></div></Section>
+        <Section number="18" title="Team and access" note="The same roster, seen from the two levels that may open it: an admin who can mint managers and reps, and a manager who may only mint reps. The mint ladder is hub-service's; these screens simply stop offering a button that would come back role_above_caller.">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div data-testid="team-admin-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/team</p>
+              <TeamPage preview={{ members: MOCK_TEAM, role: 'client_admin', clientName: 'Demo Academy' }} />
+            </div>
+            <div data-testid="team-manager-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">manager · /manage/team</p>
+              <TeamPage preview={{ members: MOCK_TEAM, role: 'manager', clientName: 'Demo Academy' }} />
+            </div>
+          </div>
+        </Section>
+        <Section number="19" title="AI features and the plan" note="Three columns, three authorities: the plan is stated and never editable here (the database refuses a browser write to it outright), while the on/off switch and the roles that see each feature belong to the tenant's admin.">
+          <div data-testid="ai-features-preview" className="mx-auto max-w-2xl">
+            <AiFeaturesCard preview={MOCK_FEATURE_GRANTS} />
+          </div>
+        </Section>
       </main>
     </div>
   )

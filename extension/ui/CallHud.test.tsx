@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CallHud } from './CallHud'
 import { playbookLibrary, queueItems } from '../fixtures'
 import { OUTBOX_KEY, readOutbox } from '../lib/outbox-store'
@@ -46,9 +46,22 @@ async function goToOffer(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByText('The offer')
 }
 
+// callbackWhen() renders a callback as "today" / "tomorrow" / a weekday, RELATIVE
+// to the moment the assertion runs, so a test that pins an absolute callback date
+// only passes inside a narrow window. The suite went red on 2026-09-03 with no
+// code change behind it: 2026-09-04 stopped being "Fri" and became "tomorrow".
+//
+// Only Date is faked. Faking setTimeout too would stall userEvent and waitFor,
+// which drive every test in this file.
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-09-01T06:00:00Z'))
   insertSnippet.mockClear()
   insertSnippet.mockResolvedValue(true)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('CallHud', () => {

@@ -34,9 +34,10 @@ export type HubResult<T> =
   | { kind: 'no_key' } //        gateway key not pasted in this browser yet
   | { kind: 'no_session' } //    no Supabase session (should be impossible behind the auth gate)
   | { kind: 'unauthorized' } //  401 — bad gateway key or invalid/expired JWT
-  | { kind: 'forbidden' } //     403 — authenticated, but this role may not do this
+  | { kind: 'forbidden'; code?: string } // 403 — authenticated, but this role may not do this
   | { kind: 'not_found' } //     404 — conversation missing, or no resolvable send route
-  | { kind: 'bad_request' } //   400 — malformed body (a bug here, not a user error)
+  | { kind: 'bad_request'; code?: string } // 400 — malformed body (a bug here, not a user error)
+  | { kind: 'conflict'; code?: string } //   409 — e.g. the address is already a platform user
   | { kind: 'budget_exceeded' } // 429 — hard AI budget wall; caller offers a non-model fallback
   | { kind: 'paused' } //        503 'paused' — the agent_send kill-switch is passive
   | { kind: 'unavailable' } //   503 — auth/DB/enqueue backend down; not the caller's fault
@@ -107,21 +108,30 @@ export async function hubFetch<T = unknown>(
     }
   }
 
-  if (res.status === 400) return { kind: 'bad_request' }
+  // hub-service answers EVERY failure with `{ error: <code> }` (its sendFail).
+  // That code is often the only thing separating two failures that share a
+  // status — `role_above_caller` from a generic 403, `paused` from the other
+  // 503s — so read it once here rather than leaving each caller to re-parse a
+  // body that has already been consumed. AT-27 shows it to the operator
+  // verbatim: hub-service is the authority on why a write was refused, and
+  // rewording its answer here would be inventing a reason.
+  let code: string | undefined
+  try {
+    code = ((await res.json()) as { error?: string }).error
+  } catch {
+    /* not every failure carries a JSON body */
+  }
+
+  if (res.status === 400) return { kind: 'bad_request', code }
   if (res.status === 429) return { kind: 'budget_exceeded' }
   if (res.status === 401) return { kind: 'unauthorized' }
-  if (res.status === 403) return { kind: 'forbidden' }
+  if (res.status === 403) return { kind: 'forbidden', code }
   if (res.status === 404) return { kind: 'not_found' }
+  if (res.status === 409) return { kind: 'conflict', code }
   if (res.status === 503) {
-    // hub-service distinguishes 'paused' (kill-switch passive) from 'disabled' /
-    // 'auth_unavailable' / 'db_unavailable' / 'enqueue_unavailable' in the body.
-    let reason: string | undefined
-    try {
-      reason = ((await res.json()) as { error?: string }).error
-    } catch {
-      /* fall through to the generic unavailable */
-    }
-    return reason === 'paused' ? { kind: 'paused' } : { kind: 'unavailable' }
+    // 'paused' (kill-switch passive) vs 'disabled' / 'auth_unavailable' /
+    // 'db_unavailable' / 'enqueue_unavailable'.
+    return code === 'paused' ? { kind: 'paused' } : { kind: 'unavailable' }
   }
   return { kind: 'network', message: `HTTP ${res.status}` }
 }
