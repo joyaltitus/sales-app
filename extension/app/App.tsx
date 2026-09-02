@@ -30,6 +30,7 @@ import { FollowingChip } from '../ui/FollowingChip'
 import { SaveLeadCard, type SaveLeadDraft } from '../ui/SaveLeadCard'
 import { ConversationReview } from '../ui/ConversationReview'
 import { CallHud } from '../ui/CallHud'
+import { isWideSurface } from '../lib/surface'
 import { Button } from '../../src/ui/Button'
 import { ErrorState } from '../../src/ui/ErrorState'
 import { QueueSkeleton, TargetSkeleton } from '../ui/Skeletons'
@@ -47,9 +48,9 @@ const TABS = [
   { to: '/library', label: 'Library' },
   { to: '/settings', label: 'Settings' },
 ]
-const PANEL_NAV_KEY = 'rep.panelNavigation'
+export const PANEL_NAV_KEY = 'rep.panelNavigation'
 type PanelRoute = '/home' | '/crm' | '/lead' | '/library' | '/settings'
-type PanelNavigation = { route: PanelRoute; selected: QueueItem | null }
+export type PanelNavigation = { route: PanelRoute; selected: QueueItem | null }
 
 const navLinkStyle = (active: boolean): CSSProperties => ({
   display: 'flex',
@@ -535,11 +536,30 @@ function PanelRoutes({ identity, initialSelected, follow }: {
   const won = useOwnWonValue(identity.clientId, identity.userId, month)
   const followedLead = follow.match.lead
 
+  // The panel is the WRITER of shared nav; the call tab is a reader only. Two
+  // writers would ping-pong the selection between mounts on every render.
   useEffect(() => {
+    if (isWideSurface()) return
     void chrome.storage.session.set({
       [PANEL_NAV_KEY]: { route: location.pathname as PanelRoute, selected },
     })
   }, [location.pathname, selected])
+
+  // ...and the call tab follows it live. Not a query param and not a reload:
+  // the rep is mid-call, and a page reload would drop the roadmap step, the
+  // picked objection and the composed close they were halfway through.
+  useEffect(() => {
+    if (!isWideSurface()) return
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== 'session' || !changes[PANEL_NAV_KEY]) return
+      const next = changes[PANEL_NAV_KEY].newValue as PanelNavigation | undefined
+      if (!next?.selected) return
+      setSelected((current) => (current?.lead_id === next.selected?.lead_id ? current : next.selected))
+      if (next.route === '/lead') navigate('/lead')
+    }
+    chrome.storage.onChanged.addListener(onChanged)
+    return () => chrome.storage.onChanged.removeListener(onChanged)
+  }, [navigate])
 
   const openLead = useCallback((item: QueueItem) => { setSelected(item); navigate('/lead') }, [navigate])
 

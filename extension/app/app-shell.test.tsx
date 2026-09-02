@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { QueueItem } from '../lib/contracts'
 
 const lead: QueueItem = {
@@ -46,6 +46,7 @@ vi.mock('@app/lib/crm-data', () => ({
 vi.mock('@app/lib/crm-actions', () => ({ addNote: vi.fn(), saveLead: vi.fn(), createLead: vi.fn() }))
 
 import { AppShell, getRootMounts } from './App'
+import { markWideSurface, resetWideSurface } from '../lib/surface'
 
 const identity = {
   userId: 'user-1', clientId: 'client-1', displayName: 'Rep',
@@ -53,6 +54,8 @@ const identity = {
 }
 
 beforeEach(() => vi.clearAllMocks())
+// The surface flag is module-global: a wide test would leak into the panel ones.
+afterEach(() => { resetWideSurface(); void chrome.storage.session.clear() })
 
 it('lands on Home, pushes the lead as a view, and keeps Lead out of the tab bar', async () => {
   const user = userEvent.setup()
@@ -103,4 +106,69 @@ it('restores the selected lead and pushed route from session storage', async () 
 
   expect(await screen.findByRole('button', { name: 'Back to queue' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Anjali Nair' })).toBeTruthy()
+})
+
+// ── AT-04 / AT-10: the two mounts, and which of them writes ──────────────────
+
+const otherLead: QueueItem = { ...lead, lead_id: 'lead-2', display_name: 'Vikram Rao' }
+
+/** Replaces the setup file's no-op onChanged with a registry we can fire. */
+function liveStorageEvents() {
+  const listeners: ((c: Record<string, chrome.storage.StorageChange>, a: string) => void)[] = []
+  vi.spyOn(chrome.storage.onChanged, 'addListener').mockImplementation((fn) => { listeners.push(fn as never) })
+  vi.spyOn(chrome.storage.onChanged, 'removeListener').mockImplementation((fn) => {
+    const at = listeners.indexOf(fn as never)
+    if (at >= 0) listeners.splice(at, 1)
+  })
+  return {
+    emit: (next: unknown) => {
+      for (const fn of [...listeners]) fn({ 'rep.panelNavigation': { newValue: next } } as never, 'session')
+    },
+    get count() { return listeners.length },
+  }
+}
+
+it('AT-04: the call tab follows the panel to a new lead, with no reload', async () => {
+  const events = liveStorageEvents()
+  await chrome.storage.session.set({ 'rep.panelNavigation': { route: '/lead', selected: lead } })
+  markWideSurface()
+
+  render(<AppShell identity={identity} />)
+  expect(await screen.findByRole('heading', { name: 'Anjali Nair' })).toBeTruthy()
+  expect(events.count).toBeGreaterThan(0)
+
+  // The panel selects someone else. The tab is not remounted and not reloaded.
+  const mountsBefore = getRootMounts()
+  act(() => events.emit({ route: '/lead', selected: otherLead }))
+
+  expect(await screen.findByRole('heading', { name: 'Vikram Rao' })).toBeTruthy()
+  expect(getRootMounts()).toBe(mountsBefore)
+})
+
+it('AT-04: the call tab never writes nav back — one writer, no ping-pong', async () => {
+  markWideSurface()
+  const write = vi.spyOn(chrome.storage.session, 'set')
+  render(<AppShell identity={identity} />)
+  await screen.findByText('Do this next')
+
+  const navWrites = write.mock.calls.filter(([values]) => 'rep.panelNavigation' in (values as object))
+  expect(navWrites).toHaveLength(0)
+})
+
+it('AT-10: the panel is unchanged — it writes nav and does not follow it', async () => {
+  const events = liveStorageEvents()
+  const write = vi.spyOn(chrome.storage.session, 'set')
+  render(<AppShell identity={identity} />)
+  await screen.findByText('Do this next')
+
+  await vi.waitFor(() => {
+    expect(write.mock.calls.some(([values]) => 'rep.panelNavigation' in (values as object))).toBe(true)
+  })
+
+  // A nav change must NOT yank the panel onto another rep's lead. Asserted as
+  // behaviour, not as a listener count: other panel features legitimately
+  // subscribe to storage, so counting listeners would prove nothing.
+  act(() => events.emit({ route: '/lead', selected: otherLead }))
+  expect(screen.queryByRole('heading', { name: 'Vikram Rao' })).toBeNull()
+  expect(screen.getByText('Do this next')).toBeTruthy()
 })

@@ -10,8 +10,10 @@ import {
 import { courseVars, needsCourse } from '../lib/course-vars'
 import { buildUpiIntent, callbackWhen, canCollect, payVars, tokenAmount, zonedIso } from '../lib/pay-link'
 import { renderSnippet } from '../lib/snippet'
+import { isWideSurface } from '../lib/surface'
 import { loadPrefs, loadSnippets, rememberCourse, rememberStage, savePrefs, type SavedSnippet } from '../lib/prefs'
 import { queueWrite } from '../lib/outbox-store'
+import { openCallTab } from '../lib/background'
 import { ObjectionChips } from './ObjectionChips'
 import { RebuttalCard } from './RebuttalCard'
 import { RoadmapStage } from './RoadmapStage'
@@ -40,6 +42,12 @@ type Props = {
   /** Lock callback rides the existing OutcomeBar follow-up + callback path. */
   onLockCallback: (atIso: string) => Promise<boolean>
   busy?: boolean
+  /**
+   * 'column' is the 380px side panel; 'wide' is the full browser tab. Omitted,
+   * it follows the mount. Tests always pass it, so neither layout can drift
+   * into being the untested one.
+   */
+  layout?: 'column' | 'wide'
 }
 
 const selectClass =
@@ -58,12 +66,14 @@ const selectClass =
  * call. Then objections, because those interrupt the call. Then the close.
  */
 export function CallHud({
-  identity, lead, library, calls, callSessionId, ratingOpen, onResult, onLockCallback, busy = false,
+  identity, lead, library, calls, callSessionId, ratingOpen, onResult, onLockCallback, busy = false, layout,
 }: Props) {
+  const wide = (layout ?? (isWideSurface() ? 'wide' : 'column')) === 'wide'
   const [courseId, setCourseId] = useState<string | null>(null)
   const [lang, setLang] = useState(DEFAULT_LANG)
   const [useMine, setUseMine] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(true)
+  const [tabOffered, setTabOffered] = useState(false)
   const [step, setStep] = useState(0)
   const [hook, setHook] = useState<HookKey>(() => hookVariant(lead, calls))
   const [objection, setObjection] = useState<Rebuttal | null>(null)
@@ -102,6 +112,7 @@ export function CallHud({
       if (!alive) return
       setUseMine(prefs.useMine)
       setShowRoadmap(prefs.showRoadmap)
+      setTabOffered(prefs.openCallsInTab)
       setSnippets(saved)
       if (prefs.defaultLang) setLang(prefs.defaultLang)
       else if (library.config?.default_lang) setLang(library.config.default_lang)
@@ -132,6 +143,28 @@ export function CallHud({
 
   const steps = useMemo(() => buildRoadmap(library.scripts, hook), [hook, library.scripts])
   const objections = useMemo(() => objectionScripts(library.scripts), [library.scripts])
+
+  // Mid-call the rep has a phone in one hand. Hunting a chip with the mouse is
+  // what costs the moment, so 1-9 fire the objections in the order they render.
+  // Guarded on the event target: a rep typing "2 seats" into the token amount
+  // must not have that keystroke swallowed and fire objection two instead.
+  useEffect(() => {
+    if (!wide) return
+    function onKey(event: KeyboardEvent) {
+      if (event.altKey || event.ctrlKey || event.metaKey) return
+      const target = event.target as HTMLElement | null
+      if (target?.isContentEditable) return
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const index = Number(event.key) - 1
+      if (!Number.isInteger(index) || index < 0 || index >= objections.length) return
+      event.preventDefault()
+      const script = objections[index]
+      setObjection((current) => (current?.taxonomy_id === script.taxonomy_id ? null : script))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [objections, wide])
   const tokenScript = useMemo(() => composedScript(library.scripts, COMPOSED_KEYS.tokenRequest), [library.scripts])
   const callbackScript = useMemo(() => composedScript(library.scripts, COMPOSED_KEYS.callbackConfirm), [library.scripts])
 
@@ -280,7 +313,11 @@ export function CallHud({
     <section
       aria-label="In-call scripts"
       data-testid="call-hud"
-      className="min-w-0 space-y-2 overflow-hidden rounded-lg border border-border bg-surface p-2.5"
+      data-layout={wide ? 'wide' : 'column'}
+      className={[
+        'min-w-0 space-y-2 overflow-hidden rounded-lg border border-border bg-surface',
+        wide ? 'mx-auto w-full max-w-[1400px] p-4' : 'p-2.5',
+      ].join(' ')}
     >
       {/* Row A — the course. Every number below comes from it. */}
       <div className="flex min-w-0 items-center gap-1.5">
@@ -330,6 +367,15 @@ export function CallHud({
             {code.toUpperCase()}
           </button>
         ))}
+        {!wide && tabOffered && (
+          <button
+            type="button"
+            onClick={() => void openCallTab().catch(() => onResult('Could not open the call tab.'))}
+            className="shrink-0 rounded-md border border-border bg-surface-raised px-2 py-1 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
+          >
+            Open in tab
+          </button>
+        )}
         <div className="ml-auto flex shrink-0 overflow-hidden rounded-md border border-border" role="group" aria-label="Wording">
           <button
             type="button"
@@ -352,7 +398,12 @@ export function CallHud({
         </div>
       </div>
 
-      {/* The body: the roadmap, or the objection that interrupted it. */}
+      {/* The body: the roadmap, or the objection that interrupted it.
+          In the panel those are mutually exclusive — 380px cannot hold both.
+          In the tab they sit side by side, because losing your place in the
+          call every time a customer pushes back is the whole complaint. */}
+      <div className={wide ? 'grid min-w-0 grid-cols-[2fr_1fr] items-start gap-3' : 'space-y-2'}>
+        <div className="min-w-0 space-y-2">
       {objection && objectionPicked ? (
         <RebuttalCard
           script={objection}
@@ -371,7 +422,8 @@ export function CallHud({
             if (words) void flagGap(objection, words)
           }}
         />
-      ) : showRoadmap ? (
+      ) : null}
+      {(wide || !objection) && showRoadmap ? (
         <RoadmapStage
           steps={steps}
           active={step}
@@ -390,12 +442,15 @@ export function CallHud({
           }}
         />
       ) : null}
-
-      <ObjectionChips
-        scripts={objections}
-        activeKey={objection?.taxonomy_key ?? null}
-        onPick={(script) => setObjection((current) => (current?.taxonomy_id === script.taxonomy_id ? null : script))}
-      />
+        </div>
+        <div className="min-w-0" data-testid="call-hud-objections">
+          <ObjectionChips
+            scripts={objections}
+            activeKey={objection?.taxonomy_key ?? null}
+            onPick={(script) => setObjection((current) => (current?.taxonomy_id === script.taxonomy_id ? null : script))}
+          />
+        </div>
+      </div>
 
       {/* Close row. Half-width each, because they are the two ways a call ends. */}
       <div className="flex min-w-0 gap-1.5">
