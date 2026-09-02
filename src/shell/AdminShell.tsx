@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -23,6 +23,8 @@ const DashboardScreen = lazy(() =>
   import('../views/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
 )
 const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ default: m.Teardown })))
+const TeamPage = lazy(() => import('../views/team/TeamPage').then((m) => ({ default: m.TeamPage })))
+const AdminSettings = lazy(() => import('../views/settings/AiFeaturesCard').then((m) => ({ default: m.AdminSettings })))
 
 // Admin view: desktop-first, left rail — deliberately the SAME pattern as
 // ManagerShell rather than a new one. §S5: "an extension of a working pattern,
@@ -49,8 +51,17 @@ const RAIL = [
   { to: '/crm', label: 'CRM', icon: Users },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
+  { to: '/team', label: 'Team', icon: UsersRound },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
+
+// AT-26: this shell is mounted at /admin, so its rail links and its internal
+// redirects carry the prefix. The RAIL entries stay shell-relative (that is
+// what the mobile bar and the `end` flag read) and get prefixed at the one
+// place each is turned into an href.
+const BASE = '/admin'
+const href = (to: string) => (to === '/' ? BASE : BASE + to)
 
 function LazyFallback() {
   return (
@@ -78,7 +89,7 @@ export function AdminShell() {
           {RAIL.map((t) => (
             <NavLink
               key={t.to}
-              to={t.to}
+              to={href(t.to)}
               end={t.end}
               className={({ isActive }) =>
                 [
@@ -113,18 +124,20 @@ export function AdminShell() {
                 <Route path="agent" element={<AgentScreen />} />
                 <Route path="docs" element={<DocsStudio />} />
                 <Route path="teardown" element={<Teardown />} />
-                <Route path="leads" element={<Navigate to="/crm" replace />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="team" element={<TeamPage />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="leads" element={<Navigate to={href('/crm')} replace />} />
+                <Route path="*" element={<Navigate to={href('/')} replace />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-6 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-8 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
-            to={t.to}
+            to={href(t.to)}
             end={t.end}
             className={({ isActive }) => [
               'flex min-h-14 flex-col items-center justify-center gap-1 text-2xs font-medium',

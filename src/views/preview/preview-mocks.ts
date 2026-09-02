@@ -123,3 +123,38 @@ export const MOCK_TILES = [
   { label: 'Needs human', value: '3', tone: 'danger' as const, sub: 'waiting for a person' },
   { label: 'Bookings (7 days)', value: '6' },
 ]
+
+// ACCESS-01 C (AT-27 / AT-28) — mock-only rows for the direction gallery, so
+// the Team page and the AI-features card can be reviewed and screenshotted
+// without a session. Nothing outside /preview reads these.
+export const MOCK_TEAM = [
+  { user_id: 'u-1', role: 'client_admin' as const, display_name: 'Joyal Titus', disabled_at: null },
+  { user_id: 'u-2', role: 'manager' as const, display_name: 'Bilal Ahmed', disabled_at: null },
+  { user_id: 'u-3', role: 'agent' as const, display_name: 'Asha Menon', disabled_at: null },
+  { user_id: 'u-4', role: 'agent' as const, display_name: 'Ravi Kumar', disabled_at: null },
+  {
+    user_id: 'u-5',
+    role: 'agent' as const,
+    display_name: 'Chen Wei',
+    disabled_at: '2026-08-14T09:00:00Z',
+  },
+]
+
+export const MOCK_FEATURE_GRANTS = [
+  {
+    id: 'fg-1',
+    feature: 'agent_chat',
+    granted: true,
+    enabled: true,
+    enabled_roles: ['agent', 'manager', 'client_admin'],
+  },
+  { id: 'fg-2', feature: 'insights', granted: true, enabled: true, enabled_roles: ['manager'] },
+  {
+    id: 'fg-3',
+    feature: 'call_transcription',
+    granted: true,
+    enabled: false,
+    enabled_roles: ['manager', 'client_admin'],
+  },
+  { id: 'fg-4', feature: 'agent_autopilot', granted: false, enabled: true, enabled_roles: [] },
+]

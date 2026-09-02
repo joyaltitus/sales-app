@@ -33,6 +33,10 @@ const TABS = [
   { to: '/more', label: 'More', icon: Ellipsis },
 ]
 
+// AT-26: mounted at /rep — see the note in AdminShell.
+const BASE = '/rep'
+const href = (to: string) => (to === '/' ? BASE : BASE + to)
+
 export function RepShell() {
   const { activeClient } = useClient()
   const { flags } = useFlags(activeClient?.id ?? null)
@@ -68,7 +72,7 @@ export function RepShell() {
               {TABS.map((tab) => (
                 <NavLink
                   key={tab.to}
-                  to={tab.to}
+                  to={href(tab.to)}
                   end={tab.end}
                   className={({ isActive }) => [
                     'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors',
@@ -120,7 +124,7 @@ export function RepShell() {
                 <Route path="docs" element={<DocsStudio />} />
                 {/* Flag-gated door: only mounts when the flag is on. */}
                 {productAi && <Route path="more/product-ai" element={<ProductAiDoor />} />}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to={href('/')} replace />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
@@ -134,7 +138,7 @@ export function RepShell() {
         {TABS.map((t) => (
           <NavLink
             key={t.to}
-            to={t.to}
+            to={href(t.to)}
             end={t.end}
             className={({ isActive }) =>
               [
