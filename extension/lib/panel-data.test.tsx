@@ -51,7 +51,10 @@ describe('useRepQueue stale-while-revalidate', () => {
       [CACHE_KEYS.queue]: cached([item('cached-lead')], new Date('2026-08-26T10:00:00Z'), 'client-1'),
     })
     const startedAt = performance.now()
-    const { result } = renderHook(() => useRepQueue({ userId: 'user-1', clientId: 'client-1', displayName: 'Rep' }))
+    const { result } = renderHook(() => useRepQueue({
+      userId: 'user-1', clientId: 'client-1', displayName: 'Rep',
+      clientName: 'Bright Academy', role: 'agent', timezone: 'Asia/Kolkata',
+    }))
 
     await waitFor(() => expect(result.current.items[0]?.lead_id).toBe('cached-lead'))
     const cachedPaintMs = performance.now() - startedAt

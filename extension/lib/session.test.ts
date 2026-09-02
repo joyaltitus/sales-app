@@ -36,7 +36,7 @@ describe('session failure and sign-out boundaries', () => {
     await chrome.storage.local.set({
       [CACHE_KEYS.leadDetails]: [{ data: { lead: { lead_id: 'lead-1' } }, fetched_at: '2026-08-26T10:00:00Z' }],
       [CACHE_KEYS.queue]: { data: [], fetched_at: '2026-08-26T10:00:00Z' },
-      [CACHE_KEYS.library]: { data: { scripts: [], taxonomy: [], rebuttals: [] }, fetched_at: '2026-08-26T10:00:00Z' },
+      [CACHE_KEYS.library]: { data: { scripts: [], courses: [], config: null, spins: [] }, fetched_at: '2026-08-26T10:00:00Z' },
       [OUTBOX_KEY]: [{ id: 'offline-note' }],
       'sb-shared-auth-token': 'session-one',
     })
