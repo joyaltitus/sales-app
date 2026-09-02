@@ -404,44 +404,44 @@ export function CallHud({
           call every time a customer pushes back is the whole complaint. */}
       <div className={wide ? 'grid min-w-0 grid-cols-[2fr_1fr] items-start gap-3' : 'space-y-2'}>
         <div className="min-w-0 space-y-2">
-      {objection && objectionPicked ? (
-        <RebuttalCard
-          script={objection}
-          picked={objectionPicked}
-          vars={vars}
-          backLabel={activeStep?.script.label ?? 'the call'}
-          busy={busy}
-          rated={usages.find((u) => u.versionId === objection.script_version_id)?.feedback ?? null}
-          canRate={usages.some((u) => u.versionId === objection.script_version_id)}
-          onBack={() => setObjection(null)}
-          onExpand={() => setSheet(objection)}
-          onInsert={() => void insertScript(objection, objectionPicked)}
-          onFeedback={(feedback, words) => {
-            const usage = usages.find((u) => u.versionId === objection.script_version_id)
-            if (usage) void rate(usage, feedback)
-            if (words) void flagGap(objection, words)
-          }}
-        />
-      ) : null}
-      {(wide || !objection) && showRoadmap ? (
-        <RoadmapStage
-          steps={steps}
-          active={step}
-          lang={lang}
-          useMine={useMine}
-          hook={hook}
-          vars={vars}
-          busy={busy}
-          spinsByScript={spinsByScript}
-          onSelect={selectStep}
-          onHook={setHook}
-          onExpand={(target) => setSheet(target.script)}
-          onInsert={(target) => {
-            const picked = pickScript(target.script, lang, useMine, spinsByScript(target.script.script_id))
-            void insertScript(target.script, picked)
-          }}
-        />
-      ) : null}
+          {objection && objectionPicked ? (
+            <RebuttalCard
+              script={objection}
+              picked={objectionPicked}
+              vars={vars}
+              backLabel={activeStep?.script.label ?? 'the call'}
+              busy={busy}
+              rated={usages.find((u) => u.versionId === objection.script_version_id)?.feedback ?? null}
+              canRate={usages.some((u) => u.versionId === objection.script_version_id)}
+              onBack={() => setObjection(null)}
+              onExpand={() => setSheet(objection)}
+              onInsert={() => void insertScript(objection, objectionPicked)}
+              onFeedback={(feedback, words) => {
+                const usage = usages.find((u) => u.versionId === objection.script_version_id)
+                if (usage) void rate(usage, feedback)
+                if (words) void flagGap(objection, words)
+              }}
+            />
+          ) : null}
+          {(wide || !objection) && showRoadmap ? (
+            <RoadmapStage
+              steps={steps}
+              active={step}
+              lang={lang}
+              useMine={useMine}
+              hook={hook}
+              vars={vars}
+              busy={busy}
+              spinsByScript={spinsByScript}
+              onSelect={selectStep}
+              onHook={setHook}
+              onExpand={(target) => setSheet(target.script)}
+              onInsert={(target) => {
+                const picked = pickScript(target.script, lang, useMine, spinsByScript(target.script.script_id))
+                void insertScript(target.script, picked)
+              }}
+            />
+          ) : null}
         </div>
         <div className="min-w-0" data-testid="call-hud-objections">
           <ObjectionChips
