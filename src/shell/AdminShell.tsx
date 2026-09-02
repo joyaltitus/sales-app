@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -24,6 +24,7 @@ const DashboardScreen = lazy(() =>
 )
 const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ default: m.Teardown })))
 const TeamPage = lazy(() => import('../views/team/TeamPage').then((m) => ({ default: m.TeamPage })))
+const TargetsPage = lazy(() => import('../views/targets/TargetsPage').then((m) => ({ default: m.TargetsPage })))
 const AdminSettings = lazy(() => import('../views/settings/AiFeaturesCard').then((m) => ({ default: m.AdminSettings })))
 
 // Admin view: desktop-first, left rail — deliberately the SAME pattern as
@@ -52,6 +53,7 @@ const RAIL = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
+  { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -125,6 +127,7 @@ export function AdminShell() {
                 <Route path="docs" element={<DocsStudio />} />
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
+                <Route path="targets" element={<TargetsPage />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="leads" element={<Navigate to={href('/crm')} replace />} />
                 <Route path="*" element={<Navigate to={href('/')} replace />} />
@@ -133,7 +136,7 @@ export function AdminShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-8 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-9 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}

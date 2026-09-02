@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -24,6 +24,7 @@ const DashboardScreen = lazy(() =>
 )
 const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ default: m.Teardown })))
 const TeamPage = lazy(() => import('../views/team/TeamPage').then((m) => ({ default: m.TeamPage })))
+const TargetsPage = lazy(() => import('../views/targets/TargetsPage').then((m) => ({ default: m.TargetsPage })))
 
 // Manager view: desktop-first (works on phone). Left rail nav, fixed shell.
 //
@@ -38,6 +39,7 @@ const RAIL = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
+  { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
 ]
 
@@ -120,6 +122,7 @@ export function ManagerShell() {
                 <Route path="docs" element={<DocsStudio />} />
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
+                <Route path="targets" element={<TargetsPage />} />
                 {/* Pre-SA-04 paths — keep deep links alive. */}
                 <Route path="leads" element={<Navigate to={href('/crm')} replace />} />
                 <Route path="assign" element={<Navigate to={href('/crm')} replace />} />
@@ -130,7 +133,7 @@ export function ManagerShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-7 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-8 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
