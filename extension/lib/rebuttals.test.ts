@@ -4,12 +4,24 @@ import type { Rebuttal } from './contracts'
 
 function row(over: Partial<Rebuttal> = {}): Rebuttal {
   return {
-    script_version_id: 'sv-1',
+    taxonomy_id: 'tax-1',
     taxonomy_key: 'price',
+    label: 'Too expensive',
+    kind: 'objection',
+    position: 0,
+    icon: null,
+    status: 'active',
+    script_id: 'sc-1',
+    script_version_id: 'sv-1',
+    version: 1,
+    created_at: '2026-08-01T00:00:00.000Z',
     headline: null,
     body: null,
+    langs: ['en'],
     uses: 0,
+    rated: 0,
     won: 0,
+    spin: null,
     ...over,
   }
 }
