@@ -27,6 +27,14 @@ npm run dev
 Design routes (no auth): `/kitchen-sink` (primitives × 6 states), `/samples`
 (hue + font decision board).
 
+Extension end-to-end (real Chrome, real backend, headed — MV3 service workers
+do not register headless). Credentials come from the environment only; this is
+deliberately **not** in CI, which has none:
+```
+npm run ext:build
+EXT_E2E_EMAIL=… EXT_E2E_PASSWORD=… npm run ext:e2e
+```
+
 ## Build / deploy
 `npm run build` → gates: first-load JS < 200KB gz + PWA assets present.
 Zeabur static site; `/version.json` stamped with the git SHA — read back after deploy.

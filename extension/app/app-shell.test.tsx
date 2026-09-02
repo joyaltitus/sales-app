@@ -172,3 +172,67 @@ it('AT-10: the panel is unchanged — it writes nav and does not follow it', asy
   expect(screen.queryByRole('heading', { name: 'Vikram Rao' })).toBeNull()
   expect(screen.getByText('Do this next')).toBeTruthy()
 })
+
+// ── CALL-ERGO-0902: when the call session opens, and who shares it ───────────
+// `callSessionId !== null` is the whole call/chat switch. It used to be set
+// inside the outcome handler — i.e. once the call was already over — so the HUD
+// showed the chat lane's "Insert" for the entire conversation.
+
+it('dialling opens the call session, and publishes it to the other mount', async () => {
+  const calls = await import('@app/lib/calls-data')
+  vi.mocked(calls.startCallSession).mockResolvedValue({ ok: true, id: 'cs-dialled' })
+  const user = userEvent.setup()
+  render(<AppShell identity={identity} />)
+  await screen.findByText('Do this next')
+  await user.click(screen.getByRole('button', { name: /Open Anjali Nair/ }))
+
+  await user.click(await screen.findByRole('button', { name: '919876543210' }))
+
+  expect(calls.startCallSession).toHaveBeenCalledTimes(1)
+  expect(vi.mocked(calls.startCallSession).mock.calls[0]![0]).toMatchObject({ leadId: 'lead-1' })
+  await vi.waitFor(async () => {
+    const stored = await chrome.storage.session.get('rep.callSession')
+    expect(stored['rep.callSession']).toMatchObject({ leadId: 'lead-1', id: 'cs-dialled' })
+  })
+})
+
+it('the second mount adopts the live session instead of opening a rival one', async () => {
+  await chrome.storage.session.set({
+    'rep.panelNavigation': { route: '/lead', selected: lead },
+    'rep.callSession': { leadId: 'lead-1', id: 'cs-live', requestId: 'req-1' },
+  })
+  const calls = await import('@app/lib/calls-data')
+  vi.mocked(calls.completeCall).mockResolvedValue({
+    ok: true, callLogId: 'cl-1', objectionLogId: null, followUpId: null, activeScriptVersionId: null,
+  })
+  const user = userEvent.setup()
+  render(<AppShell identity={identity} />)
+  await screen.findByRole('button', { name: 'Back to queue' })
+
+  await user.click(await screen.findByRole('button', { name: 'Progressing' }))
+
+  // The call tab is a second React tree over the SAME call: opening its own
+  // session would split one conversation across two rows.
+  await vi.waitFor(() => expect(calls.completeCall).toHaveBeenCalledWith('cs-live', 'progressing', expect.anything()))
+  expect(calls.startCallSession).not.toHaveBeenCalled()
+})
+
+it('a different lead does not inherit the last lead’s call session', async () => {
+  await chrome.storage.session.set({
+    'rep.panelNavigation': { route: '/lead', selected: otherLead },
+    'rep.callSession': { leadId: 'lead-1', id: 'cs-live', requestId: 'req-1' },
+  })
+  const calls = await import('@app/lib/calls-data')
+  vi.mocked(calls.startCallSession).mockResolvedValue({ ok: true, id: 'cs-new' })
+  vi.mocked(calls.completeCall).mockResolvedValue({
+    ok: true, callLogId: 'cl-2', objectionLogId: null, followUpId: null, activeScriptVersionId: null,
+  })
+  const user = userEvent.setup()
+  render(<AppShell identity={identity} />)
+  await screen.findByRole('button', { name: 'Back to queue' })
+
+  await user.click(await screen.findByRole('button', { name: 'Progressing' }))
+
+  await vi.waitFor(() => expect(calls.startCallSession).toHaveBeenCalledTimes(1))
+  expect(vi.mocked(calls.startCallSession).mock.calls[0]![0]).toMatchObject({ leadId: 'lead-2' })
+})

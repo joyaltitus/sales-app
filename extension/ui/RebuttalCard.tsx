@@ -20,6 +20,8 @@ type Props = {
   /** null until this rebuttal has been inserted — nothing to rate before that. */
   rated: 'worked' | 'didnt_work' | null
   canRate: boolean
+  /** A call session is open: the rep SAYS the rebuttal, so the verb is not "Insert". */
+  inCall?: boolean
   busy?: boolean
 }
 
@@ -31,7 +33,7 @@ type Props = {
  * model — the roadmap remembers where it was.
  */
 export function RebuttalCard({
-  script, picked, vars, backLabel, onBack, onInsert, onExpand, onFeedback, rated, canRate, busy = false,
+  script, picked, vars, backLabel, onBack, onInsert, onExpand, onFeedback, rated, canRate, inCall = false, busy = false,
 }: Props) {
   const [asking, setAsking] = useState(false)
   const [words, setWords] = useState('')
@@ -80,9 +82,10 @@ export function RebuttalCard({
         {picked.paragraphs.length === 0 ? (
           <p className="text-xs text-fg-subtle">No script written for this objection yet.</p>
         ) : (
-          <ul className="space-y-1">
+          /* Same teleprompter measure as the roadmap cue — see RoadmapStage. */
+          <ul data-testid="cue" className="max-w-[45ch] space-y-2">
             {picked.paragraphs.slice(0, 3).map((paragraph, index) => (
-              <li key={index} className="line-clamp-2 text-xs leading-relaxed break-words text-fg-muted">
+              <li key={index} className="text-lg leading-normal break-words text-fg-muted">
                 {highlighted(paragraph, vars)}
               </li>
             ))}
@@ -90,7 +93,7 @@ export function RebuttalCard({
         )}
         <div className="mt-2 flex items-center gap-1.5">
           <Button variant="secondary" size="sm" className="min-h-11 flex-1" disabled={busy || picked.paragraphs.length === 0} onClick={onInsert}>
-            Insert to WA
+            {inCall ? 'Said it →' : 'Insert to WA'}
           </Button>
           <button
             type="button"
