@@ -1,6 +1,4 @@
-import type { Cached, LeadDetail, QueueItem, Rebuttal } from './contracts'
-import type { LibraryScript } from '@app/lib/scripts-data'
-import type { ObjectionTaxonomyRow } from '@app/lib/objections-data'
+import type { Cached, LeadDetail, PlaybookLibrary, QueueItem } from './contracts'
 
 export const CACHE_KEYS = {
   queue: 'rep.cache.queue',
@@ -11,11 +9,9 @@ export const CACHE_KEYS = {
 export type ExtensionCache = {
   [CACHE_KEYS.queue]: Cached<QueueItem[]>
   [CACHE_KEYS.leadDetails]: Cached<LeadDetail>[]
-  [CACHE_KEYS.library]: Cached<{
-    scripts: LibraryScript[]
-    taxonomy: ObjectionTaxonomyRow[]
-    rebuttals: Rebuttal[]
-  }>
+  // One entry, everything the playbook needs: a mid-call panel that has to
+  // stitch three cache reads together is a panel that renders in three steps.
+  [CACHE_KEYS.library]: Cached<PlaybookLibrary>
 }
 
 export async function readCache<K extends keyof ExtensionCache>(key: K): Promise<ExtensionCache[K] | null> {

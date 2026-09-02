@@ -32,7 +32,8 @@ describe('closed write registry', () => {
 
   it('contains exactly the frozen safe kinds and no send operation', () => {
     expect(Object.keys(WRITE_REGISTRY).sort()).toEqual([
-      'add_follow_up', 'add_note', 'create_lead', 'log_objection', 'log_outcome', 'save_lead',
+      'add_follow_up', 'add_note', 'create_lead', 'delete_spin', 'log_objection', 'log_outcome',
+      'playbook_gap', 'save_lead', 'save_spin', 'script_feedback', 'script_used', 'token_received',
       'update_follow_up',
     ])
   })

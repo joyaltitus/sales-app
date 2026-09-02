@@ -27,13 +27,49 @@ export type Prefs = {
   quietTo: string
   /** Chosen workspace when the rep belongs to more than one client. */
   activeClientId: string | null
+  /** Dialect the HUD opens in; null = follow the workspace default. */
+  defaultLang: string | null
+  /** Open scripts on "Mine" rather than the company standard. */
+  useMine: boolean
+  /** Show the call roadmap when a lead opens. */
+  showRoadmap: boolean
+  /** lead_id → items.id — the course this lead was last talked about with. */
+  courseByLead: Record<string, string>
+  /** Roadmap progress for the ONE lead currently in front of the rep. Keyed by
+   *  lead so a panel remount resumes; a different lead starts at step 0, which
+   *  is what "reset on lead change" has to mean during a call. */
+  roadmap: { leadId: string; step: number } | null
 }
 
+// Every old key keeps its old default: a rep who upgrades must not discover
+// their chat mode, quiet hours or workspace reset themselves overnight.
 export const DEFAULT_PREFS: Prefs = {
   followChat: true,
   quietFrom: '21:00',
   quietTo: '09:00',
   activeClientId: null,
+  defaultLang: null,
+  useMine: false,
+  showRoadmap: true,
+  courseByLead: {},
+  roadmap: null,
+}
+
+/** Bounded: one entry per lead the rep ever opened would grow without end. */
+const MAX_REMEMBERED_COURSES = 100
+
+export async function rememberCourse(leadId: string, itemId: string | null): Promise<void> {
+  const current = (await loadPrefs()).courseByLead
+  const next: Record<string, string> = { ...current }
+  delete next[leadId]
+  if (itemId) next[leadId] = itemId
+  const keys = Object.keys(next)
+  for (const key of keys.slice(0, Math.max(0, keys.length - MAX_REMEMBERED_COURSES))) delete next[key]
+  await savePrefs({ courseByLead: next })
+}
+
+export async function rememberStage(leadId: string, step: number): Promise<void> {
+  await savePrefs({ roadmap: { leadId, step } })
 }
 
 export async function loadPrefs(): Promise<Prefs> {

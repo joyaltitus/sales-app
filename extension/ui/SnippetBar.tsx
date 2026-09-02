@@ -14,14 +14,28 @@ type Props = {
 }
 
 /**
- * Snippet insert.
+ * Put `text` in the composer, or as close as we can get, and say which happened.
  *
  * The insert path stops at the composer, by construction: it fills the box and
  * returns. There is no send here and no timer that could become one — the rep
  * reads what landed and presses Enter. When WhatsApp Web isn't open, or the
  * composer isn't there to fill, the text goes to the clipboard instead so the
  * rep is never left with a dead button.
+ *
+ * Every insert in the panel — snippets, scripts, rebuttals, the token ask —
+ * comes through here, so the three sentences a rep learns to recognise stay
+ * exactly three sentences.
  */
+export async function insertWithFallback(text: string): Promise<string> {
+  if (await insertSnippet(text)) return 'Added to the WhatsApp box. Read it, then press Enter.'
+  try {
+    await navigator.clipboard.writeText(text)
+    return 'Copied — paste it into the chat.'
+  } catch {
+    return 'Couldn’t reach WhatsApp Web. Open the chat, then try again.'
+  }
+}
+
 export function SnippetBar({ scripts, vars, onResult }: Props) {
   const [personal, setPersonal] = useState<Snippet[]>([])
 
@@ -35,17 +49,7 @@ export function SnippetBar({ scripts, vars, onResult }: Props) {
   }, [])
 
   async function insert(snippet: Snippet) {
-    const text = renderSnippet(snippet.body, vars)
-    if (await insertSnippet(text)) {
-      onResult('Added to the WhatsApp box. Read it, then press Enter.')
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(text)
-      onResult('Copied — paste it into the chat.')
-    } catch {
-      onResult('Couldn’t reach WhatsApp Web. Open the chat, then try again.')
-    }
+    onResult(await insertWithFallback(renderSnippet(snippet.body, vars)))
   }
 
   return (
