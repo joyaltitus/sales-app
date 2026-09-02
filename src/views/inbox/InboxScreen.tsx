@@ -108,9 +108,21 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   const [query, setQuery] = useState('')
 
   // SA-06 "My inbox": chats labeled to me (`conversations.assigned_to`).
-  // Reps land on My (Joyal's spec — the employee opens to their own chats,
-  // with All one tap away); desktop roles land on All. Rendering scope only.
-  const [scope, setScope] = useState<'my' | 'all'>(role === 'agent' ? 'my' : 'all')
+  // Desktop roles land on All and may switch.
+  //
+  // AT-33 amends SA-06 for reps only: a rep no longer gets "All one tap away".
+  // The floor for a tenant-wide view is manager, so below it the scope is fixed
+  // at 'my' and the toggle is not painted — offering a control whose only effect
+  // is to show work that is not yours is not a shortcut, it is the absence of
+  // the scoping this AT exists to add.
+  //
+  // RENDERING SCOPE ONLY, and deliberately so: `conversations` SELECT stays
+  // tenant-wide under RLS for every role (MASTER-PLAN §B), because the extension
+  // and the assignment controls both need to resolve rows the rep does not own.
+  // Hiding a row grants nothing and withholds nothing — this is product
+  // behaviour, and the test for it proves the FILTER, never the wall.
+  const repScoped = role === 'agent'
+  const [scope, setScope] = useState<'my' | 'all'>(repScoped ? 'my' : 'all')
   const { items: teammates } = useTeammates(clientId)
   const labelFor = useCallback(
     (assignedTo: string | null): string | null => {
@@ -325,6 +337,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
       </div>
       {/* Scope + channel controls. */}
       <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+        {!repScoped && (
         <div
           role="tablist"
           aria-label="Inbox scope"
@@ -357,6 +370,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             </button>
           ))}
         </div>
+        )}
         <div
           role="tablist"
           aria-label="Channel"

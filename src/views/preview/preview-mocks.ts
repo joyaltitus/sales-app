@@ -158,3 +158,171 @@ export const MOCK_FEATURE_GRANTS = [
   },
   { id: 'fg-4', feature: 'agent_autopilot', granted: false, enabled: true, enabled_roles: [] },
 ]
+
+// ---------------------------------------------------------------------------
+// ACCESS-01 C3 — the manage view, attribution and approvals (sections 20-22).
+// Same rule as everything above: /preview is a public route, so nothing here
+// may come from (or resemble) a live read.
+// ---------------------------------------------------------------------------
+export const MOCK_PRODUCTS = [
+  {
+    id: 'it-1',
+    slug: 'weekend-intensive',
+    name: 'Weekend intensive',
+    category: 'course',
+    description: 'Two Saturdays, 9am to 1pm, at the Kochi centre.',
+    price: 12000,
+    ai_instruction: 'Lead with the schedule; parents ask about timing first.',
+    active: true,
+  },
+  {
+    id: 'it-2',
+    slug: 'foundation-term',
+    name: 'Foundation term',
+    category: 'course',
+    // Deliberately trips the honesty lint, so the warning is visible in review.
+    description: 'Twelve weeks. We guarantee a seat in the next batch.',
+    price: 45000,
+    ai_instruction: null,
+    active: true,
+  },
+]
+
+export const MOCK_FAQS = [
+  {
+    id: 'ke-1',
+    category: 'fees',
+    question: 'Do you offer instalments?',
+    keywords: ['instalment', 'emi', 'part payment'],
+    answer:
+      'Yes — the foundation term can be paid in two instalments, split across the first month.',
+    follow_up: 'Would you like the dates for the next batch?',
+    active: true,
+  },
+  {
+    id: 'ke-2',
+    category: 'logistics',
+    question: 'Where are you located?',
+    keywords: ['address', 'location', 'directions'],
+    answer: 'Panampilly Nagar, Kochi — five minutes from the metro station.',
+    follow_up: null,
+    active: true,
+  },
+]
+
+export const MOCK_PROFILE = {
+  id: 'bp-1',
+  greeting_message: 'Hi! Thanks for writing in. What would you like to know about our courses?',
+  fallback_message: 'Let me check that with the team and come back to you.',
+  escalation_contact: 'Bilal Ahmed · +91 98470 11111',
+  location_text: 'Panampilly Nagar, Kochi',
+  payment_text: 'UPI or bank transfer. Instalments available on the foundation term.',
+  escalation_keywords: ['human', 'agent', 'manager', 'complaint', 'refund', 'legal', 'cancel'],
+  draft: null,
+  draft_updated_at: null,
+}
+
+export const MOCK_RULES = [
+  {
+    id: 'pr-1',
+    rule_key: 'obj_price_400',
+    priority: 400,
+    trigger_keywords: ['too costly', 'expensive', 'cheaper'],
+    match_mode: 'any',
+    response_text:
+      'I understand. The foundation term works out to about ₹3,750 a week, and it can be paid in two instalments.',
+    media_bundle_key: 'fees_pack',
+    active: true,
+  },
+  {
+    id: 'pr-2',
+    rule_key: 'tell_timings',
+    priority: 210,
+    trigger_keywords: ['timing', 'schedule', 'when'],
+    match_mode: 'any',
+    response_text:
+      'Weekday batches run 6pm to 8pm; the weekend intensive is Saturdays, 9am to 1pm.',
+    media_bundle_key: null,
+    active: true,
+  },
+]
+
+export const MOCK_CAMPAIGNS = [
+  {
+    id: 'cm-1',
+    campaign_key: 'onam_2026',
+    name: 'Onam 2026',
+    channel: 'meta_ads',
+    context_text: 'Early-bird pricing on the foundation term until 30 September.',
+    trigger: { code_keywords: ['onam'], ctwa_source_ids: ['120210000000123'] },
+    spend_minor: 4200000,
+    active: true,
+    starts_at: '2026-08-15T00:00:00Z',
+    ends_at: '2026-09-30T00:00:00Z',
+  },
+]
+
+export const MOCK_ROI = [
+  {
+    campaign_id: 'cm-1',
+    campaign_key: 'onam_2026',
+    name: 'Onam 2026',
+    channel: 'meta_ads',
+    spend_minor: 4200000,
+    conversations: 184,
+    leads: 96,
+    won: 14,
+    paid_orders: 14,
+    revenue_minor: 63000000,
+    cost_per_lead_minor: 43750,
+    cost_per_won_minor: 300000,
+  },
+  {
+    campaign_id: 'cm-2',
+    campaign_key: 'search_always_on',
+    name: 'Search — always on',
+    channel: 'google_ads',
+    spend_minor: 1800000,
+    conversations: 41,
+    leads: 0,
+    won: 0,
+    paid_orders: 0,
+    revenue_minor: 0,
+    // Zero leads means UNKNOWN cost per lead, never ₹0 — the case worth seeing
+    // rendered, since it is the one a reviewer would otherwise read as free.
+    cost_per_lead_minor: null,
+    cost_per_won_minor: null,
+  },
+]
+
+export const MOCK_SIGHTINGS = [
+  {
+    id: 'sg-1',
+    source_kind: 'ctwa' as const,
+    source_value: '120210000000999',
+    hit_count: 7,
+    first_seen_at: '2026-08-28T09:12:00Z',
+    last_seen_at: '2026-09-02T16:40:00Z',
+  },
+]
+
+export const MOCK_APPROVAL_GROUPS = [
+  {
+    sessionId: 'sess-1',
+    runId: 'run-1',
+    proposerId: 'u-3',
+    createdAt: '2026-09-02T11:20:00Z',
+    steps: [
+      {
+        id: 'ev-1',
+        sessionId: 'sess-1',
+        runId: 'run-1',
+        proposerId: 'u-3',
+        step: 'step-a',
+        tool: 'update_lead',
+        argsSummary: { lead: 'Anjali Ramesh', field: 'status', value: 'won' },
+        createdAt: '2026-09-02T11:20:00Z',
+      },
+    ],
+  },
+]

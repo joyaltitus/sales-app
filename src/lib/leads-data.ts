@@ -32,6 +32,12 @@ export type LeadItem = {
   objection: string | null
   lost_reason: string | null
   updated_at: string
+  // AT-33: the two columns rep_queue_v resolves an owner from, alongside
+  // conversations.assigned_to. Read here so the rep scope can use the SAME
+  // definition of "mine" the view (and the extension) already use, rather than
+  // a second, narrower one that loses a rep their own manually-created leads.
+  owner_id: string | null
+  created_by: string | null
   contact: { profile_name: string | null; channel: string; external_id: string } | null
   // SA-05: `last_customer_message_at` joined for temperature derivation (the
   // Workbench definition of lastActivityAt) — one read shape, not a second
@@ -114,7 +120,7 @@ export function useLeads(clientId: string | null) {
     const { data, error: err } = await supabase
       .from('leads')
       .select(
-        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, next_action, objection, lost_reason, updated_at, contacts ( profile_name, channel, external_id ), conversations ( assigned_to, last_customer_message_at )',
+        'id, contact_id, conversation_id, stage_id, status, est_value, temperature_override, next_action, objection, lost_reason, updated_at, owner_id, created_by, contacts ( profile_name, channel, external_id ), conversations ( assigned_to, last_customer_message_at )',
       )
       .eq('client_id', clientId)
       .order('updated_at', { ascending: false })

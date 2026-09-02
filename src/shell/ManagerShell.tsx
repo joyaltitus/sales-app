@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target, TrendingUp, ShieldCheck } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -25,6 +25,12 @@ const DashboardScreen = lazy(() =>
 const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ default: m.Teardown })))
 const TeamPage = lazy(() => import('../views/team/TeamPage').then((m) => ({ default: m.TeamPage })))
 const TargetsPage = lazy(() => import('../views/targets/TargetsPage').then((m) => ({ default: m.TargetsPage })))
+// ACCESS-01 C3: the manager half of the wave. Attribution is theirs because
+// campaign_roi_v walls at manager; Approvals is theirs because manager IS the
+// approver floor. The manage view is NOT here — 069 makes campaigns_write
+// client_admin, so every write on it would come back forbidden.
+const AttributionView = lazy(() => import('../views/attribution/AttributionView').then((m) => ({ default: m.AttributionView })))
+const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then((m) => ({ default: m.ApprovalsView })))
 
 // Manager view: desktop-first (works on phone). Left rail nav, fixed shell.
 //
@@ -39,6 +45,8 @@ const RAIL = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
+  { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
+  { to: '/attribution', label: 'Attribution', icon: TrendingUp },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
 ]
@@ -122,6 +130,8 @@ export function ManagerShell() {
                 <Route path="docs" element={<DocsStudio />} />
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
+                <Route path="approvals" element={<ApprovalsView />} />
+                <Route path="attribution" element={<AttributionView />} />
                 <Route path="targets" element={<TargetsPage />} />
                 {/* Pre-SA-04 paths — keep deep links alive. */}
                 <Route path="leads" element={<Navigate to={href('/crm')} replace />} />
@@ -133,7 +143,7 @@ export function ManagerShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-8 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-10 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}

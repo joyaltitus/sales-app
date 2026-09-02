@@ -27,7 +27,18 @@ import {
   MOCK_FUNNEL,
   MOCK_TEAM,
   MOCK_FEATURE_GRANTS,
+  MOCK_PRODUCTS,
+  MOCK_FAQS,
+  MOCK_PROFILE,
+  MOCK_RULES,
+  MOCK_CAMPAIGNS,
+  MOCK_ROI,
+  MOCK_SIGHTINGS,
+  MOCK_APPROVAL_GROUPS,
 } from './preview-mocks'
+import { ManageView } from '../manage/ManageView'
+import { AttributionView } from '../attribution/AttributionView'
+import { ApprovalsView } from '../approvals/ApprovalsView'
 import { TeamPage } from '../team/TeamPage'
 import { AiFeaturesCard } from '../settings/AiFeaturesCard'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
@@ -186,6 +197,36 @@ export default function PreviewGallery() {
         <Section number="19" title="AI features and the plan" note="Three columns, three authorities: the plan is stated and never editable here (the database refuses a browser write to it outright), while the on/off switch and the roles that see each feature belong to the tenant's admin.">
           <div data-testid="ai-features-preview" className="mx-auto max-w-2xl">
             <AiFeaturesCard preview={MOCK_FEATURE_GRANTS} />
+          </div>
+        </Section>
+        <Section number="20" title="Your setup — the client runs their own configuration" note="Five tabs the business owner works without us. What is locked is shown rather than hidden — the slug, the handover words, the trigger words — because an owner who can see the boundary stops asking to cross it. Every card carries History, and a restore is written forward as a new edit rather than rewound.">
+          <div className="grid gap-6">
+            <div data-testid="manage-products-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/setup — products, with the honesty lint firing on the second card</p>
+              <ManageView preview={{ tab: 'products', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
+            </div>
+            <div data-testid="manage-replies-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/setup — objection replies, trigger words read-only</p>
+              <ManageView preview={{ tab: 'replies', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
+            </div>
+          </div>
+        </Section>
+        <Section number="21" title="Attribution" note="What each campaign cost and what came back. A dash is not a zero: with no leads yet the cost per lead is unknown, and the view returns NULL rather than dividing — so the table says so instead of reporting free customers. Below it, the ad sources that reached us and matched nothing.">
+          <div data-testid="attribution-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+            <p className="label-caps border-b border-border px-4 py-2 text-accent">manager · /manage/attribution</p>
+            <AttributionView preview={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />
+          </div>
+        </Section>
+        <Section number="22" title="Approvals — the manager's signature" note="The same queue from both sides. A manager can clear a rep's proposal; the rep who raised it sees “awaiting manager” and no button, because nobody clears their own. The action still runs with the person who asked for it — approving supplies authority, not reach.">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div data-testid="approvals-manager-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">manager · /manage/approvals</p>
+              <ApprovalsView preview={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-2', viewerRole: 'manager', members: MOCK_TEAM }} />
+            </div>
+            <div data-testid="approvals-proposer-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+              <p className="label-caps border-b border-border px-4 py-2 text-accent">the rep who proposed it · /rep</p>
+              <ApprovalsView preview={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-3', viewerRole: 'agent', members: MOCK_TEAM }} />
+            </div>
           </div>
         </Section>
       </main>
