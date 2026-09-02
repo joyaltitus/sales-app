@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { AlertTriangle, Bell, Check, ChevronRight, Mail, Search, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Chip } from '../../ui/Chip'
+import { ScriptVoiceSection } from './ScriptVoiceSection'
 import type { GmailConnectionPreview } from '../email/emailMocks'
 
 export type AutonomyConfigPreview = {
@@ -30,10 +31,16 @@ export default function SettingsPanel() {
     window.setTimeout(() => setGmail({ account: 'priya@acme.in', status: 'connected', scopes: ['read', 'send'], lastSyncAt: 'Just now', sample: true }), 650)
   }
 
-  const any = show('gmail email channel') || show('copilot autonomy approval') || show('notifications assignment overdue deals')
-  return <section className="mt-5 space-y-4" aria-labelledby="settings-title"><div><p className="label-caps text-accent">Settings · Preview</p><h2 id="settings-title" className="mt-1 text-lg font-semibold text-fg">Connections and control</h2><div className="relative mt-3"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a setting" aria-label="Find a setting" className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle" /></div></div>
+  const any =
+    show('gmail email channel') ||
+    show('copilot autonomy approval') ||
+    show('notifications assignment overdue deals') ||
+    show('my script voice spin dialect wording')
+  return <section className="mt-5 space-y-4" aria-labelledby="settings-title"><div><p className="label-caps text-accent">Settings</p><h2 id="settings-title" className="mt-1 text-lg font-semibold text-fg">Connections and control</h2><div className="relative mt-3"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a setting" aria-label="Find a setting" className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-fg placeholder:text-fg-subtle" /></div></div>
 
-    {!any && <div className="rounded-xl border border-dashed border-border-strong p-6 text-center"><p className="text-sm font-semibold text-fg">No setting matches.</p><p className="mt-1 text-xs text-fg-muted">Try Gmail, copilot or notifications.</p></div>}
+    <ScriptVoiceSection show={show} />
+
+    {!any && <div className="rounded-xl border border-dashed border-border-strong p-6 text-center"><p className="text-sm font-semibold text-fg">No setting matches.</p><p className="mt-1 text-xs text-fg-muted">Try Gmail, copilot, notifications or script voice.</p></div>}
 
     {show('gmail email channel') && <article className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1"><header className="flex items-center gap-3 border-b border-border p-4"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-info-subtle text-info"><Mail aria-hidden size={18} /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-fg">Gmail</h3><p className="mt-0.5 text-2xs text-fg-muted">Bring email into the unified Inbox.</p></div><Chip tone={gmail.status === 'connected' ? 'success' : gmail.status === 'error' ? 'danger' : gmail.status === 'connecting' ? 'warn' : 'neutral'}>{gmail.status}</Chip></header><div className="p-4">{gmail.status === 'disconnected' && <><p className="text-xs leading-relaxed text-fg-muted">Connect a workspace Gmail account to read threads and send reviewed drafts.</p><div className="mt-3 flex gap-2"><Button onClick={connect}>Connect Gmail</Button><Button variant="ghost" onClick={() => setGmail({ account: null, status: 'error', scopes: [], lastSyncAt: null, error: 'Google authorization was cancelled.', sample: true })}>Preview error</Button></div></>}{gmail.status === 'connecting' && <div className="flex items-center gap-3 text-xs text-fg-muted"><span className="h-4 w-4 animate-spin rounded-pill border-2 border-accent border-t-transparent" />Waiting for Google authorization…</div>}{gmail.status === 'connected' && <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-success-subtle text-success"><Check aria-hidden size={15} /></span><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-fg">{gmail.account}</p><p className="mt-0.5 text-2xs text-fg-muted">Read + send · synced {gmail.lastSyncAt}</p></div><button onClick={() => setGmail({ account: null, status: 'disconnected', scopes: [], lastSyncAt: null, sample: true })} className="text-2xs font-semibold text-fg-muted hover:text-danger">Disconnect</button></div>}{gmail.status === 'error' && <div><div className="flex gap-2 rounded-lg bg-danger-subtle p-3 text-xs text-danger"><AlertTriangle aria-hidden size={15} className="shrink-0" />{gmail.error}</div><Button variant="secondary" size="sm" className="mt-3" onClick={connect}>Try again</Button></div>}<p className="mt-3 text-2xs text-fg-subtle">OAuth affordance only — not wired</p></div></article>}
 
