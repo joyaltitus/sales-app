@@ -8,7 +8,9 @@ import {
   type LeadPatch,
 } from '@app/lib/crm-actions'
 import { logObjection, type ObjectionSource } from '@app/lib/objections-data'
+import { updateScriptUsageFeedback } from '@app/lib/scripts-data'
 import type { CallOutcome, OutboxEntry } from './contracts'
+import { panelSupabase } from './panel-client'
 import { drain, enqueue } from './outbox'
 
 export const OUTBOX_KEY = 'rep.outbox'
@@ -126,6 +128,119 @@ export const WRITE_REGISTRY: Record<OutboxEntry['kind'], (entry: OutboxEntry) =>
     })
     assertOk(result, true)
   },
+
+  // ── Playbook writes ────────────────────────────────────────────────────────
+  //
+  // insertScriptUsage/insertPlaybookGap in src/lib predate migration 068 and
+  // take neither the client-minted id nor the new columns, so these go direct
+  // under the same RLS the helpers rely on.
+  // dedupe-after-PLAY-A: collapse into src/lib/scripts-data.ts once its
+  // signatures carry id, call_session_id, lang, used_personal and
+  // script_version_id.
+
+  /** Insert-as-draft usage. The entry id IS the row id, so a double-tap that
+   *  reuses the same handle collides on the primary key and 23505 means done. */
+  async script_used(entry) {
+    const args = entry.args
+    const { error } = await panelSupabase.from('script_usage').insert({
+      id: entry.id,
+      client_id: text(args, 'client_id'),
+      script_version_id: text(args, 'script_version_id'),
+      actor_id: text(args, 'actor_id'),
+      objection_log_id: optionalText(args, 'objection_log_id'),
+      conversation_id: optionalText(args, 'conversation_id'),
+      call_session_id: optionalText(args, 'call_session_id'),
+      lang: optionalText(args, 'lang'),
+      used_personal: args.used_personal === true,
+      inserted_as_draft: true,
+    })
+    assertOk({ ok: !error, message: error?.message, code: error?.code }, true)
+  },
+
+  /** 👍/👎 — an UPDATE keyed by the usage id the panel minted at insert time. */
+  async script_feedback(entry) {
+    const result = await updateScriptUsageFeedback(
+      text(entry.args, 'client_id'),
+      text(entry.args, 'usage_id'),
+      text(entry.args, 'feedback') as 'worked' | 'didnt_work',
+    )
+    assertOk(result)
+  },
+
+  /** "What did they say?" — the words the standard had no answer for. */
+  async playbook_gap(entry) {
+    const args = entry.args
+    const { error } = await panelSupabase.from('playbook_gaps').insert({
+      id: entry.id,
+      client_id: text(args, 'client_id'),
+      taxonomy_id: text(args, 'taxonomy_id'),
+      script_version_id: optionalText(args, 'script_version_id'),
+      objection_log_id: optionalText(args, 'objection_log_id'),
+      exact_customer_words: optionalText(args, 'exact_customer_words'),
+      created_by: text(args, 'created_by'),
+    })
+    // 23505 is uq_playbook_gaps_one_open: already flagged, not a failure.
+    assertOk({ ok: !error, message: error?.message, code: error?.code }, true)
+  },
+
+  /** The rep's own wording, one row per (script, dialect) — upsert, not append. */
+  async save_spin(entry) {
+    const args = entry.args
+    const { error } = await panelSupabase.from('quick_replies').upsert({
+      client_id: text(args, 'client_id'),
+      scope: 'personal',
+      script_id: text(args, 'script_id'),
+      lang: text(args, 'lang'),
+      title: text(args, 'title'),
+      body: text(args, 'body'),
+      created_by: text(args, 'created_by'),
+    }, { onConflict: 'client_id,created_by,script_id,lang' })
+    assertOk({ ok: !error, message: error?.message, code: error?.code })
+  },
+
+  async delete_spin(entry) {
+    const args = entry.args
+    const { error } = await panelSupabase.from('quick_replies').delete()
+      .eq('client_id', text(args, 'client_id'))
+      .eq('created_by', text(args, 'created_by'))
+      .eq('script_id', text(args, 'script_id'))
+      .eq('lang', text(args, 'lang'))
+      .eq('scope', 'personal')
+    assertOk({ ok: !error, message: error?.message, code: error?.code })
+  },
+
+  /**
+   * "Token received".
+   *
+   * lead_facts has no browser INSERT policy, so this tries the structured row
+   * first and falls back to a note with a fixed prefix. Either way the money
+   * shows up on the timeline — a rep who collected ₹5,000 and sees nothing is
+   * a rep who stops trusting the button.
+   */
+  async token_received(entry) {
+    const args = entry.args
+    const clientId = text(args, 'client_id')
+    const amount = typeof args.amount === 'number' ? args.amount : null
+    const at = optionalText(args, 'at') ?? new Date().toISOString()
+    const { error } = await panelSupabase.from('lead_facts').insert({
+      id: entry.id,
+      client_id: clientId,
+      lead_id: text(args, 'lead_id'),
+      kind: 'payment',
+      fact_key: 'token_received',
+      status: 'confirmed',
+      value: { amount, at },
+    })
+    if (!error || error.code === '23505') return
+    const note = await addNote(clientId, {
+      id: entry.id,
+      conversation_id: null,
+      lead_id: text(args, 'lead_id'),
+      author: optionalText(args, 'actor_id'),
+      body: `TOKEN ₹${amount ?? '—'} received`,
+    })
+    assertOk(note, true)
+  },
 }
 
 export async function readOutbox(): Promise<OutboxEntry[]> {
@@ -133,13 +248,25 @@ export async function readOutbox(): Promise<OutboxEntry[]> {
   return Array.isArray(stored[OUTBOX_KEY]) ? stored[OUTBOX_KEY] as OutboxEntry[] : []
 }
 
+/**
+ * Queue one write.
+ *
+ * `id` is the idempotency handle. Callers that can fire twice for the same real
+ * action — the same script inserted twice into the same call — pass the SAME id
+ * both times: the second enqueue is dropped here if it is still pending, and
+ * collides on the primary key if it already drained. Either way, one row.
+ */
 export async function queueWrite(
   kind: OutboxEntry['kind'],
   args: Args,
   now = new Date(),
+  id: string = crypto.randomUUID(),
 ): Promise<{ ok: true; entry: OutboxEntry } | { ok: false; error: 'OUTBOX_FULL' }> {
+  const pending = await readOutbox()
+  const already = pending.find((item) => item.id === id)
+  if (already) return { ok: true, entry: already }
   const entry: OutboxEntry = {
-    id: crypto.randomUUID(),
+    id,
     kind,
     args: kind === 'save_lead'
       ? { ...args, saved_offline_at: now.toISOString(), offline_label: `saved offline at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` }
@@ -148,7 +275,7 @@ export async function queueWrite(
     attempts: 0,
     last_error: null,
   }
-  const result = enqueue(await readOutbox(), entry)
+  const result = enqueue(pending, entry)
   if (!result.ok) return { ok: false, error: result.error }
   await chrome.storage.local.set({ [OUTBOX_KEY]: result.list })
   return { ok: true, entry }
