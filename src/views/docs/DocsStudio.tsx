@@ -65,7 +65,9 @@ export function DocsStudio() {
           <div className="flex rounded-md border border-border bg-surface-sunk p-0.5" role="tablist" aria-label="Docs workspace">
             {(['documents', 'playbook'] as const).map((item) => <button key={item} role="tab" aria-selected={workspace === item} onClick={() => setWorkspace(item)} className={['rounded-sm px-3 py-1.5 text-xs font-semibold capitalize', workspace === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}>{item}</button>)}
           </div>
-          <SampleTag label="Preview — not wired" />
+          {/* The Documents half is still mock; the Playbook half is wired to
+              script_versions and the 068 settings, so the tag would be a lie there. */}
+          {workspace === 'documents' && <SampleTag label="Preview — not wired" />}
           {workspace === 'documents' && <Chip tone={approval === 'approved' ? 'success' : approval === 'pending' ? 'warn' : 'neutral'}>
             {approval === 'approved' ? 'Approved' : approval === 'pending' ? 'Approval pending' : 'Draft'}
           </Chip>}

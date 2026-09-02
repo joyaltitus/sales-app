@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -22,6 +22,7 @@ const AgentScreen = lazy(() =>
 const DashboardScreen = lazy(() =>
   import('../views/dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
 )
+const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ default: m.Teardown })))
 
 // Manager view: desktop-first (works on phone). Left rail nav, fixed shell.
 //
@@ -35,6 +36,7 @@ const RAIL = [
   { to: '/crm', label: 'CRM', icon: Users },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
+  { to: '/teardown', label: 'Teardown', icon: Wrench },
 ]
 
 function LazyFallback() {
@@ -110,6 +112,7 @@ export function ManagerShell() {
                 <Route path="dashboard" element={<DashboardScreen />} />
                 <Route path="agent" element={<AgentScreen />} />
                 <Route path="docs" element={<DocsStudio />} />
+                <Route path="teardown" element={<Teardown />} />
                 {/* Pre-SA-04 paths — keep deep links alive. */}
                 <Route path="leads" element={<Navigate to="/crm" replace />} />
                 <Route path="assign" element={<Navigate to="/crm" replace />} />
@@ -120,7 +123,7 @@ export function ManagerShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-5 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-6 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
