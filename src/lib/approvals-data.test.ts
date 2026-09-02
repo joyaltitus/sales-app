@@ -64,6 +64,7 @@ function pendingRow(step: string, runId = 'run-1', createdAt = '2026-09-01T10:00
     run_id: runId,
     tool: 'update_lead',
     args_summary: { value: 'won' },
+    approval_state: 'proposed',
     result_summary: {
       kind: 'approval_pending',
       proposer_id: REP,
@@ -83,6 +84,7 @@ function approvedRow(step: string, runId = 'run-1') {
     run_id: runId,
     tool: 'update_lead',
     args_summary: {},
+    approval_state: 'confirmed',
     result_summary: {
       kind: 'approved',
       approver_id: MANAGER,
@@ -136,6 +138,39 @@ describe('usePendingApprovals — pending is a subtraction, not a column', () =>
       TENANT,
     ])
     expect(rec.ops.some((o) => o.fn === 'limit')).toBe(true)
+  })
+
+  it('filters on a PLAIN column, never a jsonb path', () => {
+    // A recorder-builder mock records the call rather than running it, so no
+    // test in this file can prove Postgres accepts a given filter. That is the
+    // argument for only ever issuing one whose syntax is not in question — and
+    // this assertion is what stops the jsonb-path version coming back.
+    responses.set('agent_events', { data: [], error: null })
+    renderHook(() => usePendingApprovals(TENANT))
+    return waitFor(() => {
+      const columns = calls[0].ops
+        .filter((o) => o.fn === 'in' || o.fn === 'eq')
+        .map((o) => String(o.args[0]))
+      expect(columns).toContain('approval_state')
+      for (const c of columns) expect(c).not.toContain('->')
+    })
+  })
+
+  it('ignores a ceremony-state row that is not an approval event', async () => {
+    // `approval_state: 'proposed'` is reused by other flows — hub-service says
+    // so, which is why the real discriminator lives in result_summary. The
+    // server filter over-selects on purpose; this is the narrowing that pays
+    // for it.
+    responses.set('agent_events', {
+      data: [
+        { ...pendingRow('step-a'), result_summary: { kind: 'something_else' } },
+        pendingRow('step-b'),
+      ],
+      error: null,
+    })
+    const { result } = renderHook(() => usePendingApprovals(TENANT))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.groups[0].steps.map((s) => s.step)).toEqual(['step-b'])
   })
 
   it('drops a step that already has an approved row for the same run', async () => {

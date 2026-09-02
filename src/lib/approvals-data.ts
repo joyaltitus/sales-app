@@ -79,6 +79,7 @@ type EventRow = {
   tool: string
   args_summary: Record<string, unknown> | null
   result_summary: Record<string, unknown> | null
+  approval_state: string | null
   created_at: string
 }
 
@@ -86,6 +87,11 @@ function summaryString(row: EventRow, key: string): string | null {
   const v = row.result_summary?.[key]
   return typeof v === 'string' ? v : null
 }
+
+/** The two `approval_state` values the ceremony writes: hub-service emits a
+ *  pending proposal as 'proposed' and a cleared one as 'confirmed'. Both are
+ *  ORDINARY COLUMN values, which is the point — see the note on the read below. */
+const CEREMONY_STATES = ['proposed', 'confirmed']
 
 /** Still-pending = an `approval_pending` whose (run_id, step) has no `approved`
  *  row. There is no "cleared" flag to read: agent_events is append-only by
@@ -103,11 +109,31 @@ export function usePendingApprovals(clientId: string | null) {
       return
     }
     setLoading(true)
+    // The server filter uses `approval_state`, a PLAIN column, and the
+    // `result_summary.kind` narrowing happens below in JS.
+    //
+    // The obvious query is `.in('result_summary->>kind', [...])`, and it was the
+    // first version of this. It is probably valid PostgREST — but a
+    // recorder-builder test records the call rather than running it, so no test
+    // here can prove Postgres accepts a jsonb path in an `in.()` filter, and
+    // this screen shipped without a live pass. A query nothing can prove is the
+    // wrong thing to put on the only path to an approval queue.
+    //
+    // `approval_state` is not exclusive to this ceremony — 'proposed' is reused,
+    // which is exactly why hub-service parks the real discriminator in
+    // result_summary — so this OVER-selects and the kind check narrows it. That
+    // is a cheap trade rather than a compromise: the window still contains only
+    // approval-state rows, so it stays dense, unlike filtering raw agent_events
+    // (an audit row per tool step) client-side, where the pending rows worth
+    // seeing could sit just outside the limit and the queue would render empty
+    // with nothing wrong on its face.
     const { data, error: err } = await supabase
       .from('agent_events')
-      .select('id, user_id, session_id, run_id, tool, args_summary, result_summary, created_at')
+      .select(
+        'id, user_id, session_id, run_id, tool, args_summary, result_summary, approval_state, created_at',
+      )
       .eq('client_id', clientId)
-      .in('result_summary->>kind', [KIND_APPROVAL_PENDING, KIND_APPROVED])
+      .in('approval_state', CEREMONY_STATES)
       .order('created_at', { ascending: false })
       .limit(EVENT_LIMIT)
     if (err) {
