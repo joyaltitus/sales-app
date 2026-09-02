@@ -130,18 +130,6 @@ export default function OptionsPage() {
         </label>
       </Section>
 
-      <Section title="Calls in a full tab" hint="Opens the in-call playbook in its own browser tab, where the roadmap and the objections sit side by side instead of stacked. The panel keeps working the same way — this only adds a button.">
-        <label className="flex min-h-11 items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={prefs.openCallsInTab}
-            onChange={(event) => update({ openCallsInTab: event.target.checked })}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          <span className="text-sm text-fg">Show “Open in tab” on a lead</span>
-        </label>
-      </Section>
-
       <Section title="Quiet hours" hint="Follow-up and new-lead notifications are held during this window. Set both to the same time to switch quiet hours off.">
         <div className="flex flex-wrap items-center gap-2">
           <label className="grid gap-1">
