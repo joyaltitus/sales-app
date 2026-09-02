@@ -65,11 +65,26 @@ export function LeadsScreen({ crm = false }: { crm?: boolean }) {
   // their own + unassigned leads; manager/admin see the tenant). RENDERING
   // scope only — `leads` SELECT is tenant-wide under RLS for every role, and
   // the WRITE wall stays migration 035. Hiding a row grants nothing.
+  //
+  // AT-33 fixes what "their own" resolved to. This filter read ONLY
+  // `conversations.assigned_to`, while `rep_queue_v` — the definition the
+  // extension already ships against — resolves an owner as
+  // COALESCE(leads.owner_id, conversations.assigned_to, leads.created_by).
+  // The two disagreed in both directions: a lead explicitly owned by a rep but
+  // whose thread sat with someone else vanished from the owner's board, and a
+  // manually-created lead only appeared because assigned_to happened to be
+  // null. One definition of "mine", derived the same way in both places.
+  //
+  // A null owner (nobody's yet) stays visible to every rep. That is the
+  // standing ruling above, not an oversight: unclaimed work is exactly what a
+  // rep should be able to pick up, and rep_queue_v models it as owner = null
+  // rather than as someone else's row.
   const scopedItems = useMemo(() => {
     if (!crm || role !== 'agent') return items
-    return items.filter(
-      (l) => l.conversation?.assigned_to == null || l.conversation.assigned_to === userId,
-    )
+    return items.filter((l) => {
+      const owner = l.owner_id ?? l.conversation?.assigned_to ?? l.created_by ?? null
+      return owner === null || owner === userId
+    })
   }, [crm, role, items, userId])
 
   const visibleItems = useMemo(() => {

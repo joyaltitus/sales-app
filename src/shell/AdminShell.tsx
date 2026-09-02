@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target, SlidersHorizontal, TrendingUp, ShieldCheck } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -26,6 +26,13 @@ const Teardown = lazy(() => import('../views/manager/Teardown').then((m) => ({ d
 const TeamPage = lazy(() => import('../views/team/TeamPage').then((m) => ({ default: m.TeamPage })))
 const TargetsPage = lazy(() => import('../views/targets/TargetsPage').then((m) => ({ default: m.TargetsPage })))
 const AdminSettings = lazy(() => import('../views/settings/AiFeaturesCard').then((m) => ({ default: m.AdminSettings })))
+// ACCESS-01 C3: the configuration surface (AT-29), the ROI/sightings pair
+// (AT-30) and the manager approval queue. Lazy like every other non-landing
+// screen — the manage view carries five tabs and belongs nowhere near the
+// first paint.
+const ManageView = lazy(() => import('../views/manage/ManageView').then((m) => ({ default: m.ManageView })))
+const AttributionView = lazy(() => import('../views/attribution/AttributionView').then((m) => ({ default: m.AttributionView })))
+const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then((m) => ({ default: m.ApprovalsView })))
 
 // Admin view: desktop-first, left rail — deliberately the SAME pattern as
 // ManagerShell rather than a new one. §S5: "an extension of a working pattern,
@@ -53,6 +60,9 @@ const RAIL = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
+  { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
+  { to: '/setup', label: 'Setup', icon: SlidersHorizontal },
+  { to: '/attribution', label: 'Attribution', icon: TrendingUp },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
   { to: '/settings', label: 'Settings', icon: Settings },
@@ -127,6 +137,9 @@ export function AdminShell() {
                 <Route path="docs" element={<DocsStudio />} />
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
+                <Route path="approvals" element={<ApprovalsView />} />
+                <Route path="setup" element={<ManageView />} />
+                <Route path="attribution" element={<AttributionView />} />
                 <Route path="targets" element={<TargetsPage />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="leads" element={<Navigate to={href('/crm')} replace />} />
@@ -136,7 +149,7 @@ export function AdminShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-9 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-cols-12 border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}

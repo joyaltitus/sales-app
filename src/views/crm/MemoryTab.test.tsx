@@ -23,6 +23,8 @@ const sampleLead: LeadItem = {
   next_action: null,
   objection: null,
   lost_reason: null,
+  owner_id: null,
+  created_by: null,
   updated_at: '2026-08-10T09:00:00Z',
   contact: {
     profile_name: 'Asha Patel',

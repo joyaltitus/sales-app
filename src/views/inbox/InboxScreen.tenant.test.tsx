@@ -71,13 +71,31 @@ describe('PixellEdu inbox visibility', () => {
     expect(screen.getByTestId(`conversation-${TARGET_CONVERSATION_ID}`)).toHaveTextContent('919947638424')
   })
 
-  it('opens the assigned demo rep on My inbox and shows the target conversation', () => {
+  // AT-33 amends SA-06 here: a rep opened on "My inbox" with "All" one tap
+  // away. The tap is gone — the floor for a tenant-wide view is manager — so
+  // the rep is fixed to their own chats and the toggle is not painted at all.
+  // Their own assigned conversation still shows, which is the half of SA-06
+  // that survives.
+  it('fixes a rep to their own chats, with no way to widen the scope', () => {
     clientState.role = 'agent'
     authState.userId = DEMO_REP_ID
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><InboxScreen canSend /></MemoryRouter>)
 
-    expect(screen.getByRole('tab', { name: 'My inbox' })).toHaveAttribute('aria-selected', 'true')
+    // Scoped narrowly to the SCOPE tablist — the status filter has an "All"
+    // chip of its own, and that one is a rep's to use.
+    expect(screen.queryByRole('tablist', { name: 'Inbox scope' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'My inbox' })).not.toBeInTheDocument()
     expect(screen.getByTestId(`conversation-${TARGET_CONVERSATION_ID}`)).toHaveTextContent('919947638424')
+  })
+
+  it('hides a colleague’s conversation from a rep — the filter, not the wall', () => {
+    clientState.role = 'agent'
+    authState.userId = DEMO_REP_ID
+    queueItems.push({ ...targetConversation, id: 'someone-elses', assigned_to: 'another-rep' })
+    render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><InboxScreen canSend /></MemoryRouter>)
+
+    expect(screen.getByTestId(`conversation-${TARGET_CONVERSATION_ID}`)).toBeInTheDocument()
+    expect(screen.queryByTestId('conversation-someone-elses')).not.toBeInTheDocument()
   })
 
   it('does not show LuxeLine data while PixellEdu is active', () => {

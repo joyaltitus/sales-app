@@ -21,6 +21,8 @@ function lead(overrides: Partial<LeadItem> = {}): LeadItem {
     next_action: null,
     objection: null,
     lost_reason: null,
+    owner_id: null,
+    created_by: null,
     updated_at: '2026-08-01T09:00:00.000Z',
     contact: null,
     conversation: { assigned_to: null, last_customer_message_at: '2026-08-01T09:00:00.000Z' },
