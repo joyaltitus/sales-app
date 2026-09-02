@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  CALL_TAB_KEY,
   NOTIFIED_FOLLOW_UPS_KEY,
+  openCallTab,
   openChatTab,
   processAlarmTick,
 } from './background'
@@ -113,5 +115,55 @@ describe('chat tab reuse', () => {
     expect(tabs.update).toHaveBeenCalledWith({ url: 'whatsapp://send?phone=933333333333' })
     expect(tabs.query).not.toHaveBeenCalled()
     expect(tabs.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('call tab reuse', () => {
+  function chromeWith(session: Record<string, unknown>, tabsOver: Record<string, unknown> = {}) {
+    const store = { ...session }
+    const tabs = {
+      get: vi.fn(async (id: number) => ({ id, windowId: 5 })),
+      create: vi.fn(async () => ({ id: 91 })),
+      update: vi.fn(async () => ({})),
+      ...tabsOver,
+    }
+    const windows = { update: vi.fn(async () => ({})) }
+    vi.stubGlobal('chrome', {
+      tabs,
+      windows,
+      runtime: { getURL: (path: string) => `chrome-extension://abc${path}` },
+      storage: {
+        session: {
+          get: vi.fn(async (key: string) => (key in store ? { [key]: store[key] } : {})),
+          set: vi.fn(async (values: Record<string, unknown>) => { Object.assign(store, values) }),
+        },
+      },
+    })
+    return { tabs, windows, store }
+  }
+
+  it('AT-01/AT-02: creates the call tab once, then focuses that same tab', async () => {
+    const first = chromeWith({})
+    const created = await openCallTab()
+    expect(created).toBe(91)
+    expect(first.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://abc/call.html', active: true })
+    expect(first.store[CALL_TAB_KEY]).toBe(91)
+
+    // Second click, with the id now remembered: focus, never a second tab.
+    const second = chromeWith({ [CALL_TAB_KEY]: 91 })
+    const again = await openCallTab()
+    expect(again).toBe(91)
+    expect(second.tabs.create).not.toHaveBeenCalled()
+    expect(second.tabs.update).toHaveBeenCalledWith(91, { active: true })
+    expect(second.windows.update).toHaveBeenCalledWith(5, { focused: true })
+  })
+
+  it('AT-03: a remembered tab the rep closed falls through to a new one instead of throwing', async () => {
+    const { tabs } = chromeWith(
+      { [CALL_TAB_KEY]: 404 },
+      { get: vi.fn(async () => { throw new Error('No tab with id: 404.') }) },
+    )
+    await expect(openCallTab()).resolves.toBe(91)
+    expect(tabs.create).toHaveBeenCalledOnce()
   })
 })

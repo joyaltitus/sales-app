@@ -336,3 +336,73 @@ describe('offline', () => {
     expect((await chrome.storage.local.get(OUTBOX_KEY))[OUTBOX_KEY]).toHaveLength(3)
   })
 })
+
+describe('CallHud layout', () => {
+  it('AT-05: the panel keeps its single column — a rebuttal REPLACES the roadmap', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'column' }))
+    await screen.findByText('Opener — follow-up')
+    expect(screen.getByTestId('call-hud')).toHaveAttribute('data-layout', 'column')
+
+    await user.click(screen.getByRole('button', { name: /Too expensive/ }))
+    expect(await screen.findByText('Anchor on per-square-foot value, not total price')).toBeInTheDocument()
+    // The roadmap is gone: 380px cannot hold both, and that is the panel's contract.
+    expect(screen.queryByText(/picking up where we left off/)).not.toBeInTheDocument()
+  })
+
+  it('AT-06: the tab shows the roadmap and the rebuttal at once, objections in their own zone', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
+    expect(screen.getByTestId('call-hud')).toHaveAttribute('data-layout', 'wide')
+
+    await user.click(screen.getByRole('button', { name: /Too expensive/ }))
+    expect(await screen.findByText('Anchor on per-square-foot value, not total price')).toBeInTheDocument()
+    // The whole point: handling an objection no longer loses your place in the call.
+    expect(screen.getByText(/picking up where we left off/)).toBeInTheDocument()
+    expect(within(screen.getByTestId('call-hud-objections')).getByRole('button', { name: /Too expensive/ })).toBeInTheDocument()
+  })
+
+  it('AT-07: digits fire the objections in the order they render', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
+
+    await user.keyboard('1')
+    expect(await screen.findByText('Anchor on per-square-foot value, not total price')).toBeInTheDocument()
+
+    // Same digit again is the way back out — one key, both directions.
+    await user.keyboard('1')
+    await waitFor(() => {
+      expect(screen.queryByText('Anchor on per-square-foot value, not total price')).not.toBeInTheDocument()
+    })
+  })
+
+  it('AT-08: a digit typed into a field is text, not a shortcut', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
+
+    await user.click(screen.getByRole('button', { name: /Too expensive/ }))
+    await user.click(screen.getByRole('button', { name: 'Insert to WA' }))
+    await user.click(screen.getByRole('button', { name: 'Missed' }))
+
+    const said = await screen.findByLabelText('What did they say?')
+    await user.type(said, '2 friends got it for 3000')
+
+    // The digits are text. Had they been swallowed as shortcuts, the field would
+    // be short and objection 2 and 3 would have fired underneath the rep.
+    expect(said).toHaveValue('2 friends got it for 3000')
+    expect(screen.getByText('Anchor on per-square-foot value, not total price')).toBeInTheDocument()
+  })
+
+  it('AT-07/AT-10: no keyboard shortcuts and no tab button in the panel by default', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'column' }))
+    await screen.findByText('Opener — follow-up')
+
+    await user.keyboard('1')
+    expect(screen.queryByText('Anchor on per-square-foot value, not total price')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open in tab' })).not.toBeInTheDocument()
+  })
+})

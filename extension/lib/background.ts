@@ -58,3 +58,38 @@ export async function openChatTab(url: string, mode: ChatMode): Promise<number |
   if (tab.id === undefined) throw new Error('Chrome created a chat tab without an id')
   return tab.id
 }
+
+export const CALL_TAB_KEY = 'rep.callTabId'
+
+/**
+ * Open — or re-focus — the ONE full-tab call HUD.
+ *
+ * Reuse is the whole point: a rep who clicks this on six leads in a row must
+ * end with one tab, not six. The stored id is a hint, never a promise — the rep
+ * may have closed the tab, and Chrome rejects an update to a dead id — so a
+ * miss falls through to create instead of throwing (a throw here would leave
+ * the rep with no HUD at all, mid-call, which is the worst possible moment).
+ */
+export async function openCallTab(): Promise<number> {
+  const url = chrome.runtime.getURL('/call.html')
+  const stored = await chrome.storage.session.get(CALL_TAB_KEY)
+  const known = stored[CALL_TAB_KEY]
+
+  if (typeof known === 'number') {
+    try {
+      const tab = await chrome.tabs.get(known)
+      if (tab.id !== undefined) {
+        await chrome.tabs.update(tab.id, { active: true })
+        await chrome.windows.update(tab.windowId, { focused: true })
+        return tab.id
+      }
+    } catch {
+      // Closed since we stored it. Fall through and make a new one.
+    }
+  }
+
+  const tab = await chrome.tabs.create({ url, active: true })
+  if (tab.id === undefined) throw new Error('Chrome created a call tab without an id')
+  await chrome.storage.session.set({ [CALL_TAB_KEY]: tab.id })
+  return tab.id
+}

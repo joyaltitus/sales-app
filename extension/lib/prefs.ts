@@ -33,6 +33,9 @@ export type Prefs = {
   useMine: boolean
   /** Show the call roadmap when a lead opens. */
   showRoadmap: boolean
+  /** Offer the full-tab HUD on a lead. Off by default: an existing rep's
+   *  workflow must not change under them on upgrade. */
+  openCallsInTab: boolean
   /** lead_id → items.id — the course this lead was last talked about with. */
   courseByLead: Record<string, string>
   /** Roadmap progress for the ONE lead currently in front of the rep. Keyed by
@@ -51,6 +54,7 @@ export const DEFAULT_PREFS: Prefs = {
   defaultLang: null,
   useMine: false,
   showRoadmap: true,
+  openCallsInTab: false,
   courseByLead: {},
   roadmap: null,
 }
