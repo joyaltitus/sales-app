@@ -47,7 +47,6 @@ vi.mock('@app/lib/crm-actions', () => ({ addNote: vi.fn(), saveLead: vi.fn(), cr
 
 import { AppShell, getRootMounts } from './App'
 import { markWideSurface, resetWideSurface } from '../lib/surface'
-import { loadPrefs } from '../lib/prefs'
 
 const identity = {
   userId: 'user-1', clientId: 'client-1', displayName: 'Rep',
@@ -172,24 +171,4 @@ it('AT-10: the panel is unchanged — it writes nav and does not follow it', asy
   act(() => events.emit({ route: '/lead', selected: otherLead }))
   expect(screen.queryByRole('heading', { name: 'Vikram Rao' })).toBeNull()
   expect(screen.getByText('Do this next')).toBeTruthy()
-})
-
-// The bug this guards: the toggle shipped on the standalone options page, which
-// a rep reaches only by right-clicking the extension icon. It was live, correct
-// and effectively invisible. "Reachable from the panel" is the real requirement,
-// so it is asserted through the panel's own navigation, not by rendering the
-// settings component directly.
-it('the full-tab switch is reachable from the panel Settings tab and persists', async () => {
-  const user = userEvent.setup()
-  render(<AppShell identity={identity} />)
-  await screen.findByText('Do this next')
-
-  await user.click(screen.getByRole('link', { name: 'Settings' }))
-  const toggle = await screen.findByRole('checkbox', { name: /Open in tab/ })
-  expect(toggle).not.toBeChecked()
-
-  await user.click(toggle)
-  await vi.waitFor(async () => {
-    expect((await loadPrefs()).openCallsInTab).toBe(true)
-  })
 })

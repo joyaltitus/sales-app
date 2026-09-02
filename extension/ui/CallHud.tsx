@@ -73,7 +73,6 @@ export function CallHud({
   const [lang, setLang] = useState(DEFAULT_LANG)
   const [useMine, setUseMine] = useState(false)
   const [showRoadmap, setShowRoadmap] = useState(true)
-  const [tabOffered, setTabOffered] = useState(false)
   const [step, setStep] = useState(0)
   const [hook, setHook] = useState<HookKey>(() => hookVariant(lead, calls))
   const [objection, setObjection] = useState<Rebuttal | null>(null)
@@ -112,7 +111,6 @@ export function CallHud({
       if (!alive) return
       setUseMine(prefs.useMine)
       setShowRoadmap(prefs.showRoadmap)
-      setTabOffered(prefs.openCallsInTab)
       setSnippets(saved)
       if (prefs.defaultLang) setLang(prefs.defaultLang)
       else if (library.config?.default_lang) setLang(library.config.default_lang)
@@ -367,7 +365,7 @@ export function CallHud({
             {code.toUpperCase()}
           </button>
         ))}
-        {!wide && tabOffered && (
+        {!wide && (
           <button
             type="button"
             onClick={() => void openCallTab().catch(() => onResult('Could not open the call tab.'))}

@@ -396,13 +396,30 @@ describe('CallHud layout', () => {
     expect(screen.getByText('Anchor on per-square-foot value, not total price')).toBeInTheDocument()
   })
 
-  it('AT-07/AT-10: no keyboard shortcuts and no tab button in the panel by default', async () => {
+  it('AT-07: digits are a tab-only shortcut — the panel does not steal them', async () => {
     const user = userEvent.setup()
     render(hud({ layout: 'column' }))
     await screen.findByText('Opener — follow-up')
 
     await user.keyboard('1')
     expect(screen.queryByText('Anchor on per-square-foot value, not total price')).not.toBeInTheDocument()
+  })
+})
+
+describe('the Open in tab button', () => {
+  // AT-10 used to say "absent unless the rep opts in". Two rounds of a real rep
+  // being unable to find a working feature says the opt-in was the defect, not
+  // the protection: it is one button that opens a tab, and nothing is lost by
+  // showing it. The promise is now the opposite one, and it is still a promise.
+  it('is always there in the panel — no setting to discover first', async () => {
+    render(hud({ layout: 'column' }))
+    await screen.findByText('Opener — follow-up')
+    expect(await screen.findByRole('button', { name: 'Open in tab' })).toBeInTheDocument()
+  })
+
+  it('is NOT offered inside the tab it opens', async () => {
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
     expect(screen.queryByRole('button', { name: 'Open in tab' })).not.toBeInTheDocument()
   })
 })

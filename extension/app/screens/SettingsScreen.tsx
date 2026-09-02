@@ -127,20 +127,6 @@ export default function SettingsScreen({ clientId }: { clientId?: string }) {
         />
         Show the call roadmap when a lead opens
       </label>
-      <label className="flex min-h-11 items-center gap-2.5 text-sm text-fg">
-        <input
-          type="checkbox"
-          checked={prefs.openCallsInTab}
-          onChange={(event) => void patch({ openCallsInTab: event.target.checked })}
-          className="size-4 accent-[var(--accent)]"
-        />
-        Offer “Open in tab” on a lead
-      </label>
-      <p className="-mt-1 text-xs leading-relaxed text-fg-subtle">
-        Opens the playbook in its own browser tab, with the roadmap and the objections side by
-        side instead of stacked, and 1–9 on the keyboard for objections. The panel keeps working
-        exactly the same way.
-      </p>
       <a
         href={`${HUB_URL}/more`}
         target="_blank"
