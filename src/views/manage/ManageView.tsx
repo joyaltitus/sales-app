@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthProvider'
 import { useTeam } from '../../lib/team-data'
 import { useConfigStaleness } from '../../lib/manage-data'
 import type { Campaign, Faq, Product, Profile, Rule, Staleness } from '../../lib/manage-data'
+import type { IntakeSource } from './LeadSources'
+import type { ImportBatch } from './Import'
 import { Chip } from '../../ui/Chip'
 import { EmptyState } from '../../ui/EmptyState'
 import { ProductsTab } from './ProductsTab'
@@ -12,6 +14,8 @@ import { FaqsTab } from './FaqsTab'
 import { ProfileTab } from './ProfileTab'
 import { RulesTab } from './RulesTab'
 import { CampaignsTab } from './CampaignsTab'
+import { LeadSources } from './LeadSources'
+import { Import } from './Import'
 
 // AT-29 — the client_admin's configuration surface.
 //
@@ -30,6 +34,8 @@ const TABS = [
   { key: 'profile', label: 'Profile' },
   { key: 'replies', label: 'Objection replies' },
   { key: 'campaigns', label: 'Campaigns' },
+  { key: 'sources', label: 'Lead sources' },
+  { key: 'import', label: 'Import' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -58,6 +64,8 @@ export type ManagePreview = {
   profile?: Profile
   rules?: Rule[]
   campaigns?: Campaign[]
+  sources?: IntakeSource[]
+  imports?: ImportBatch[]
   tab?: TabKey
   clientName?: string
 }
@@ -142,6 +150,8 @@ export function ManageView({ preview }: { preview?: ManagePreview } = {}) {
       {tab === 'profile' && <ProfileTab {...tabProps} preview={preview?.profile} />}
       {tab === 'replies' && <RulesTab {...tabProps} preview={preview?.rules} />}
       {tab === 'campaigns' && <CampaignsTab {...tabProps} preview={preview?.campaigns} />}
+      {tab === 'sources' && <LeadSources {...tabProps} preview={preview?.sources} />}
+      {tab === 'import' && <Import {...tabProps} preview={preview?.imports} />}
     </div>
   )
 }

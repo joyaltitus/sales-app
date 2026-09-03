@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Megaphone, Plus, TriangleAlert } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Megaphone, MessageSquare, Plus, TriangleAlert } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import {
   useCampaigns,
   createCampaign,
@@ -18,7 +19,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { ErrorState } from '../../ui/ErrorState'
 import { Skeleton } from '../../ui/Skeleton'
 import { HistoryButton, HistoryDrawer } from './HistoryDrawer'
-import { Collisions, HonestyNotes, KeywordExpander, RefsNote, WriteFailure } from './shared'
+import { Collisions, CopyBox, HonestyNotes, KeywordExpander, RefsNote, WriteFailure } from './shared'
 import type { TabProps } from './shared'
 
 // Campaigns — three different write paths on one card, because 069 locks two of
@@ -50,12 +51,14 @@ function CampaignCard({
   clientId,
   userId,
   names,
+  displayNumber,
   onChanged,
 }: {
   campaign: Campaign
   clientId: string
   userId: string | null
   names: Map<string, string>
+  displayNumber: string | null
   onChanged: () => void
 }) {
   const [name, setName] = useState(campaign.name)
@@ -272,6 +275,8 @@ function CampaignCard({
         </div>
       </div>
 
+      <WebsiteWidget campaign={campaign} displayNumber={displayNumber} />
+
       {failure ? <WriteFailure code={failure} /> : null}
 
       <HistoryDrawer
@@ -286,6 +291,77 @@ function CampaignCard({
         onReverted={onChanged}
       />
     </article>
+  )
+}
+
+
+// The website widget (S2-G). No backend, and deliberately so: a wa.me link with
+// the campaign's code word pre-typed IS the attribution. The customer sends the
+// word, the existing trigger matcher claims the conversation for this campaign,
+// and nothing new has to be built, deployed or kept alive to make that work.
+//
+// It needs the tenant's own WhatsApp number in dialable form, which lives on
+// `channel_accounts.display_number` and is NULL until someone fills it in. A
+// link built on a missing number would be a broken link on a customer's website,
+// so the block says what is missing instead of rendering one.
+
+/** Bare digits — wa.me rejects '+', spaces and dashes. */
+export function waDigits(displayNumber: string): string {
+  return displayNumber.replace(/\D/g, '')
+}
+
+export function waLink(displayNumber: string, codeWord: string): string {
+  return `https://wa.me/${waDigits(displayNumber)}?text=${encodeURIComponent(codeWord)}`
+}
+
+/** The paste-in floating button. Plain DOM, one anchor, no dependency and no
+ *  build step — it has to survive being pasted into a Wix page, a WordPress
+ *  footer widget or a hand-written index.html. */
+export function floatingButtonSnippet(href: string): string {
+  return `<script>
+(function () {
+  var a = document.createElement('a');
+  a.href = '${href}';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = 'Chat on WhatsApp';
+  a.setAttribute('aria-label', 'Chat with us on WhatsApp');
+  a.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483000;background:#25D366;color:#fff;font:600 15px/1 system-ui,sans-serif;padding:14px 18px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.25)';
+  document.body.appendChild(a);
+})();
+</script>`
+}
+
+function WebsiteWidget({ campaign, displayNumber }: { campaign: Campaign; displayNumber: string | null }) {
+  const codeWord = campaign.trigger?.code_keywords?.[0]
+  if (!codeWord) return null
+
+  return (
+    <div className="mt-4 border-t border-border pt-4">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-fg">
+        <MessageSquare aria-hidden size={13} /> Put this campaign on your website
+      </p>
+      {displayNumber ? (
+        <>
+          <p className="mt-1 text-2xs leading-relaxed text-fg-subtle">
+            Opens WhatsApp with “{codeWord}” already typed. Whoever sends it is counted against
+            this campaign automatically.
+          </p>
+          <CopyBox label="Link" value={waLink(displayNumber, codeWord)} hint="Works in a bio, a button, a QR code." />
+          <CopyBox
+            label="Floating button"
+            value={floatingButtonSnippet(waLink(displayNumber, codeWord))}
+            hint="Paste before </body>. Nothing else to install."
+          />
+        </>
+      ) : (
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-warn" role="alert">
+          <TriangleAlert aria-hidden size={13} />
+          Your WhatsApp number is not filled in yet, so there is no link to give out. Ask your
+          account manager to add it.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -424,9 +500,35 @@ function NewCampaignForm({ clientId, onCreated }: { clientId: string; onCreated:
   )
 }
 
+
+/** The tenant's own WhatsApp number, for the widget link. One row, one column;
+ *  `channel_accounts` is member-readable and every other column on it is engine
+ *  plumbing this screen has no business showing. */
+function useDisplayNumber(clientId: string | null): string | null {
+  const [number, setNumber] = useState<string | null>(null)
+  useEffect(() => {
+    if (!clientId) return
+    let live = true
+    void supabase
+      .from('channel_accounts')
+      .select('display_number')
+      .eq('client_id', clientId)
+      .eq('channel', 'whatsapp')
+      .limit(1)
+      .then(({ data }) => {
+        if (live) setNumber((data?.[0]?.display_number as string | null) ?? null)
+      })
+    return () => {
+      live = false
+    }
+  }, [clientId])
+  return number
+}
+
 export function CampaignsTab({ clientId, userId, names, preview }: TabProps<Campaign>) {
   const live = useCampaigns(preview ? null : clientId)
   const items = preview ?? live.items
+  const displayNumber = useDisplayNumber(preview ? null : clientId)
 
   if (live.error && !preview) {
     return <ErrorState title="Couldn't load your campaigns." body={live.error} onRetry={live.reload} />
@@ -456,6 +558,7 @@ export function CampaignsTab({ clientId, userId, names, preview }: TabProps<Camp
             clientId={clientId}
             userId={userId}
             names={names}
+            displayNumber={displayNumber}
             onChanged={live.reload}
           />
         ))
