@@ -75,9 +75,10 @@ const ACTIVATION_HELP: Record<string, string> = {
   params_mismatch: 'The template expects a different number of values than the source fills in.',
 }
 
-/** The `<script>` a website owner pastes. Ten lines, no framework, no build
- *  step: it opens the hosted form in a centred popup, and falls back to a normal
- *  navigation when the popup is blocked. */
+/** The block a website owner pastes. An iframe of hub-service's own D-EMBED
+ *  page rather than a script: the form's markup, validation and anti-bot floor
+ *  are already frozen server-side, and a script would be a second copy of them
+ *  living on someone else's page, unversioned. */
 export function embedSnippet(base: string, slug: string): string {
   return `<iframe src="${base}/embed/v1/${slug}" title="Enquiry form"
         width="100%" height="520" style="border:0;max-width:520px"
