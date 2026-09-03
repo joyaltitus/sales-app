@@ -3,7 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio, X } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
-import { useQueue, usePreviews, useThread, useLiveRefresh, mergeOutbound, newOptimisticId } from '../../lib/inbox-data'
+import { useQueue, usePreviews, useThread, useLiveRefresh, mergeOutbound, newOptimisticId, isWindowClosed } from '../../lib/inbox-data'
 import type { QueueItem, OptimisticBubble, Message } from '../../lib/inbox-data'
 import { useTeammates, teammateLabel, useConvLead } from '../../lib/crm-data'
 import { markConversationRead } from '../../lib/crm-actions'
@@ -562,6 +562,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           contactId={selected?.contact_id ?? ''}
           canSend={canSend}
           isOptedOut={selected?.contact?.is_opted_out}
+          windowClosed={selected ? isWindowClosed(selected) : false}
           onSent={refreshAll}
           seed={draftSeed}
           onOptimisticSend={onOptimisticSend}

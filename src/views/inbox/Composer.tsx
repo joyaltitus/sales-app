@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { SendHorizontal, Sparkles, Trash2, Zap } from 'lucide-react'
+import { FileCheck2, SendHorizontal, Sparkles, Trash2, Zap } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
@@ -9,6 +9,8 @@ import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
 import { supabase } from '../../lib/supabase'
+import { sendTemplateNow, sendable, useWaTemplates } from '../../lib/outbound-data'
+import type { WaTemplate } from '../../lib/outbound-data'
 
 // SA-06 quick replies — the retype-killer. Wired to the `quick_replies` table
 // (client_id, title, body, scope 'personal'|'team', created_by, active).
@@ -71,6 +73,116 @@ function useQuickReplies(clientId: string | null, userId: string | null) {
   }
 
   return { items, loading, save, remove }
+}
+
+
+// SEND TEMPLATE — the only thing that reaches a customer once the reply window
+// has shut. WhatsApp allows it, free text is refused, and the refusal happens
+// server-side, so offering the template here is what turns a dead composer into
+// a usable one rather than a nicer error message.
+//
+// It writes ONE pending follow_up and returns. The outreach follow-up lane in
+// hub-service drains it (~1 min) through pm_prepare_template_send, which
+// re-checks approval, opt-out and the per-contact daily cap — none of which this
+// picker claims to have checked itself. The list is narrowed to approved+active
+// templates because those are the only ones that can survive that call.
+function SendTemplate({
+  clientId,
+  userId,
+  contactId,
+  conversationId,
+}: {
+  clientId: string | null
+  userId: string | null
+  contactId: string
+  conversationId: string
+}) {
+  const { items } = useWaTemplates(clientId)
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [failure, setFailure] = useState<string | null>(null)
+  const [queued, setQueued] = useState(false)
+
+  const options = items.filter(sendable)
+
+  const pick = async (t: WaTemplate) => {
+    if (!clientId || !userId) return
+    setBusy(t.id)
+    setFailure(null)
+    const res = await sendTemplateNow({
+      clientId,
+      userId,
+      contactId,
+      conversationId,
+      template: t,
+      // Blanks are sent empty: this picker has no per-send parameter form, so a
+      // template with variables is registered-but-unfillable here and Meta
+      // rejects the count mismatch. Named rather than hidden — see the note
+      // under the list.
+      params: (t.variables ?? []).map(() => ''),
+    })
+    setBusy(null)
+    if (!res.ok) {
+      setFailure(res.detail ?? res.code)
+      return
+    }
+    setOpen(false)
+    setQueued(true)
+  }
+
+  if (queued) {
+    return (
+      <p className="border-b border-border bg-surface px-4 py-2.5 text-xs text-fg-muted" role="status">
+        Template queued — it sends within about a minute. It will appear in the thread once it does.
+      </p>
+    )
+  }
+
+  return (
+    <div className="border-b border-border bg-surface px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="min-w-0 flex-1 text-xs text-fg-muted">
+          The 24-hour reply window is closed. Only an approved template can reach this customer now.
+        </p>
+        <Button size="sm" variant="secondary" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <FileCheck2 aria-hidden size={14} /> Send template
+        </Button>
+      </div>
+
+      {open && (
+        <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+          {options.length === 0 ? (
+            <p className="py-1 text-xs text-fg-subtle">
+              No approved templates yet. Your account manager registers them.
+            </p>
+          ) : (
+            options.map((t) => (
+              <button
+                key={t.id}
+                disabled={busy !== null}
+                onClick={() => void pick(t)}
+                className="w-full rounded-md px-2 py-1.5 text-left text-xs text-fg hover:bg-surface-sunk disabled:opacity-50"
+              >
+                <span className="font-mono font-semibold">{t.template_name}</span>
+                {t.body_preview && <span className="ml-2 text-fg-muted">{t.body_preview}</span>}
+                {(t.variables ?? []).length > 0 && (
+                  <span className="ml-2 text-warn">
+                    · has {t.variables.length} blank{t.variables.length === 1 ? '' : 's'} — send it
+                    from Broadcasts instead
+                  </span>
+                )}
+              </button>
+            ))
+          )}
+          {failure && (
+            <p className="py-1 text-xs text-danger" role="alert">
+              {failure}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // The composer. `messages` INSERT policies are empty, so the browser CANNOT
@@ -138,6 +250,7 @@ export function Composer({
   contactId,
   canSend,
   isOptedOut = false,
+  windowClosed = false,
   onSent,
   seed,
   onOptimisticSend = () => '',
@@ -147,6 +260,11 @@ export function Composer({
   contactId: string
   canSend: boolean
   isOptedOut?: boolean
+  /** SA-OUTBOUND: the customer's reply window has shut, so free text will be
+   *  refused server-side and a template is the only way through. Computed once
+   *  in inbox-data.isWindowClosed and passed down, so the rail and the composer
+   *  cannot disagree about it. */
+  windowClosed?: boolean
   onSent: () => void
   /** SA-05: AI draft from the context rail. Counter-keyed so the same draft
    *  can be pushed twice; it seeds the input, the human still edits + sends. */
@@ -284,6 +402,15 @@ export function Composer({
             </Button>
           )}
         </div>
+      )}
+
+      {windowClosed && (
+        <SendTemplate
+          clientId={activeClient?.id ?? null}
+          userId={session?.user.id ?? null}
+          contactId={contactId}
+          conversationId={conversationId}
+        />
       )}
 
       <ObjectionCapture

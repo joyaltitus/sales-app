@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles, Pause, Play, Trash2, ExternalLink } from 'lucide-react'
 import type { QueueItem } from '../../lib/inbox-data'
-import { parseFacts } from '../../lib/inbox-data'
+import { isWindowClosed, parseFacts } from '../../lib/inbox-data'
 import { useLeadStages, useFollowUps, moveLeadStage } from '../../lib/leads-data'
 import { useConvLead, useNotes, useTeammates, teammateLabel } from '../../lib/crm-data'
 import { setBotPaused, assignConversation, addFollowUp, addNote, deleteNote } from '../../lib/crm-actions'
@@ -32,8 +32,6 @@ const capsStyle = {
 
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
-const WINDOW_MS = 24 * 3_600_000
-const IG_HUMAN_WINDOW_MS = 7 * 24 * 3_600_000
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -235,10 +233,7 @@ export function ContextRail({
 
   // --- service window (UX mirror only; the real gate lives server-side) --
   const isIG = item.contact?.channel === 'instagram'
-  const sinceLast = item.last_customer_message_at
-    ? Date.now() - new Date(item.last_customer_message_at).getTime()
-    : Infinity
-  const windowClosed = sinceLast > (isIG ? IG_HUMAN_WINDOW_MS : WINDOW_MS)
+  const windowClosed = isWindowClosed(item)
 
 
   return (

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target, SlidersHorizontal, TrendingUp, ShieldCheck, Rocket } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target, SlidersHorizontal, TrendingUp, ShieldCheck, Rocket, Megaphone, FileCheck2 } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -35,6 +35,12 @@ const ManageView = lazy(() => import('../views/manage/ManageView').then((m) => (
 // pm_ack_go_live_item walls there, so a manager would get a page of buttons
 // that all answer forbidden.
 const GoLive = lazy(() => import('../views/manage/GoLive').then((m) => ({ default: m.GoLive })))
+// S2-E1: outbound. Broadcasts writes rows the hub's outreach lanes drain;
+// Templates is the read-only registry those sends pick from (wa_templates_write
+// is super_admin, so there is nothing here for a client to save). Reps see
+// neither — a blast is not a rep-scoped action.
+const Broadcasts = lazy(() => import('../views/outbound/Broadcasts').then((m) => ({ default: m.Broadcasts })))
+const OutboundTemplates = lazy(() => import('../views/outbound/Templates').then((m) => ({ default: m.Templates })))
 const AttributionView = lazy(() => import('../views/attribution/AttributionView').then((m) => ({ default: m.AttributionView })))
 const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then((m) => ({ default: m.ApprovalsView })))
 
@@ -65,6 +71,8 @@ const RAIL = [
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
+  { to: '/broadcasts', label: 'Broadcasts', icon: Megaphone },
+  { to: '/templates', label: 'Templates', icon: FileCheck2 },
   { to: '/setup', label: 'Setup', icon: SlidersHorizontal },
   { to: '/go-live', label: 'Go live', icon: Rocket },
   { to: '/attribution', label: 'Attribution', icon: TrendingUp },
@@ -143,6 +151,8 @@ export function AdminShell() {
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="approvals" element={<ApprovalsView />} />
+                <Route path="broadcasts" element={<Broadcasts />} />
+                <Route path="templates" element={<OutboundTemplates />} />
                 <Route path="setup" element={<ManageView />} />
                 <Route path="go-live" element={<GoLive />} />
                 <Route path="attribution" element={<AttributionView />} />
