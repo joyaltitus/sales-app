@@ -193,3 +193,25 @@ export function sendAgentMessage(conversationId: string, text: string) {
     }),
   })
 }
+
+export const TRANSCRIBE_PATH = '/api/transcribe'
+
+/** POST /api/transcribe — multipart, so hubFetch deliberately leaves the
+ *  content-type off (it sets one only for non-FormData bodies). `degraded` is
+ *  the provider's own low-confidence signal; the caller shows the transcript
+ *  either way and flags it rather than hiding it.
+ *
+ *  Lives here rather than in extension/lib/voice-flow.ts because the web app
+ *  cannot import across that boundary — `@app` is a wxt alias and `extension/`
+ *  is outside tsconfig's `include`. The extension re-exports this one. */
+export type TranscribeResponse =
+  | { ok: true; transcript: string; provider: 'sarvam' | 'gemini'; degraded: boolean }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'bad_request' | 'budget_exceeded'
+      | 'transcription_failed' | 'auth_unavailable' | 'db_unavailable' | 'disabled' }
+
+export function transcribeNote(audio: Blob, clientId: string): Promise<HubResult<TranscribeResponse>> {
+  const form = new FormData()
+  form.append('audio', audio, 'note.webm')
+  form.append('client_id', clientId)
+  return hubFetch<TranscribeResponse>(TRANSCRIBE_PATH, { method: 'POST', body: form })
+}

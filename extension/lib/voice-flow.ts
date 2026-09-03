@@ -4,18 +4,12 @@ import {
   type Approval,
   type ChecklistItem,
 } from '@app/lib/agent-chat'
-import { hubFetch, type HubResult } from '@app/lib/api'
 import type { ProposedField } from '../ui/VoiceCard'
-import type { TranscribeResponse } from './contracts'
 
-export const TRANSCRIBE_PATH = '/api/transcribe'
-
-export function transcribeNote(audio: Blob, clientId: string): Promise<HubResult<TranscribeResponse>> {
-  const form = new FormData()
-  form.append('audio', audio, 'note.webm')
-  form.append('client_id', clientId)
-  return hubFetch<TranscribeResponse>(TRANSCRIBE_PATH, { method: 'POST', body: form })
-}
+// The transcribe call moved to @app/lib/api so the web app can use it too — the
+// import only crosses this way (extension -> src), never back. Re-exported here
+// so every existing caller keeps its import path.
+export { TRANSCRIBE_PATH, transcribeNote, type TranscribeResponse } from '@app/lib/api'
 
 function title(value: unknown): string {
   return String(value ?? 'CRM field').replace(/_/g, ' ').replace(/^./, (char) => char.toUpperCase())

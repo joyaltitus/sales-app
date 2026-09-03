@@ -148,8 +148,3 @@ export type PlaybookLibrary = {
   spins: PersonalSpin[]
 }
 export type ChatMode = 'wa_me' | 'desktop'
-
-export type TranscribeResponse =
-  | { ok: true; transcript: string; provider: 'sarvam' | 'gemini'; degraded: boolean }
-  | { ok: false; error: 'unauthorized' | 'forbidden' | 'bad_request' | 'budget_exceeded'
-      | 'transcription_failed' | 'auth_unavailable' | 'db_unavailable' | 'disabled' }

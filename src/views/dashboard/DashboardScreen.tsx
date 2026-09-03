@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
@@ -11,7 +11,11 @@ import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } 
 import { Skeleton } from '../../ui/Skeleton'
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, Download, FileText, MessageSquareText, Target } from 'lucide-react'
 import { ForecastWidget } from '../revenue/ForecastWidget'
-import { EmptyState } from '../../ui/EmptyState'
+
+// S2-E2: the owner readout is real again — campaign_roi_v + /api/metrics +
+// employee_targets. Lazy so its second metrics window is only ever fetched by
+// someone who actually opens the tab.
+const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
 
 // SA-05 company dashboard — manager/client_admin. REAL wherever the browser
 // already holds the data under RLS (conversations, leads, stages, follow_ups,
@@ -255,11 +259,7 @@ export function DashboardScreen() {
           )}
         </section>}
 
-        {view === 'report' && (
-          <div className="p-6">
-            <EmptyState title="Owner report arrives with campaign ROI" body="A clean weekly or monthly summary for leadership is on the way." />
-          </div>
-        )}
+        {view === 'report' && <Suspense fallback={<Skeleton className="h-[820px]" />}><OwnerBusinessReport /></Suspense>}
       </div>
     </div>
   )

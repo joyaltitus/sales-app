@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target, SlidersHorizontal, TrendingUp, ShieldCheck } from 'lucide-react'
+import { Activity, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Settings, Target, SlidersHorizontal, TrendingUp, ShieldCheck, Rocket } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -31,6 +31,10 @@ const AdminSettings = lazy(() => import('../views/settings/AiFeaturesCard').then
 // screen — the manage view carries five tabs and belongs nowhere near the
 // first paint.
 const ManageView = lazy(() => import('../views/manage/ManageView').then((m) => ({ default: m.ManageView })))
+// S2-E2: the go-live gate sits beside the setup it grades. client_admin only —
+// pm_ack_go_live_item walls there, so a manager would get a page of buttons
+// that all answer forbidden.
+const GoLive = lazy(() => import('../views/manage/GoLive').then((m) => ({ default: m.GoLive })))
 const AttributionView = lazy(() => import('../views/attribution/AttributionView').then((m) => ({ default: m.AttributionView })))
 const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then((m) => ({ default: m.ApprovalsView })))
 
@@ -62,6 +66,7 @@ const RAIL = [
   { to: '/team', label: 'Team', icon: UsersRound },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
   { to: '/setup', label: 'Setup', icon: SlidersHorizontal },
+  { to: '/go-live', label: 'Go live', icon: Rocket },
   { to: '/attribution', label: 'Attribution', icon: TrendingUp },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
@@ -139,6 +144,7 @@ export function AdminShell() {
                 <Route path="team" element={<TeamPage />} />
                 <Route path="approvals" element={<ApprovalsView />} />
                 <Route path="setup" element={<ManageView />} />
+                <Route path="go-live" element={<GoLive />} />
                 <Route path="attribution" element={<AttributionView />} />
                 <Route path="targets" element={<TargetsPage />} />
                 <Route path="settings" element={<AdminSettings />} />
@@ -149,7 +155,7 @@ export function AdminShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-12 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="grid shrink-0 grid-flow-col auto-cols-fr border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
