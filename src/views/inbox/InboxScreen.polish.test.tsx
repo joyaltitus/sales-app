@@ -47,9 +47,6 @@ vi.mock('./QueueRow', () => ({
     </button>
   ),
 }))
-vi.mock('../email/EmailQueueRow', () => ({
-  EmailQueueRow: () => <div data-testid="email-queue-row">Email Row</div>,
-}))
 vi.mock('../calls/CallButton', () => ({ CallButton: () => null }))
 vi.mock('./ContextRail', () => ({ ContextRail: () => <div data-testid="context-rail">Context Rail</div> }))
 vi.mock('./Composer', () => ({ Composer: () => <div data-testid="composer">Composer</div> }))
@@ -126,25 +123,6 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
     expect(
       screen.queryByText('Next: answer the price question'),
     ).not.toBeInTheDocument()
-  })
-
-  it('AT-07: Email demo row is hidden under "My inbox" and visible under "All"', async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <InboxScreen canSend={false} />
-      </MemoryRouter>,
-    )
-
-    // Under "All" scope, email row is visible
-    expect(screen.getByTestId('email-queue-row')).toBeInTheDocument()
-
-    // Switch to "My inbox" scope
-    const myTab = screen.getByRole('tab', { name: 'My inbox' })
-    await user.click(myTab)
-
-    // Email row should be hidden under "My inbox"
-    expect(screen.queryByTestId('email-queue-row')).not.toBeInTheDocument()
   })
 
   it('renders unread indicator dot on WhatsApp channel tab when WhatsApp conversation is unread', () => {

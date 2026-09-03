@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
@@ -9,12 +9,9 @@ import { useMetrics } from '../../lib/metrics-data'
 import { formatINRCompact } from '../../ui/formatMoney'
 import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } from './charts'
 import { Skeleton } from '../../ui/Skeleton'
-import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, Download, FileText, MessageSquareText, Target, Users } from 'lucide-react'
-import { ObjectionsReview } from './ObjectionsReview'
+import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, Download, FileText, MessageSquareText, Target } from 'lucide-react'
 import { ForecastWidget } from '../revenue/ForecastWidget'
-
-const CompetitionConsole = lazy(() => import('../momentum/CompetitionConsole'))
-const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
+import { EmptyState } from '../../ui/EmptyState'
 
 // SA-05 company dashboard — manager/client_admin. REAL wherever the browser
 // already holds the data under RLS (conversations, leads, stages, follow_ups,
@@ -25,11 +22,10 @@ const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
 // channel/day rollup and no rep attribution browser-side).
 
 const D = 24 * 3_600_000
-type DashboardView = 'operate' | 'revenue' | 'coach' | 'report'
+type DashboardView = 'operate' | 'revenue' | 'report'
 const DASHBOARD_VIEWS: { key: DashboardView; label: string; icon: typeof Activity }[] = [
   { key: 'operate', label: 'Operate', icon: Activity },
   { key: 'revenue', label: 'Revenue', icon: BarChart3 },
-  { key: 'coach', label: 'Coach', icon: Users },
   { key: 'report', label: 'Business report', icon: FileText },
 ]
 
@@ -159,9 +155,6 @@ export function DashboardScreen() {
     ? followUpCompliance.done_on_time + followUpCompliance.done_late
     : 0
 
-  const repStats = metrics?.rep_stats ?? []
-  const bestRep = [...repStats].sort((a, b) => b.won - a.won)[0]
-
   const isManagerOrAdmin = activeClient?.role !== 'agent'
 
   const exportDashboardCsv = () => {
@@ -178,7 +171,6 @@ export function DashboardScreen() {
   const viewCopy: Record<DashboardView, { eyebrow: string; title: string; detail: string }> = {
     operate: { eyebrow: 'Today', title: 'Run the floor without chasing updates.', detail: 'Live exceptions first; healthy work stays quiet.' },
     revenue: { eyebrow: 'Revenue', title: 'Know what can close and where it is stuck.', detail: 'Live pipeline with a clearly labelled preview forecast.' },
-    coach: { eyebrow: 'Coaching', title: 'Coach the behavior that moves revenue.', detail: 'Personal progress and customer objections, kept separate from urgent work.' },
     report: { eyebrow: 'Owner view', title: 'The business, ready to forward.', detail: 'A clean weekly or monthly summary for leadership.' },
   }
 
@@ -263,15 +255,11 @@ export function DashboardScreen() {
           )}
         </section>}
 
-        {view === 'coach' && <section className="space-y-6" aria-label="Coaching dashboard">
-          <Suspense fallback={<Skeleton className="h-[520px]" />}><CompetitionConsole /></Suspense>
-          <Panel title="Personal bests" caption="Each rep's replies, median reply time, and won leads over the last 14 days.">
-            {metricsLoading ? <Skeleton className="h-40" /> : <div className="overflow-x-auto"><table className="w-full min-w-[560px] border-collapse text-sm"><thead><tr className="border-b border-border">{['Rep', 'Replies', 'Median reply', 'Won'].map((heading, index) => <th key={heading} scope="col" className={['py-1.5 text-2xs text-fg-subtle uppercase', index === 0 ? 'text-left' : 'text-right'].join(' ')}>{heading}</th>)}</tr></thead><tbody>{repStats.map((rep) => { const maxReplies = Math.max(...repStats.map((item) => item.replies), 1); return <tr key={rep.user_id} className="border-b border-border last:border-0"><td className="py-3 text-fg"><span className="font-medium">{rep.name}</span>{rep.user_id === bestRep?.user_id && <span className="ml-2 rounded-pill bg-accent-subtle px-2 py-0.5 text-2xs font-semibold text-accent">best pace</span>}</td><td className="py-2"><div className="flex items-center justify-end gap-2"><div className="h-2 w-24 overflow-hidden rounded-pill bg-surface-sunk"><div className="h-full rounded-pill bg-fg-subtle" style={{ width: `${(rep.replies / maxReplies) * 100}%` }} /></div><span className="tnum w-10 text-right text-fg">{rep.replies}</span></div></td><td className="tnum py-2 text-right text-fg">{rep.median_reply_minutes == null ? '—' : `${Math.round(rep.median_reply_minutes)}m`}</td><td className="tnum py-2 text-right text-fg">{rep.won}</td></tr> })}</tbody></table></div>}
-          </Panel>
-          <ObjectionsReview />
-        </section>}
-
-        {view === 'report' && <Suspense fallback={<Skeleton className="h-[820px]" />}><OwnerBusinessReport /></Suspense>}
+        {view === 'report' && (
+          <div className="p-6">
+            <EmptyState title="Owner report arrives with campaign ROI" body="A clean weekly or monthly summary for leadership is on the way." />
+          </div>
+        )}
       </div>
     </div>
   )

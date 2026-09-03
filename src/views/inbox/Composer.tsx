@@ -4,7 +4,6 @@ import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
 import { sendAgentMessage } from '../../lib/api'
 import { clearGatewayKey, hasConfiguredGatewayKey, loadGatewayKey, saveGatewayKey } from '../../lib/gateway-key'
-import { VoiceButton } from '../../ui/agent/VoiceButton'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
@@ -385,9 +384,6 @@ export function Composer({
             }}
             className="max-h-28 min-h-9 w-full resize-none bg-transparent px-2 py-2 text-sm text-fg outline-none placeholder:text-fg-subtle"
           />
-        </div>
-        <div className="shrink-0">
-          <VoiceButton onTranscript={setText} compact />
         </div>
         {/* The accent is reserved for exactly one thing per screen: the next
             action (§1.7). On this screen that is Send, and nothing else. */}
