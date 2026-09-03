@@ -110,7 +110,7 @@ export function Floor() {
   const combinedLiveException = !!oldest && oldest.id === firstHandover?.id
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestPreview = oldest ? previews.get(oldest.id) ?? 'Waiting for a reply' : ''
-  const openDecisionCount = 1 + (firstHandover ? 1 : 0) + (oldest && !combinedLiveException ? 1 : 0)
+  const openDecisionCount = (firstHandover ? 1 : 0) + (oldest && !combinedLiveException ? 1 : 0)
 
   return (
     <div className="page-frame space-y-6">
@@ -145,14 +145,6 @@ export function Floor() {
           <span className="tnum rounded-pill bg-danger-subtle px-2.5 py-1 text-2xs font-semibold text-danger">{openDecisionCount} open</span>
         </div>
 
-        <ExceptionRow
-          icon={Bot}
-          title="Approve Anjali’s quotation"
-          detail="AI prepared a two-instalment quote. Price and terms are unchanged; it needs one-tap approval before send."
-          meta="2m ago · Preview"
-          to="/docs"
-          onAsk={() => setCopilotAsk('Anjali’s quote is blocked only by approval. The price matches the approved plan, and sending before 2 pm protects today’s promised follow-up.')}
-        />
         {firstHandover && (
           <ExceptionRow
             icon={MessageSquareWarning}
@@ -172,7 +164,7 @@ export function Floor() {
             meta="Live"
             to={`/inbox?c=${encodeURIComponent(oldest.id)}`}
             danger={overdue15m.includes(oldest)}
-            onAsk={() => setCopilotAsk(`${oldestName} has the highest live revenue-weighted wait. The last message contains buying intent and the ₹60,000 deal has no scheduled follow-up.`)}
+            onAsk={() => setCopilotAsk(`${oldestName} has waited longer than anyone else on the floor. Every extra minute lowers the chance of a same-day reply.`)}
           />
         )}
         {!oldest && !unpicked.length && (

@@ -257,7 +257,7 @@ export function DashboardScreen() {
 
         {view === 'report' && (
           <div className="p-6">
-            <EmptyState title="Owner report — coming with campaign ROI" body="A clean weekly or monthly summary for leadership is on the way." />
+            <EmptyState title="Owner report arrives with campaign ROI" body="A clean weekly or monthly summary for leadership is on the way." />
           </div>
         )}
       </div>
