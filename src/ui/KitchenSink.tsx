@@ -115,7 +115,6 @@ function Inner() {
       <Section title="Voice — idle / recording / processing / transcript">
         <VoiceButton />
         <VoiceButton compact />
-        <VoiceButton lowConfidenceDemo />
       </Section>
 
       <Section title="AI — approval and memory">

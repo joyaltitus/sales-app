@@ -35,8 +35,11 @@ import {
   MOCK_ROI,
   MOCK_SIGHTINGS,
   MOCK_APPROVAL_GROUPS,
+  MOCK_METRICS,
+  MOCK_GO_LIVE,
 } from './preview-mocks'
 import { ManageView } from '../manage/ManageView'
+import { GoLive } from '../manage/GoLive'
 import { AttributionView } from '../attribution/AttributionView'
 import { ApprovalsView } from '../approvals/ApprovalsView'
 import { TeamPage } from '../team/TeamPage'
@@ -180,7 +183,7 @@ export default function PreviewGallery() {
         <Section number="13" title="Rep momentum and My Season" note="Every visibility mode preserves a path to a good day. Points explain themselves, quiet hours remove pressure, and achievement stays restrained."><div className="grid gap-3 xl:grid-cols-4"><div><p className="label-caps mb-2">Full board policy</p><MomentumCard visibility="full_board" /></div><div><p className="label-caps mb-2">Top-3 policy</p><MomentumCard visibility="top_three" /></div><div><p className="label-caps mb-2">Private policy</p><MomentumCard visibility="private" /></div><div><p className="label-caps mb-2">Quiet hours</p><MomentumCard visibility="full_board" quietHours /></div></div><div className="mx-auto mt-8 max-w-2xl"><MySeason /></div></Section>
         <Section number="14" title="Manager Momentum console" note="Rules, challenge design, both leagues, rookie ramp and care signals live under one manager-controlled policy with a rep preview beside every consequential setting."><CompetitionConsole /></Section>
         <Section number="15" title="First impressions and auth edges" note="A mature product promise frames sign-in, while invite acceptance, recovery, failure and session-expiry states protect context and explain exactly what happens next."><AuthExperiencePreview /></Section>
-        <Section number="16" title="Owner business report" note="Revenue, coverage, execution, bookings and buyer objections resolve into a one-page renewal artifact built for a 30-second read and a clean A4 handoff."><OwnerBusinessReport /></Section>
+        <Section number="16" title="Owner business report" note="Revenue against target, open pipeline, return on campaign spend and buyer objections resolve into a one-page artifact built for a 30-second read and a clean A4 handoff. Every figure is sourced; nothing without a source is drawn."><OwnerBusinessReport preview={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 1500000 }} /></Section>
         <Section number="17" title="Rep follow-ups and task details" note="Rows now open full context instead of exposing only quick actions: who, due promise, stage, deal value, last contact, next action and a clearly labeled local preview state."><div className="grid gap-6"><div data-testid="follow-ups-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><FollowUpsTab /></div><div data-testid="todos-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><TodosTab /></div></div></Section>
         <Section number="18" title="Team and access" note="The same roster, seen from the two levels that may open it: an admin who can mint managers and reps, and a manager who may only mint reps. The mint ladder is hub-service's; these screens simply stop offering a button that would come back role_above_caller.">
           <div className="grid gap-6 xl:grid-cols-2">
@@ -227,6 +230,12 @@ export default function PreviewGallery() {
               <p className="label-caps border-b border-border px-4 py-2 text-accent">the rep who proposed it · /rep</p>
               <ApprovalsView preview={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-3', viewerRole: 'agent', members: MOCK_TEAM }} />
             </div>
+          </div>
+        </Section>
+        <Section number="23" title="Go live" note="The gate the database owns. Six checks derived continuously from the tenant's own setup, six a person has to confirm, and one verdict — with the remedy printed next to every red row rather than left to be guessed.">
+          <div data-testid="go-live-preview" className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
+            <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/go-live</p>
+            <GoLive preview={MOCK_GO_LIVE} />
           </div>
         </Section>
       </main>

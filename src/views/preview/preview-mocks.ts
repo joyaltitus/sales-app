@@ -326,3 +326,61 @@ export const MOCK_APPROVAL_GROUPS = [
     ],
   },
 ]
+
+/** One GET /api/metrics snapshot, in hub-service's response shape, so the
+ *  gallery can paint the owner report without a session. Numbers are the same
+ *  demo-tenant fiction as the rest of this file. */
+export const MOCK_METRICS = {
+  ok: true,
+  window: { from: '2026-08-04', to: '2026-09-02', days: 30 },
+  response_time_series: [],
+  volume_by_channel: [
+    { date: '2026-08-31', whatsapp: 61, instagram: 12 },
+    { date: '2026-09-01', whatsapp: 74, instagram: 9 },
+    { date: '2026-09-02', whatsapp: 58, instagram: 14 },
+  ],
+  rep_stats: [],
+  follow_up_compliance: { done_on_time: 94, done_late: 6, overdue: 3 },
+  pipeline_stage_weighted: [
+    { stage_id: 's-1', stage_key: 'qualified', label: 'Qualified', raw_value: 1240000, weight: 0.2, weighted_value: 248000 },
+    { stage_id: 's-2', stage_key: 'visit', label: 'Demo / visit', raw_value: 860000, weight: 0.4, weighted_value: 344000 },
+    { stage_id: 's-3', stage_key: 'proposal', label: 'Proposal', raw_value: 690000, weight: 0.6, weighted_value: 414000 },
+    { stage_id: 's-4', stage_key: 'verbal', label: 'Verbal yes', raw_value: 350000, weight: 0.8, weighted_value: 280000 },
+  ],
+  pipeline_weighted_total: 1286000,
+  objection_counts: [
+    { taxonomy_key: 'price', label: 'Price / fees', count: 38 },
+    { taxonomy_key: 'timing', label: 'Timing', count: 24 },
+    { taxonomy_key: 'approval', label: 'Needs approval', count: 17 },
+  ],
+  won_by_source: [
+    { source: 'meta_ads', campaign_id: 'cm-1', campaign_name: 'Onam 2026', amount: 630000, won_count: 14 },
+    { source: 'walk_in', campaign_id: null, campaign_name: null, amount: 210000, won_count: 5 },
+  ],
+  capture_rate: null,
+}
+
+/** pm_go_live_check's return, mid-onboarding: two derived checks still red and
+ *  three of the six human acks outstanding — the state worth reviewing, since
+ *  an all-green checklist shows none of the copy that matters. */
+export const MOCK_GO_LIVE = {
+  ok: true as const,
+  client_id: 'a0de0000-0000-4000-8000-000000000001',
+  auto: {
+    blocks_activated: true,
+    no_dangling_refs: false,
+    persona_applied: true,
+    profile_applied: true,
+    scorecard_fresh: false,
+    channel_wired: true,
+  },
+  manual_acks: {
+    kickoff_interview: { acked: true, note: null, acked_by: 'u-1', acked_at: '2026-08-28T09:10:00Z' },
+    persona_reviewed: { acked: true, note: null, acked_by: 'u-1', acked_at: '2026-08-29T11:00:00Z' },
+    escalation_keywords_set: { acked: true, note: null, acked_by: 'u-1', acked_at: '2026-08-30T15:30:00Z' },
+    real_device_check: { acked: false, note: null, acked_by: null, acked_at: null },
+    escalation_alert_fired: { acked: false, note: null, acked_by: null, acked_at: null },
+    handover_walkthrough: { acked: false, note: null, acked_by: null, acked_at: null },
+  },
+  ready: false,
+}
