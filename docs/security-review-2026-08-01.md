@@ -68,7 +68,7 @@ The inbox "My" scope is also a JS filter, but the UI offers "All" to every role 
 | Data / access | Boundary | Evidence |
 |---|---|---|
 | `user_client_memberships` ⋈ `clients` | RLS only — **no user or tenant filter** | `src/shell/ClientProvider.tsx:48` |
-| `clients.feature_flags` | RLS + client-controlled `.eq('id', clientId)` | `src/lib/flags.ts:19` |
+| `feature_grants` (entitlements; was `clients.feature_flags` until hub #276) | RLS + client-controlled `.eq('client_id', clientId)` | `src/lib/featureOn.ts:70` |
 | `conversations` ⋈ `contacts` | RLS + client-controlled `client_id` | `src/lib/inbox-data.ts:83` |
 | `messages` previews + thread bodies, transcriptions, media, delivery failures | RLS + client-controlled `client_id` | `src/lib/inbox-data.ts:137`, `:187` |
 | `turn_traces` (routes, matched rule keys) | RLS + client-controlled `client_id` | `src/lib/inbox-data.ts:197`, `src/lib/landing-data.ts:114` |

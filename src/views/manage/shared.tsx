@@ -1,4 +1,5 @@
-import { Info, ShieldAlert, TriangleAlert } from 'lucide-react'
+import { useState } from 'react'
+import { Copy, Info, ShieldAlert, TriangleAlert } from 'lucide-react'
 import type { Collision, HonestyWarning } from '../../lib/manage-data'
 
 // Small pieces every manage tab shares. They exist so five tabs cannot drift on
@@ -183,6 +184,42 @@ export function KeywordExpander({
           }}
         />
       </div>
+      {hint ? <span className="mt-1 block text-2xs text-fg-subtle">{hint}</span> : null}
+    </div>
+  )
+}
+
+/** A value the operator has to get into another system by hand — a URL, a key,
+ *  a snippet. Selectable text ALWAYS, with copying as the convenience on top:
+ *  `navigator.clipboard` is absent over plain http and inside some webviews, and
+ *  a copy button that silently no-ops there would lose the only copy of a key
+ *  that is shown once. Failure flips the label rather than throwing. */
+export function CopyBox({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setState('copied')
+    } catch {
+      setState('failed')
+    }
+  }
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-2">
+        <span className="label-caps">{label}</span>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="ml-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-2xs font-semibold text-fg-muted hover:text-fg"
+        >
+          <Copy aria-hidden size={12} />
+          {state === 'copied' ? 'Copied' : state === 'failed' ? 'Select and copy' : 'Copy'}
+        </button>
+      </div>
+      <pre className="mt-1 max-h-48 overflow-auto rounded-md border border-border bg-surface-sunk p-2.5 text-2xs leading-relaxed whitespace-pre-wrap break-all text-fg">
+        {value}
+      </pre>
       {hint ? <span className="mt-1 block text-2xs text-fg-subtle">{hint}</span> : null}
     </div>
   )

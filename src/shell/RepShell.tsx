@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
 import { Home, Inbox, Kanban, Ellipsis, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useClient } from './ClientProvider'
-import { useFlags, flagOn } from '../lib/flags'
+import { useFeatureGrants, featureOn } from '../lib/featureOn'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
 import { Skeleton } from '../ui/Skeleton'
@@ -39,10 +39,14 @@ const href = (to: string) => (to === '/' ? BASE : BASE + to)
 
 export function RepShell() {
   const { activeClient } = useClient()
-  const { flags } = useFlags(activeClient?.id ?? null)
+  const { grants } = useFeatureGrants(activeClient?.id ?? null)
   const { items: queueItems } = useQueue(activeClient?.id ?? null)
   const unreadInboxCount = queueItems.filter((i) => i.unread_count > 0).length
-  const productAi = flagOn(flags, 'product_ai')
+  // hub #276: this door used to read a jsonb column on `clients`, a second door
+  // register that 069 replaced. `feature_grants` is the one entitlement source
+  // now — same key, same "no row = hidden" default, plus the role test the
+  // grants table carries. The old column is dropped hub-side once this deploys.
+  const productAi = featureOn(grants, 'product_ai', activeClient?.role)
   const [collapsed, setCollapsed] = useState(
     () => typeof window !== 'undefined' && window.localStorage.getItem('sa:rep-sidebar-collapsed') === '1',
   )

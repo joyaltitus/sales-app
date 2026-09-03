@@ -4,10 +4,12 @@ import type { Role } from '../shell/ClientProvider'
 
 // AI-features reader/writer (AT-28) — `feature_grants`, the ENTITLEMENT table.
 //
-// Not to be confused with flags.ts, which reads `clients.feature_flags` (a
-// tenant jsonb of product doors). These are two different questions and 069
-// deliberately kept both: feature_flags asks "is this door built for you", and
-// feature_grants asks "did you buy it, is it switched on, and for which roles".
+// It is now the ONLY door register. `flags.ts` used to read a second one — a
+// per-tenant jsonb on `clients` — and 069 kept both alive while the question
+// split in two: "is this door built for you" vs "did you buy it, is it switched
+// on, and for which roles". One unauditable jsonb was the wrong answer to the
+// first, so hub #276 collapsed them here and drops that column. `featureOn`
+// answers both questions at once; a missing row still means a hidden door.
 //
 // THREE COLUMNS, THREE DIFFERENT AUTHORITIES:
 //   granted       — what the plan includes. Writable only from a privileged

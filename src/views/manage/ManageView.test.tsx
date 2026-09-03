@@ -111,9 +111,17 @@ describe('Campaigns tab', () => {
 })
 
 describe('the tab bar', () => {
-  it('offers exactly the five client-tier sections', () => {
+  it('offers exactly the client-tier sections', () => {
     renderTab('products')
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
-    expect(tabs).toEqual(['Products', 'Answers', 'Profile', 'Objection replies', 'Campaigns'])
+    expect(tabs).toEqual([
+      'Products',
+      'Answers',
+      'Profile',
+      'Objection replies',
+      'Campaigns',
+      'Lead sources',
+      'Import',
+    ])
   })
 })
