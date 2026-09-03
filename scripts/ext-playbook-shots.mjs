@@ -108,6 +108,10 @@ const TABLES = {
   rep_queue_v: QUEUE,
   employee_targets: [{ id: 't-1', client_id: CLIENT, user_id: USER, month: '2026-09-01', target_value: 400000, incentive_per_won: 2500, bonus_at_target: 15000, created_by: USER, created_at: iso(0), updated_at: iso(0) }],
   leads: [{ est_value: 120000 }, { est_value: 65000 }],
+  // startCallSession upserts here and .single()s the row back. Without a
+  // fixture it read null and threw inside the outcome handler, which is why
+  // step 7 timed out waiting for a rating strip that was never going to render.
+  call_sessions: [{ id: 'cs-1' }],
   objection_taxonomy: TAXONOMY,
   script_versions: VERSIONS,
   script_win_rates_v: [
@@ -193,6 +197,38 @@ async function assertFits(page, selector, label) {
   if (!ok) failures.push(`${label}: scrollWidth ${measured.scrollWidth} > clientWidth ${measured.clientWidth}`)
 }
 
+/**
+ * The cue must be SAYABLE — read out loud, mid-call, by someone who is not
+ * looking at it steadily. Class names prove nothing here; these are the pixels
+ * Chrome actually laid out, and the column width in the ch unit the 45ch cap
+ * is written in.
+ */
+async function measureCue(page, label) {
+  const m = await page.evaluate(() => {
+    const li = document.querySelector('[data-testid="cue"] li')
+    if (!li) return null
+    const probe = document.createElement('span')
+    probe.textContent = '0'
+    probe.style.cssText = 'position:absolute;visibility:hidden;font:inherit'
+    li.appendChild(probe)
+    const ch = probe.getBoundingClientRect().width
+    probe.remove()
+    return {
+      px: parseFloat(getComputedStyle(li).fontSize),
+      ch: li.closest('[data-testid="cue"]').getBoundingClientRect().width / ch,
+    }
+  })
+  if (!m) {
+    failures.push(`${label}: no cue on screen`)
+    return
+  }
+  const big = m.px >= 20
+  const narrow = m.ch <= 46
+  process.stdout.write(`  ${big && narrow ? '✓' : '✗'} ${label}: cue ${m.px.toFixed(1)}px, ${m.ch.toFixed(1)}ch\n`)
+  if (!big) failures.push(`${label}: cue is ${m.px.toFixed(1)}px, under the 20px floor`)
+  if (!narrow) failures.push(`${label}: cue column is ${m.ch.toFixed(1)}ch, over the 45ch cap`)
+}
+
 async function shoot(page, name, theme) {
   await page.waitForTimeout(400)
   await page.screenshot({ path: path.join(OUT, `${name}-${theme}.png`) })
@@ -271,6 +307,7 @@ async function run() {
     await tap(hudOnly.getByRole('button', { name: 'Next', exact: true }))
     await tap(hudOnly.getByRole('button', { name: 'Next', exact: true }))
     await shoot(page, '03-hud-offer-course-picked', theme)
+    await measureCue(page, `${theme} · panel cue`)
     await tap(hudOnly.getByRole('button', { name: 'MN', exact: true }))
     await page.waitForTimeout(200)
     await shoot(page, '04-hud-manglish-longest', theme)
@@ -300,10 +337,32 @@ async function run() {
     await page.waitForTimeout(300)
     await shoot(page, '08-token-close-row', theme)
 
-    // 7. The feedback strip, after an outcome.
+    // 7. The wide tab. Spare width goes to the stepper and the objection zone —
+    // never to longer lines, which is what the ch measurement is for.
+    const tab = await context.newPage()
+    await tab.setViewportSize({ width: 1280, height: 860 })
+    await tab.goto(`chrome-extension://${id}/call.html`)
+    await tab.waitForSelector('[data-testid="call-hud"][data-layout="wide"]', { timeout: 20000 })
+    await tab.getByLabel('Course').selectOption('item-0003')
+    // The tab resumes the step the panel left off on — no walking it forward,
+    // which would only re-test the stepper the panel already covered.
+    await tab.waitForTimeout(300)
+    await measureCue(tab, `${theme} · wide-tab cue`)
+    await tab.screenshot({ path: path.join(OUT, `12-wide-tab-${theme}.png`) })
+    process.stdout.write(`  ✓ 12-wide-tab-${theme}.png\n`)
+    await tab.keyboard.press('1')
+    await tab.waitForSelector('[aria-label^="Rebuttal:"]', { timeout: 10000 })
+    await measureCue(tab, `${theme} · wide-tab rebuttal cue`)
+    await tab.screenshot({ path: path.join(OUT, `13-wide-tab-objection-${theme}.png`) })
+    process.stdout.write(`  ✓ 13-wide-tab-objection-${theme}.png\n`)
+
+    // 8. The feedback strip, after an outcome.
     await tap(page.getByRole('button', { name: 'Progressing' }))
-    await page.waitForSelector('text=scripts used this call', { timeout: 15000 })
-    await page.getByRole('group', { name: 'Rate the scripts you used' }).scrollIntoViewIfNeeded()
+    // By role, not by the sentence: that copy pluralises, so "scripts used this
+    // call" silently never matches the one-usage run and times out.
+    const strip = page.getByRole('group', { name: 'Rate the scripts you used' })
+    await strip.waitFor({ timeout: 15000 })
+    await strip.scrollIntoViewIfNeeded()
     await shoot(page, '09-feedback-strip', theme)
 
     // 8. Library and Settings.

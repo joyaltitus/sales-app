@@ -17,6 +17,8 @@ type Props = {
   onHook: (key: HookKey) => void
   onInsert: (step: RoadmapStep) => void
   onExpand: (step: RoadmapStep) => void
+  /** A call session is open: the rep SAYS the cue, so the verb is not "Insert". */
+  inCall?: boolean
   busy?: boolean
 }
 
@@ -29,7 +31,7 @@ type Props = {
  * contents.
  */
 export function RoadmapStage({
-  steps, active, lang, useMine, hook, vars, spinsByScript, onSelect, onHook, onInsert, onExpand, busy = false,
+  steps, active, lang, useMine, hook, vars, spinsByScript, onSelect, onHook, onInsert, onExpand, inCall = false, busy = false,
 }: Props) {
   if (steps.length === 0) return null
   const current = Math.min(Math.max(active, 0), steps.length - 1)
@@ -136,11 +138,16 @@ export function RoadmapStage({
                   {picked.paragraphs.length === 0 ? (
                     <p className="text-xs text-fg-subtle">No script written for this step yet.</p>
                   ) : (
-                    <ul className="space-y-1">
+                    /* Sayable, not readable. ~20px in a ~45ch column is
+                       teleprompter practice: the eye travels DOWN a narrow
+                       measure instead of across a document. Nothing is clamped
+                       — half a sentence cannot be said out loud, and break-words
+                       plus the HUD's own overflow-hidden already hold the column. */
+                    <ul data-testid="cue" className="max-w-[45ch] space-y-2">
                       {picked.paragraphs.slice(0, 3).map((paragraph, i) => (
-                        <li key={i} className="flex min-w-0 gap-1.5 text-xs leading-relaxed text-fg-muted">
-                          <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-pill bg-border-strong" />
-                          <span className="line-clamp-2 min-w-0 break-words">{highlighted(paragraph, vars)}</span>
+                        <li key={i} className="flex min-w-0 gap-2 text-lg leading-normal text-fg-muted">
+                          <span aria-hidden className="mt-3 h-1 w-1 shrink-0 rounded-pill bg-border-strong" />
+                          <span className="min-w-0 break-words">{highlighted(paragraph, vars)}</span>
                         </li>
                       ))}
                     </ul>
@@ -154,7 +161,7 @@ export function RoadmapStage({
                       disabled={busy || picked.paragraphs.length === 0}
                       onClick={() => onInsert(step)}
                     >
-                      Insert
+                      {inCall ? 'Said it →' : 'Insert'}
                     </Button>
                     <Button
                       variant="ghost"

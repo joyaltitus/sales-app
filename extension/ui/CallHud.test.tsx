@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -75,7 +76,7 @@ describe('CallHud', () => {
   // ★ B8: course unpicked → tokens visible, warn chip, Insert still allowed.
   it('leaves course tokens visible and Insert live when no course is picked', async () => {
     const user = userEvent.setup()
-    render(hud())
+    render(hud({ callSessionId: null }))
     await goToOffer(user)
 
     expect(screen.getByText(/Pick a course to fill numbers/)).toBeInTheDocument()
@@ -102,7 +103,8 @@ describe('CallHud', () => {
   // ★ B8: double-tap Insert → ONE script_used row.
   it('writes one usage row however many times Insert is tapped', async () => {
     const user = userEvent.setup()
-    render(hud())
+    // Chat lane: the button stays put, so three taps are three taps on ONE script.
+    render(hud({ callSessionId: null }))
     await screen.findByText('Opener — follow-up')
 
     const insert = screen.getByRole('button', { name: 'Insert' })
@@ -121,7 +123,7 @@ describe('CallHud', () => {
     const user = userEvent.setup()
     render(hud())
     await screen.findByText('Opener — follow-up')
-    await user.click(screen.getByRole('button', { name: 'Insert' }))
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
 
     await waitFor(async () => {
       const used = (await readOutbox()).find((entry) => entry.kind === 'script_used')
@@ -156,7 +158,7 @@ describe('CallHud', () => {
   // ★ B8: lead switch resets the roadmap and the rate-these strip.
   it('resets progress and the used-scripts strip when the lead changes', async () => {
     const user = userEvent.setup()
-    const { rerender } = render(hud({ ratingOpen: true }))
+    const { rerender } = render(hud({ ratingOpen: true, callSessionId: null }))
     await goToOffer(user)
     await user.click(screen.getByRole('button', { name: 'Insert' }))
     expect(await screen.findByRole('group', { name: 'Rate the scripts you used' })).toBeInTheDocument()
@@ -185,7 +187,7 @@ describe('CallHud', () => {
     render(hud())
     await screen.findByText('Opener — follow-up')
     await user.click(screen.getByRole('button', { name: /Too expensive/ }))
-    await user.click(screen.getByRole('button', { name: 'Insert to WA' }))
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
     await user.click(screen.getByRole('button', { name: 'Missed' }))
 
     await user.type(await screen.findByLabelText('What did they say?'), 'my brother got it for half')
@@ -203,7 +205,7 @@ describe('CallHud', () => {
     const user = userEvent.setup()
     render(hud({ ratingOpen: true }))
     await screen.findByText('Opener — follow-up')
-    await user.click(screen.getByRole('button', { name: 'Insert' }))
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
 
     const strip = await screen.findByRole('group', { name: 'Rate the scripts you used' })
     await user.click(within(strip).getByRole('button', { name: /worked$/ }))
@@ -280,7 +282,7 @@ describe('CallHud', () => {
     expect(await screen.findByText('My words')).toBeInTheDocument()
     expect(screen.getByText(/I did this course myself/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Insert' }))
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
     await waitFor(async () => {
       const used = (await readOutbox()).find((entry) => entry.kind === 'script_used')
       expect(used?.args).toMatchObject({ used_personal: true })
@@ -300,7 +302,7 @@ describe('CallHud', () => {
     insertSnippet.mockResolvedValue(false)
     const user = userEvent.setup()
     const onResult = vi.fn()
-    render(hud({ onResult }))
+    render(hud({ onResult, callSessionId: null }))
     await screen.findByText('Opener — follow-up')
     await user.click(screen.getByRole('button', { name: 'Insert' }))
 
@@ -322,7 +324,6 @@ describe('CallHud', () => {
     expect(root.className).toContain('min-w-0')
     const long = await screen.findByText(/complete full-stack development bootcamp aanu/)
     expect(long.className).toMatch(/break-words/)
-    expect(long.className).toMatch(/line-clamp/)
   })
 })
 
@@ -333,7 +334,7 @@ describe('offline', () => {
     render(hud({ ratingOpen: true }))
     await screen.findByText('Opener — follow-up')
 
-    await user.click(screen.getByRole('button', { name: 'Insert' }))
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
     const strip = await screen.findByRole('group', { name: 'Rate the scripts you used' })
     await user.click(within(strip).getByRole('button', { name: /worked$/ }))
 
@@ -397,8 +398,9 @@ describe('CallHud layout', () => {
     await screen.findByText('Opener — follow-up')
 
     await user.click(screen.getByRole('button', { name: /Too expensive/ }))
-    await user.click(screen.getByRole('button', { name: 'Insert to WA' }))
-    await user.click(screen.getByRole('button', { name: 'Missed' }))
+    const card = screen.getByRole('region', { name: /^Rebuttal:/ })
+    await user.click(within(card).getByRole('button', { name: /Said it/ }))
+    await user.click(within(card).getByRole('button', { name: 'Missed' }))
 
     const said = await screen.findByLabelText('What did they say?')
     await user.type(said, '2 friends got it for 3000')
@@ -434,5 +436,125 @@ describe('the Open in tab button', () => {
     render(hud({ layout: 'wide' }))
     await screen.findByText('Opener — follow-up')
     expect(screen.queryByRole('button', { name: 'Open in tab' })).not.toBeInTheDocument()
+  })
+})
+
+// ─── CALL-ERGO-0902 ──────────────────────────────────────────────────────────
+// A rep on a live call reads the HUD OUT LOUD. Every test below defends one
+// half of that: the type is sayable, and the button says what the rep is doing.
+
+/** The cue size, read off the token file rather than trusted from a class name.
+ *  jsdom compiles no CSS, so `text-lg` alone would prove nothing — this resolves
+ *  it the way the build does and asserts the pixels. */
+function tokenPx(name: string): number {
+  const css = readFileSync('src/ui/tokens.css', 'utf8')
+  const match = new RegExp(`--${name}:\\s*([\\d.]+)rem`).exec(css)
+  if (!match) throw new Error(`no --${name} in tokens.css`)
+  return Number(match[1]) * 16
+}
+
+describe('CALL-ERGO-0902 — sayable', () => {
+  // AT-01
+  it.each(['column', 'wide'] as const)('cue text is at least 20px in the %s layout', async (layout) => {
+    render(hud({ layout }))
+    await screen.findByText('Opener — follow-up')
+    const cue = screen.getAllByTestId('cue')[0]!
+    const size = [...cue.querySelectorAll('li')].map((li) => li.className.match(/text-(\w+)/)?.[1])
+    expect(size).not.toHaveLength(0)
+    for (const step of size) expect(tokenPx(`text-${step}`)).toBeGreaterThanOrEqual(20)
+  })
+
+  // AT-02
+  it('the cue column never exceeds 45ch, wide tab included', async () => {
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
+    for (const cue of screen.getAllByTestId('cue')) {
+      const ch = Number(cue.className.match(/max-w-\[(\d+)ch\]/)?.[1])
+      expect(ch).toBeLessThanOrEqual(45)
+    }
+  })
+
+  // AT-03 — bold-exact vs grey-yours needs no schema: highlighted() already
+  // renders the highlight as its own <strong>, in a different colour token.
+  it('a highlight renders visually distinct from the words around it', async () => {
+    const user = userEvent.setup()
+    render(hud())
+    await goToOffer(user)
+
+    const strong = await screen.findByText('EMI is {{course.emi}} a month.')
+    expect(strong.tagName).toBe('STRONG')
+    expect(strong.className).toMatch(/font-semibold/)
+    expect(strong.className).toMatch(/text-fg\b/)
+    // The surrounding words are the muted token, so bold is not the only signal.
+    expect(strong.closest('li')!.className).toMatch(/text-fg-muted/)
+  })
+
+  // AT-04
+  it('mid-call the primary action is "Said it →": it advances and never inserts', async () => {
+    const user = userEvent.setup()
+    render(hud({ callSessionId: 'call-1' }))
+    await screen.findByText('Opener — follow-up')
+    expect(screen.getByText('1/4')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Insert' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
+
+    await waitFor(() => expect(screen.getByText('2/4')).toBeInTheDocument())
+    expect(insertSnippet).not.toHaveBeenCalled()
+  })
+
+  // AT-04 (the tell): the clipboard toast is what says the action was wrong.
+  it('mid-call there is no "paste it into the chat" toast', async () => {
+    insertSnippet.mockResolvedValue(false)
+    const user = userEvent.setup()
+    const onResult = vi.fn()
+    render(hud({ callSessionId: 'call-1', onResult }))
+    await screen.findByText('Opener — follow-up')
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
+
+    await waitFor(async () => expect((await readOutbox()).some((e) => e.kind === 'script_used')).toBe(true))
+    expect(onResult.mock.calls.flat().join(' ')).not.toMatch(/Copied|paste it into the chat/)
+  })
+
+  // AT-05 — the chat lane, untouched.
+  it('with NO call session the primary action is still Insert and still fills the composer', async () => {
+    const user = userEvent.setup()
+    render(hud({ callSessionId: null }))
+    await screen.findByText('Opener — follow-up')
+    expect(screen.queryByRole('button', { name: /Said it/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Insert' }))
+
+    await waitFor(() => expect(insertSnippet).toHaveBeenCalledTimes(1))
+    expect(insertSnippet.mock.calls[0]![0]).toContain('picking up where we left off')
+    // Reading a line off the panel does not move the call along by itself.
+    expect(screen.getByText('1/4')).toBeInTheDocument()
+  })
+
+  // AT-06 — this session is what starts filling script_usage.
+  it('"Said it →" records script_usage against the call session', async () => {
+    const user = userEvent.setup()
+    render(hud({ callSessionId: 'call-9' }))
+    await screen.findByText('Opener — follow-up')
+    await user.click(screen.getByRole('button', { name: /Said it/ }))
+
+    await waitFor(async () => {
+      const used = (await readOutbox()).find((entry) => entry.kind === 'script_used')
+      expect(used?.args).toMatchObject({ call_session_id: 'call-9', script_version_id: expect.any(String) })
+    })
+  })
+
+  // A rebuttal answers an objection; it is not a step, so it must NOT advance.
+  it('a rebuttal said out loud is logged but leaves the roadmap where it was', async () => {
+    const user = userEvent.setup()
+    render(hud({ layout: 'wide' }))
+    await screen.findByText('Opener — follow-up')
+    await user.click(screen.getByRole('button', { name: /Too expensive/ }))
+    const card = screen.getByRole('region', { name: /^Rebuttal:/ })
+    await user.click(within(card).getByRole('button', { name: /Said it/ }))
+
+    await waitFor(async () => expect((await readOutbox()).some((e) => e.kind === 'script_used')).toBe(true))
+    expect(insertSnippet).not.toHaveBeenCalled()
+    expect(screen.getByText('1/4')).toBeInTheDocument()
   })
 })

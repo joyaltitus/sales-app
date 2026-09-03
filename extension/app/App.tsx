@@ -11,11 +11,11 @@ import { usePlaybookLibrary, useRepQueue, type PanelIdentity } from '../lib/pane
 import type { CallOutcome, LeadDetail, QueueItem } from '../lib/contracts'
 import { CACHE_KEYS, cacheLeadDetail, cached, readCache } from '../lib/cache'
 import { firstOfMonth, useOwnWonValue, useTarget } from '@app/lib/targets-data'
-import { useLeadStages, moveLeadStage } from '@app/lib/leads-data'
-import { addNote, createLead, saveLead } from '@app/lib/crm-actions'
+import { useLeadStages } from '@app/lib/leads-data'
+import { addNote, createLead } from '@app/lib/crm-actions'
 import { completeCall, startCallSession, useCallLogs } from '@app/lib/calls-data'
 import { useLeadMemory, useNotes } from '@app/lib/crm-data'
-import { logObjection, useObjectionLogs, useObjectionTaxonomy } from '@app/lib/objections-data'
+import { useObjectionLogs, useObjectionTaxonomy } from '@app/lib/objections-data'
 import { chatLink } from '../lib/chat-link'
 import { readChatMessages } from '../lib/wa-bridge'
 import type { ChatMessage } from '../lib/wa-chat'
@@ -23,7 +23,7 @@ import { loadChatMode } from './chat-mode'
 import { queueWrite } from '../lib/outbox-store'
 import { CrmScreen, sinceFor, type DateFilterKey } from '../ui/CrmScreen'
 import { LeadScreen } from '../ui/LeadScreen'
-import { OutcomeBar } from '../ui/OutcomeBar'
+import { OutcomeTap } from '../ui/OutcomeTap'
 import { TargetBar } from '../ui/TargetBar'
 import { VoiceFlow } from '../ui/VoiceFlow'
 import { FollowingChip } from '../ui/FollowingChip'
@@ -49,6 +49,8 @@ const TABS = [
   { to: '/settings', label: 'Settings' },
 ]
 export const PANEL_NAV_KEY = 'rep.panelNavigation'
+/** The live call, shared by the two mounts that can show it. See beginCall. */
+const CALL_SESSION_KEY = 'rep.callSession'
 type PanelRoute = '/home' | '/crm' | '/lead' | '/library' | '/settings'
 export type PanelNavigation = { route: PanelRoute; selected: QueueItem | null }
 
@@ -180,7 +182,6 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
   // Reference data the LEAD screen needs. Deliberately read here rather than in
   // PanelRoutes: on the old shape both of these fired on panel open, ahead of
   // anything the rep could see.
-  const stages = useLeadStages(identity.clientId).stages
   const taxonomy = useObjectionTaxonomy(identity.clientId).items
   const library = usePlaybookLibrary(identity.clientId, identity.userId)
 
@@ -208,6 +209,19 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     setCallSessionId(null)
     setRatingOpen(false)
     callRequestId.current = crypto.randomUUID()
+    // The side panel and the call tab are two React trees over ONE call.
+    // Whichever of them dialled owns the session; the other adopts it here —
+    // otherwise the tab, which is the surface a rep actually performs from,
+    // would sit in chat mode for the whole call and offer them "Insert".
+    // ponytail: adopted once, at mount. A dial in the OTHER tree after this one
+    // is already open does not reach it; add a storage.onChanged listener if
+    // reps start dialling from the tab while the panel is on screen.
+    void chrome.storage.session.get(CALL_SESSION_KEY).then((stored) => {
+      const open = stored[CALL_SESSION_KEY] as { leadId: string; id: string; requestId: string } | undefined
+      if (!alive || open?.leadId !== lead.lead_id) return
+      callRequestId.current = open.requestId
+      setCallSessionId(open.id)
+    })
     void readCache(CACHE_KEYS.leadDetails).then((entries) => {
       const entry = entries?.find((item) => item.scope === identity.clientId && item.data.lead.lead_id === lead.lead_id)
       if (alive && entry) {
@@ -218,15 +232,18 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     return () => { alive = false }
   }, [identity.clientId, lead])
 
-  /** `callbackAtIso` comes from the HUD's Lock callback, which asks for a time;
-   *  OutcomeBar still passes nothing and keeps its date-at-09:00 behaviour. */
-  async function outcome(value: CallOutcome, taxonomyKey?: string, callbackAtIso?: string): Promise<boolean> {
-    if (value === 'objection' && !taxonomyKey) {
-      setMessage('Choose an objection type before logging this outcome.')
-      return false
-    }
-    setBusy(true)
-    setMessage(null)
+  /**
+   * Open the call session, once per lead.
+   *
+   * This used to happen inside `outcome()` — that is, when the call was already
+   * OVER. Everything keyed on `callSessionId !== null` therefore spent the whole
+   * call on the wrong side of the branch: the HUD showed the chat lane's
+   * "Insert" to a rep who was talking to a human being, and only switched to
+   * the in-call verb once there was nothing left to say. Dialling is the start
+   * of a call, so the session starts here and `outcome()` reuses it.
+   */
+  async function beginCall(): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+    if (callSessionId) return { ok: true, id: callSessionId }
     const started = await startCallSession({
       clientId: identity.clientId,
       contactId: current.contact_id,
@@ -234,9 +251,28 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
       actorId: identity.userId,
       surface: 'whatsapp_extension',
       requestedNumber: current.phone_e164,
+      // Same id for the whole lead: dialling twice is one call session, not two.
       clientRequestId: callRequestId.current,
     })
-    if (started.ok) setCallSessionId(started.id)
+    if (started.ok) {
+      setCallSessionId(started.id)
+      void chrome.storage.session.set({
+        [CALL_SESSION_KEY]: { leadId: current.lead_id, id: started.id, requestId: callRequestId.current },
+      })
+    }
+    return started
+  }
+
+  /** `callbackAtIso` comes from the HUD's Lock callback, which asks for a time;
+   *  OutcomeTap still passes nothing and keeps its date-at-09:00 behaviour. */
+  async function outcome(value: CallOutcome, taxonomyKey?: string, callbackAtIso?: string): Promise<boolean> {
+    if (value === 'objection' && !taxonomyKey) {
+      setMessage('Choose an objection type before logging this outcome.')
+      return false
+    }
+    setBusy(true)
+    setMessage(null)
+    const started = await beginCall()
     const result = started.ok
       ? await completeCall(started.id, value, {
           taxonomyKey: value === 'objection' ? taxonomyKey : null,
@@ -250,6 +286,7 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     }
     setMessage('Outcome logged.')
     setRatingOpen(true)
+    if (value === 'closed') onRevenueChanged()
     void calls.reload()
     if (value === 'objection') void objections.reload()
     onChanged()
@@ -296,7 +333,6 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
     setCachedAt(null)
     void cacheLeadDetail(cached(detail, new Date(), identity.clientId))
   }, [detail, detailError, detailPending, identity.clientId])
-  const stageOptions = stages.map((stage) => ({ key: stage.stage_key, label: stage.label }))
   const taxonomyOptions = taxonomy.map((item) => ({ key: item.key, label: item.label }))
   // One chip for the whole workspace: the lead's own history if that is what is
   // stale, otherwise the playbook the HUD is reading from.
@@ -339,56 +375,11 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
           <SaveConversation identity={identity} lead={current} onSaved={() => { void notes.reload(); onChanged() }} />
           <VoiceFlow clientId={identity.clientId} leadId={current.lead_id} onSaved={onChanged} />
           <section className="rounded-lg border border-border bg-surface-raised shadow-elev-1">
-            <OutcomeBar
-              stages={stageOptions}
-              stageKey={current.stage_key}
-              status={current.status}
+            <OutcomeTap
               taxonomy={taxonomyOptions}
               busy={busy}
               onOutcome={(value, key) => void outcome(value, key)}
-              onStageChange={(key) => {
-                const stage = stages.find((item) => item.stage_key === key)
-                if (!stage) return
-                setBusy(true)
-                void moveLeadStage(identity.clientId, current.lead_id, stage.id).then((result) => {
-                  setBusy(false)
-                  if (!result.ok) setMessage(result.message ?? 'Stage change was denied.')
-                  else { setCurrent((item) => ({ ...item, stage_key: key, stage_label: stage.label })); onChanged() }
-                })
-              }}
-              onStatusChange={(status) => {
-                const stage = stages.find((item) => item.stage_key === current.stage_key)
-                if (!stage) return
-                setBusy(true)
-                void saveLead(identity.clientId, current.lead_id, stage.id, { status }).then((result) => {
-                  setBusy(false)
-                  if (!result.ok) setMessage(result.message ?? 'Status change was denied.')
-                  else {
-                    setCurrent((item) => ({ ...item, status }))
-                    onChanged()
-                    if (status === 'won') onRevenueChanged()
-                  }
-                })
-              }}
               onFollowUpChange={setFollowUp}
-              onSaveNote={(body) => {
-                setBusy(true)
-                void addNote(identity.clientId, { conversation_id: null, lead_id: current.lead_id, author: identity.userId, body }).then((result) => {
-                  setBusy(false)
-                  setMessage(result.ok ? 'Note saved.' : result.message ?? 'Note could not be saved.')
-                  if (result.ok) { void notes.reload(); onChanged() }
-                })
-              }}
-              onObjection={(key) => {
-                const item = taxonomy.find((candidate) => candidate.key === key)
-                if (!item) return
-                setBusy(true)
-                void logObjection({ clientId: identity.clientId, contactId: current.contact_id, leadId: current.lead_id, taxonomyId: item.id, source: 'crm', actorId: identity.userId }).then((result) => {
-                  setBusy(false)
-                  setMessage(result.ok ? 'Objection logged.' : result.message)
-                  if (result.ok) { void objections.reload(); onChanged() }
-                })
-              }}
             />
           </section>
         </div>
@@ -399,7 +390,11 @@ function LeadWorkspace({ identity, lead, onChanged, onRevenueChanged, onBack }: 
           if (url) void chrome.runtime.sendMessage({ type: 'rep.openChat', url, mode })
         })
       }}
-      onCall={() => { if (current.phone_e164) void chrome.tabs.create({ url: `tel:${current.phone_e164}` }) }}
+      onCall={() => {
+        if (!current.phone_e164) return
+        void beginCall()
+        void chrome.tabs.create({ url: `tel:${current.phone_e164}` })
+      }}
     />
   )
 }

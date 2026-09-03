@@ -69,6 +69,8 @@ export function CallHud({
   identity, lead, library, calls, callSessionId, ratingOpen, onResult, onLockCallback, busy = false, layout,
 }: Props) {
   const wide = (layout ?? (isWideSurface() ? 'wide' : 'column')) === 'wide'
+  // Call mode IS the session id. Nothing else decides it.
+  const inCall = callSessionId !== null
   const [courseId, setCourseId] = useState<string | null>(null)
   const [lang, setLang] = useState(DEFAULT_LANG)
   const [useMine, setUseMine] = useState(false)
@@ -211,8 +213,18 @@ export function CallHud({
     }
   }
 
-  async function insertScript(script: Rebuttal, picked: PickedScript) {
-    onResult(await insertWithFallback(renderSnippet(toText(picked.paragraphs), vars)))
+  /**
+   * Use a script, and log that it was used.
+   *
+   * `spoken` is the in-call cue path: the rep says the line to a human ear, so
+   * there is no composer to fill and no clipboard to fall back to. Filling
+   * WhatsApp there would be wrong twice — a message the customer never asked
+   * for, and a "Copied — paste it into the chat" toast that tells the rep the
+   * button they just pressed was the wrong one. Off-call the same button is
+   * still the chat lane's Insert, unchanged.
+   */
+  async function useScript(script: Rebuttal, picked: PickedScript, spoken = false) {
+    if (!spoken) onResult(await insertWithFallback(renderSnippet(toText(picked.paragraphs), vars)))
     await recordUsage(script, picked)
   }
 
@@ -273,7 +285,7 @@ export function CallHud({
       return
     }
     const picked = pickScript(tokenScript, lang, useMine, spinsByScript(tokenScript.script_id))
-    await insertScript(tokenScript, picked)
+    await useScript(tokenScript, picked)
   }
 
   async function confirmToken() {
@@ -413,7 +425,8 @@ export function CallHud({
               canRate={usages.some((u) => u.versionId === objection.script_version_id)}
               onBack={() => setObjection(null)}
               onExpand={() => setSheet(objection)}
-              onInsert={() => void insertScript(objection, objectionPicked)}
+              inCall={inCall}
+              onInsert={() => void useScript(objection, objectionPicked, inCall)}
               onFeedback={(feedback, words) => {
                 const usage = usages.find((u) => u.versionId === objection.script_version_id)
                 if (usage) void rate(usage, feedback)
@@ -434,9 +447,13 @@ export function CallHud({
               onSelect={selectStep}
               onHook={setHook}
               onExpand={(target) => setSheet(target.script)}
+              inCall={inCall}
               onInsert={(target) => {
                 const picked = pickScript(target.script, lang, useMine, spinsByScript(target.script.script_id))
-                void insertScript(target.script, picked)
+                void useScript(target.script, picked, inCall)
+                // Saying the line IS finishing the step. Only the open step
+                // carries this button, so `step` is the one that was just said.
+                if (inCall) selectStep(step + 1)
               }}
             />
           ) : null}
