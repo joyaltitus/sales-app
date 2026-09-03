@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target, TrendingUp, ShieldCheck } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target, TrendingUp, ShieldCheck, Megaphone, FileCheck2 } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -29,6 +29,11 @@ const TargetsPage = lazy(() => import('../views/targets/TargetsPage').then((m) =
 // campaign_roi_v walls at manager; Approvals is theirs because manager IS the
 // approver floor. The manage view is NOT here — 069 makes campaigns_write
 // client_admin, so every write on it would come back forbidden.
+// S2-E1: outbound. RLS lets a manager insert broadcasts and follow_ups, so
+// unlike the manage view this pair genuinely works for them. Templates is
+// read-only for every role here — Meta approves, the operator registers.
+const Broadcasts = lazy(() => import('../views/outbound/Broadcasts').then((m) => ({ default: m.Broadcasts })))
+const OutboundTemplates = lazy(() => import('../views/outbound/Templates').then((m) => ({ default: m.Templates })))
 const AttributionView = lazy(() => import('../views/attribution/AttributionView').then((m) => ({ default: m.AttributionView })))
 const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then((m) => ({ default: m.ApprovalsView })))
 
@@ -46,6 +51,8 @@ const RAIL = [
   { to: '/docs', label: 'Documents', icon: FileText },
   { to: '/team', label: 'Team', icon: UsersRound },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
+  { to: '/broadcasts', label: 'Broadcasts', icon: Megaphone },
+  { to: '/templates', label: 'Templates', icon: FileCheck2 },
   { to: '/attribution', label: 'Attribution', icon: TrendingUp },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/teardown', label: 'Teardown', icon: Wrench },
@@ -131,6 +138,8 @@ export function ManagerShell() {
                 <Route path="teardown" element={<Teardown />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="approvals" element={<ApprovalsView />} />
+                <Route path="broadcasts" element={<Broadcasts />} />
+                <Route path="templates" element={<OutboundTemplates />} />
                 <Route path="attribution" element={<AttributionView />} />
                 <Route path="targets" element={<TargetsPage />} />
                 {/* Pre-SA-04 paths — keep deep links alive. */}

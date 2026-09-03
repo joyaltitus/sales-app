@@ -17,6 +17,30 @@ const CONVERSATION_LIMIT = 200
 const MESSAGE_LIMIT = 300
 const TRACE_LIMIT = 300
 
+// WhatsApp allows a free-text reply only inside 24 hours of the customer's last
+// message; Instagram gives a human 7 days. Outside it, only a pre-approved
+// template may open the conversation.
+//
+// The real gate is server-side (gate.js, pm_prepare_template_send) — this is the
+// UX mirror, and it lives here rather than in a component because two screens
+// read it: the context rail explains the closed window, and the composer offers
+// the template that reopens it. Two copies of this arithmetic would eventually
+// disagree, and the shape of that bug is a rep told the window is open by one
+// panel while the other refuses to send.
+export const WA_WINDOW_MS = 24 * 3_600_000
+export const IG_HUMAN_WINDOW_MS = 7 * 24 * 3_600_000
+
+/** No customer message at all counts as closed: there is no window to be inside. */
+export function isWindowClosed(
+  item: Pick<QueueItem, 'last_customer_message_at' | 'contact'>,
+  now: number = Date.now(),
+): boolean {
+  const since = item.last_customer_message_at
+    ? now - new Date(item.last_customer_message_at).getTime()
+    : Infinity
+  return since > (item.contact?.channel === 'instagram' ? IG_HUMAN_WINDOW_MS : WA_WINDOW_MS)
+}
+
 export type QueueItem = {
   id: string
   contact_id: string
