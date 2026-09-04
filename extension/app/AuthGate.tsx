@@ -88,8 +88,8 @@ export function AuthGate({ children }: { children: (identity: PanelIdentity) => 
       )}
       {message && <p role="alert" className="rounded-md bg-danger-subtle px-3 py-2 text-xs leading-relaxed text-danger">{message}</p>}
       <form onSubmit={signIn} className="grid gap-3">
-        <label className="grid gap-1"><span className="label-caps">Email</span><Input required type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-        <label className="grid gap-1"><span className="label-caps">Password</span><Input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <label className="grid gap-1"><span className="text-xs font-medium text-fg-muted">Email</span><Input required type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        <label className="grid gap-1"><span className="text-xs font-medium text-fg-muted">Password</span><Input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <Button type="submit" className="mt-1 min-h-11 w-full" loading={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</Button>
       </form>
     </main>

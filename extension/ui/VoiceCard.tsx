@@ -57,7 +57,7 @@ export function VoiceCard({
           {recording ? <Square aria-hidden size={16} /> : <Mic aria-hidden size={20} strokeWidth={1.75} />}
         </button>
         <div className="min-w-0 flex-1">
-          <span className="label-caps block">{recording ? 'Recording…' : transcribing ? 'Transcribing…' : 'Talk to log'}</span>
+          <span className="block text-xs font-medium text-fg">{recording ? 'Recording…' : transcribing ? 'Transcribing…' : 'Talk to log'}</span>
           <p className="text-2xs leading-snug text-fg-muted">Describe the call. You review the draft before anything is saved.</p>
         </div>
         {recording && (
@@ -77,7 +77,7 @@ export function VoiceCard({
 
       {proposedFields.length > 0 && (
         <div className="space-y-2">
-          <span className="label-caps block">Proposed fields</span>
+          <span className="block text-xs font-medium text-fg-muted">Proposed fields</span>
           {proposedFields.map((field) => (
             <label key={field.key} className="block">
               <span className="mb-0.5 block text-2xs font-medium text-fg-muted">{field.label}</span>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
-import { SALES_CONFIG_DEFAULTS, setSalesConfig } from '../../../lib/sales-settings-data'
+import { setSalesConfig } from '../../../lib/sales-settings-data'
 import type { Course, SalesConfig } from '../../../lib/sales-settings-data'
 import { buildMergeVars, renderMerged, resolveParagraphs } from '../../../lib/script-body'
 import type { LibraryScript } from '../../../lib/scripts-data'
@@ -52,8 +52,6 @@ export function SettingsView({
     return renderMerged(
       paragraphs,
       buildMergeVars({
-        contactName: 'Anjali',
-        repName: 'you',
         clientName,
         course: course ? { name: course.name, facts: course.facts } : null,
         salesConfig: { tokenAmount: config.tokenAmount, payUrl: config.payUrl, upiVpa: config.upiVpa },
@@ -100,8 +98,8 @@ export function SettingsView({
       <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
         <div className="border-b border-border p-4">
           <p className="label-caps text-accent">Sales settings</p>
-          <h3 className="mt-1 text-md font-semibold text-fg">What the money words say.</h3>
-          <p className="mt-1 text-xs text-fg-muted">Managers only. Every value here lands inside a rep's message.</p>
+          <h3 className="mt-1 text-md font-semibold text-fg">Payment settings</h3>
+          <p className="mt-1 text-xs text-fg-muted">Used in payment messages.</p>
         </div>
 
         {error && (
@@ -157,7 +155,6 @@ export function SettingsView({
               <input
                 defaultValue={config.upiVpa}
                 onBlur={(event) => event.target.value !== config.upiVpa && void save({ upiVpa: event.target.value })}
-                placeholder="academy@ybl"
                 className={field}
               />
             </label>
@@ -166,7 +163,6 @@ export function SettingsView({
               <input
                 defaultValue={config.upiPayee}
                 onBlur={(event) => event.target.value !== config.upiPayee && void save({ upiPayee: event.target.value })}
-                placeholder="Vidya Sagar Academy"
                 className={field}
               />
             </label>
@@ -202,11 +198,11 @@ export function SettingsView({
                 type="number"
                 min={1}
                 step={1}
-                defaultValue={config.tokenAmount}
+                defaultValue={config.tokenAmount ?? ''}
                 onBlur={(event) => {
                   const value = Math.round(Number(event.target.value))
                   if (!Number.isFinite(value) || value <= 0) {
-                    event.target.value = String(config.tokenAmount)
+                    event.target.value = config.tokenAmount === null ? '' : String(config.tokenAmount)
                     return
                   }
                   if (value !== config.tokenAmount) void save({ tokenAmount: value })
@@ -219,7 +215,6 @@ export function SettingsView({
               <input
                 defaultValue={config.tokenNote}
                 onBlur={(event) => event.target.value !== config.tokenNote && void save({ tokenNote: event.target.value })}
-                placeholder="Seat reservation"
                 className={field}
               />
             </label>
@@ -241,19 +236,19 @@ export function SettingsView({
 
       <aside className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-elev-1">
         <p className="label-caps">What the rep sends</p>
-        <h3 className="mt-1 text-sm font-semibold text-fg">Seat reservation, in {langLabel(config.defaultLang)}</h3>
+        <h3 className="mt-1 text-sm font-semibold text-fg">Payment message · {langLabel(config.defaultLang)}</h3>
         <div className="mt-3 rounded-lg border border-border bg-surface-sunk p-4">
           {tokenScript?.current ? (
             <ScriptText paragraphs={previewParagraphs} />
           ) : (
             <p className="text-xs leading-relaxed text-fg-muted">
-              No “Seat reservation text” script yet. Add one in the Library and this preview fills in.
+              No payment script yet. Add one in the Library to see it here.
             </p>
           )}
         </div>
         <p className="mt-2 text-2xs text-fg-subtle">
           {course ? `Using ${course.name}.` : 'No course facts yet — add one in Courses.'}
-          {config.tokenAmount === SALES_CONFIG_DEFAULTS.tokenAmount && ' Token amount is still the default.'}
+          {config.tokenAmount === null && ' Token amount is not set.'}
         </p>
       </aside>
     </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { UserRound } from 'lucide-react'
 
 // SA-05 avatar — Joyal's direct ask ("need to see the profile pic") supersedes
 // §1.10 #4 for contact identity everywhere it appears. A real profile picture
@@ -63,7 +64,7 @@ export function Avatar({
         'flex shrink-0 items-center justify-center rounded-[10px] border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--surface-sunk))] font-semibold text-fg-muted shadow-elev-1 select-none',
       ].join(' ')}
     >
-      {initial}
+      {initial === '·' ? <UserRound size={size === 'sm' ? 13 : size === 'lg' ? 19 : 16} strokeWidth={1.75} /> : initial}
     </span>
   )
 }

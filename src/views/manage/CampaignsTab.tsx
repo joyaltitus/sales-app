@@ -151,7 +151,7 @@ function CampaignCard({
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="label-caps text-fg-subtle">{campaign.campaign_key}</span>
+        <span className="font-mono text-2xs text-fg-subtle">{campaign.campaign_key}</span>
         <Chip tone={campaign.active ? 'accent' : 'neutral'}>{campaign.channel}</Chip>
         {!campaign.active && <Chip tone="neutral">Off</Chip>}
         <div className="ml-auto flex items-center gap-1">
@@ -165,12 +165,12 @@ function CampaignCard({
       </div>
 
       <label className="mt-3 block">
-        <span className="label-caps">Name</span>
+        <span className="text-xs font-medium text-fg-muted">Name</span>
         <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
 
       <label className="mt-3 block">
-        <span className="label-caps">What the assistant may say about this campaign</span>
+        <span className="text-xs font-medium text-fg-muted">What the assistant may say about this campaign</span>
         <textarea
           className="mt-1 min-h-20 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
           value={context}
@@ -183,11 +183,11 @@ function CampaignCard({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="label-caps">Starts</span>
+          <span className="text-xs font-medium text-fg-muted">Starts</span>
           <Input className="mt-1" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
         </label>
         <label className="block">
-          <span className="label-caps">Ends</span>
+          <span className="text-xs font-medium text-fg-muted">Ends</span>
           <Input
             className="mt-1"
             type="date"
@@ -251,7 +251,7 @@ function CampaignCard({
 
       <div className="mt-4 border-t border-border pt-4">
         <label className="block">
-          <span className="label-caps">Spend so far</span>
+          <span className="text-xs font-medium text-fg-muted">Spend so far</span>
           <Input
             className="mt-1"
             inputMode="decimal"
@@ -424,14 +424,14 @@ function NewCampaignForm({ clientId, onCreated }: { clientId: string; onCreated:
         if (ready && !busy) void submit()
       }}
     >
-      <p className="label-caps">New campaign</p>
+      <p className="text-sm font-semibold text-fg">New campaign</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="label-caps">Name</span>
+          <span className="text-xs font-medium text-fg-muted">Name</span>
           <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="block">
-          <span className="label-caps">Short key</span>
+          <span className="text-xs font-medium text-fg-muted">Short key</span>
           <Input
             className="mt-1"
             value={key}
@@ -441,7 +441,7 @@ function NewCampaignForm({ clientId, onCreated }: { clientId: string; onCreated:
         </label>
       </div>
       <label className="mt-3 block">
-        <span className="label-caps">Channel</span>
+        <span className="text-xs font-medium text-fg-muted">Channel</span>
         <select
           className="mt-1 h-10 w-full rounded-md border border-border bg-surface-raised px-2 text-sm text-fg"
           value={channel}
@@ -455,7 +455,7 @@ function NewCampaignForm({ clientId, onCreated }: { clientId: string; onCreated:
         </select>
       </label>
       <label className="mt-3 block">
-        <span className="label-caps">What the assistant may say about it</span>
+        <span className="text-xs font-medium text-fg-muted">What the assistant may say about it</span>
         <textarea
           className="mt-1 min-h-20 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
           value={context}
@@ -464,11 +464,11 @@ function NewCampaignForm({ clientId, onCreated }: { clientId: string; onCreated:
       </label>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="label-caps">Starts</span>
+          <span className="text-xs font-medium text-fg-muted">Starts</span>
           <Input className="mt-1" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
         </label>
         <label className="block">
-          <span className="label-caps">Ends</span>
+          <span className="text-xs font-medium text-fg-muted">Ends</span>
           <Input
             className="mt-1"
             type="date"

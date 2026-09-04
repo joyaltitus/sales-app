@@ -1,11 +1,11 @@
 import { FileText, Image as ImageIcon, Mic } from 'lucide-react'
-import type { PreviewKind, QueueItem } from '../../lib/inbox-data'
+import type { SnippetKind, QueueItem } from '../../lib/inbox-data'
 import { waitStamp, urgency } from '../../lib/wait'
 import { Avatar } from '../../ui/Avatar'
 import { ChannelIcon } from '../../ui/ChannelIcon'
 import { formatPhone } from '../../lib/phone'
 
-const PREVIEW_ICON: Partial<Record<PreviewKind, typeof ImageIcon>> = {
+const SNIPPET_ICON: Partial<Record<SnippetKind, typeof ImageIcon>> = {
   image: ImageIcon,
   audio: Mic,
   document: FileText,
@@ -29,30 +29,25 @@ const STAMP: Record<ReturnType<typeof urgency>, string> = {
   late: 'text-danger',
 }
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 export function QueueRow({
   item,
-  preview,
-  previewKind = 'text',
+  snippet,
+  snippetKind = 'text',
   selected,
   onSelect,
   assigneeLabel,
 }: {
   item: QueueItem
-  preview: string
+  snippet: string
   /** Media-only inbound rows get a glyph instead of relying on text alone. */
-  previewKind?: PreviewKind
+  snippetKind?: SnippetKind
   selected: boolean
   onSelect: () => void
   /** SA-06: who this chat is labeled under — "You", a teammate's name, or
    *  null for unlabeled. Resolved by the parent (it owns the roster). */
   assigneeLabel?: string | null
 }) {
-  const PreviewIcon = PREVIEW_ICON[previewKind]
+  const SnippetIcon = SNIPPET_ICON[snippetKind]
   const level = urgency(item.last_customer_message_at)
   const stamp = waitStamp(item.last_customer_message_at)
   const name = item.contact?.profile_name ?? formatPhone(item.contact?.external_id) ?? 'Unknown contact'
@@ -108,25 +103,24 @@ export function QueueRow({
                 item.unread_count > 0 ? 'font-medium text-fg' : 'text-fg-subtle',
               ].join(' ')}
             >
-              {PreviewIcon && <PreviewIcon aria-hidden size={12} className="shrink-0" />}
-              <span className="truncate">{preview}</span>
+              {SnippetIcon && <SnippetIcon aria-hidden size={12} className="shrink-0" />}
+              <span className="truncate">{snippet}</span>
             </span>
             {/* Right-edge metadata is capped at TWO chips (audit A16): paused
                 state > assignee > unread count. Three stacked chips collided
-                with the preview at 390px. */}
+                with the snippet at 390px. */}
             {assigneeLabel && !(item.bot_paused && item.unread_count > 0) && (
               <span
                 className={[
-                  'shrink-0 text-2xs uppercase',
+                  'shrink-0 text-2xs font-medium',
                   assigneeLabel === 'You' ? 'text-accent' : 'text-fg-subtle',
                 ].join(' ')}
-                style={capsStyle}
               >
                 {assigneeLabel}
               </span>
             )}
             {item.bot_paused && (
-              <span className="shrink-0 text-2xs text-warn uppercase" style={capsStyle}>
+              <span className="shrink-0 text-2xs font-medium text-warn">
                 {item.escalation_resolved ? 'Bot paused' : 'Needs human'}
               </span>
             )}

@@ -40,15 +40,6 @@ export function StatusBadge({
   )
 }
 
-/** "Preview" marker — SA-04 convention: dashed border = not wired yet. */
-export function SampleTag({ label = 'Preview' }: { label?: string }) {
-  return (
-    <span className="label-caps rounded-pill border border-dashed border-border-strong px-1.5 text-fg-subtle">
-      {label}
-    </span>
-  )
-}
-
 /** Original-message evidence: collapsed quote, expands inline. The source is
  *  the customer's own words — always available, never a mystery score. */
 export function EvidenceLink({
@@ -96,7 +87,7 @@ export function ToolProgress({
       ) : (
         <Check aria-hidden size={13} className="mt-0.5 shrink-0 text-success" />
       )}
-      <span className="label-caps mt-0.5 shrink-0">{tool}</span>
+      <span className="mt-0.5 shrink-0 text-2xs font-semibold text-fg-subtle">{tool.replaceAll('_', ' ')}</span>
       <span className="min-w-0 text-fg-muted">{summary}</span>
     </div>
   )

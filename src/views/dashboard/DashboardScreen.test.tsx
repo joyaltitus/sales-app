@@ -66,14 +66,16 @@ describe('DashboardScreen', () => {
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><DashboardScreen /></MemoryRouter>)
 
     expect(screen.getByRole('heading', { name: 'What needs attention today' })).toBeInTheDocument()
-    expect(screen.queryByText('The business, at a glance.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Business report', level: 2 })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Revenue' }))
     expect(screen.getByText('Open pipeline')).toBeInTheDocument()
     expect(screen.getByText('Pipeline by stage')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Business report' }))
-    expect(await screen.findByText('The business, at a glance.', {}, { timeout: 15_000 })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Business report', level: 2 }, { timeout: 15_000 }),
+    ).toBeInTheDocument()
     // The report's own numbers, not the operating dashboard's.
     expect(screen.getByText('Return on spend')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'What needs attention today' })).not.toBeInTheDocument()

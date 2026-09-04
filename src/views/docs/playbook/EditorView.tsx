@@ -65,11 +65,8 @@ export function EditorView({
   const vars = useMemo(
     () =>
       buildMergeVars({
-        contactName: 'Anjali',
-        repName: 'you',
         clientName,
         course: course ? { name: course.name, facts: course.facts } : null,
-        callbackWhen: 'tomorrow 5pm',
       }),
     [course, clientName],
   )

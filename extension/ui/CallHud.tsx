@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarClock, CreditCard, Quote, TriangleAlert } from 'lucide-react'
+import { CalendarClock, CreditCard, Quote, ThumbsDown, ThumbsUp, TriangleAlert } from 'lucide-react'
 import type { PersonalSpin, PlaybookLibrary, QueueItem, Rebuttal } from '../lib/contracts'
 import type { PanelIdentity } from '../lib/panel-data'
 import { spinsFor } from '../lib/panel-data'
@@ -356,7 +356,7 @@ export function CallHud({
             disabled={busy}
             onClick={() => setLang(code)}
             className={[
-              'min-h-8 rounded-pill border px-2.5 text-2xs font-semibold uppercase transition-colors',
+              'min-h-8 rounded-pill border px-2.5 text-2xs font-semibold transition-colors',
               code === lang
                 ? 'border-accent bg-accent-subtle text-accent'
                 : 'border-border bg-surface-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -549,17 +549,17 @@ export function CallHud({
                 type="button"
                 aria-label={`${usage.label} worked`}
                 onClick={() => void rate(usage, 'worked')}
-                className="min-h-9 rounded-md border border-border bg-surface-raised px-2 text-xs hover:border-success hover:text-success"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-success hover:text-success"
               >
-                👍
+                <ThumbsUp aria-hidden size={13} /> Worked
               </button>
               <button
                 type="button"
                 aria-label={`${usage.label} missed`}
                 onClick={() => void rate(usage, 'didnt_work')}
-                className="min-h-9 rounded-md border border-border bg-surface-raised px-2 text-xs hover:border-danger hover:text-danger"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-danger hover:text-danger"
               >
-                👎
+                <ThumbsDown aria-hidden size={13} /> Missed
               </button>
             </div>
           ))}

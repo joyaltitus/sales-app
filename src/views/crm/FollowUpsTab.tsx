@@ -24,11 +24,7 @@ import { ErrorState } from '../../ui/ErrorState'
 import { Sheet } from '../../ui/Sheet'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatINR, formatINRCompact } from '../../ui/formatMoney'
-import { FOLLOW_UP_PREVIEW_ITEMS } from './followUpMocks'
-import type { FollowUpDetailPreview } from './followUpMocks'
-
 type FollowUpView = FollowUpItem & {
-  sample?: true
   person: string
   phone: string
   channel: string
@@ -40,10 +36,6 @@ type FollowUpView = FollowUpItem & {
 }
 
 type Bucket = { label: string; tone: string; items: FollowUpView[] }
-
-function isPreview(item: FollowUpItem): item is FollowUpDetailPreview {
-  return 'sample' in item && item.sample === true
-}
 
 function dueStamp(iso: string, now: number): string {
   const diff = new Date(iso).getTime() - now
@@ -64,7 +56,6 @@ function dateTime(iso: string) {
 }
 
 function toView(item: FollowUpItem, leads: LeadItem[], stageById: Map<string, string>): FollowUpView {
-  if (isPreview(item)) return item
   const lead = item.lead_id ? leads.find((candidate) => candidate.id === item.lead_id) : null
   const contact = lead?.contact
   const lastContactAt = lead?.conversation?.last_customer_message_at
@@ -108,7 +99,6 @@ function FollowUpDetails({
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <Chip tone={overdue ? 'danger' : item.status === 'snoozed' ? 'warn' : 'accent'}>{overdue ? 'Overdue' : item.status === 'snoozed' ? 'Snoozed' : 'Scheduled'}</Chip>
-          {item.sample && <span className="text-2xs font-semibold text-fg-subtle">Test data · local only</span>}
         </div>
         <h3 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-fg">{item.person}</h3>
         <p className="mt-1 flex items-center gap-1.5 text-xs text-fg-muted"><UserRound aria-hidden size={13} /> {item.phone} · {item.channel}</p>
@@ -138,10 +128,10 @@ function FollowUpDetails({
 
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => onAction('done')} disabled={busy}><Check aria-hidden size={15} /> Mark done</Button>
-        {item.conversationId && !item.sample ? (
+        {item.conversationId ? (
           <Link to={`/inbox?c=${encodeURIComponent(item.conversationId)}`} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"><MessageCircle aria-hidden size={15} /> Open chat</Link>
         ) : (
-          <button disabled className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-sunk px-3 text-xs font-semibold text-fg-subtle"><MessageCircle aria-hidden size={15} /> Chat preview</button>
+          <button disabled className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-sunk px-3 text-xs font-semibold text-fg-subtle"><MessageCircle aria-hidden size={15} /> No chat linked</button>
         )}
         <button onClick={() => onAction('snooze1d')} disabled={busy} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg disabled:opacity-50"><TimerReset aria-hidden size={14} /> Tomorrow</button>
         <button onClick={() => onAction('snooze3d')} disabled={busy} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg disabled:opacity-50"><TimerReset aria-hidden size={14} /> In 3 days</button>
@@ -157,17 +147,14 @@ export function FollowUpsTab() {
   const { items: leads, loading: leadsLoading } = useLeads(clientId)
   const { stages, loading: stagesLoading } = useLeadStages(clientId)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [sampleItems, setSampleItems] = useState<FollowUpDetailPreview[]>(FOLLOW_UP_PREVIEW_ITEMS)
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get('f'))
   const [busyId, setBusyId] = useState<string | null>(null)
   const [errId, setErrId] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<string | null>(null)
 
   const loading = followUpsLoading || leadsLoading || stagesLoading
-  const usingSample = !loading && liveFollowUps.length === 0
-  const sourceItems: FollowUpItem[] = usingSample ? sampleItems : liveFollowUps
   const stageById = useMemo(() => new Map(stages.map((stage) => [stage.id, stage.label])), [stages])
-  const followUps = useMemo(() => sourceItems.map((item) => toView(item, leads, stageById)), [sourceItems, leads, stageById])
+  const followUps = useMemo(() => liveFollowUps.map((item) => toView(item, leads, stageById)), [liveFollowUps, leads, stageById])
   const selected = followUps.find((item) => item.id === selectedId) ?? null
 
   const openDetail = (id: string | null) => {
@@ -183,19 +170,6 @@ export function FollowUpsTab() {
     setBusyId(item.id)
     setErrId(null)
     setReceipt(null)
-    if (item.sample) {
-      if (action === 'done') {
-        setSampleItems((all) => all.filter((candidate) => candidate.id !== item.id))
-        openDetail(null)
-        setReceipt(`${item.person} marked done — preview only.`)
-      } else {
-        const hours = action === 'snooze1d' ? 24 : 72
-        setSampleItems((all) => all.map((candidate) => candidate.id === item.id ? { ...candidate, status: 'snoozed', due_at: new Date(Date.now() + hours * 3_600_000).toISOString() } : candidate))
-        setReceipt(`${item.person} snoozed ${action === 'snooze1d' ? 'until tomorrow' : 'for 3 days'} — preview only.`)
-      }
-      setBusyId(null)
-      return
-    }
     if (!clientId) {
       setBusyId(null)
       setErrId(item.id)
@@ -241,11 +215,10 @@ export function FollowUpsTab() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-canvas">
-      {usingSample && <p className="border-b border-border bg-surface-sunk px-4 py-1.5 text-2xs font-semibold text-fg-subtle">Preview test data — no live follow-ups were returned. Changes stay on this device.</p>}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="page-frame max-w-[1280px] space-y-5">
           <header className="flex flex-wrap items-end justify-between gap-3">
-            <div><p className="label-caps text-accent">Promises due</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-fg">Follow up with full context.</h2><p className="mt-1 text-xs text-fg-muted">Open any row to see the contact, deal, history, and next action before you respond.</p></div>
+            <div><h2 className="text-xl font-semibold tracking-[-0.03em] text-fg">Follow-ups</h2><p className="mt-1 text-xs text-fg-muted">Open a row to see its contact, deal, history, and next action.</p></div>
           </header>
 
           <section className="grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="Follow-up summary">
@@ -258,7 +231,7 @@ export function FollowUpsTab() {
           {receipt && <p role="status" className="rounded-md border border-[color-mix(in_srgb,var(--success)_25%,var(--border))] bg-success-subtle px-3 py-2 text-xs font-semibold text-success">{receipt}</p>}
 
           {followUps.length === 0 ? (
-            <div className="rounded-xl border border-border bg-surface p-6"><EmptyState icon={Check} title="All follow-ups cleared." body="New promises appear here as they are scheduled from leads and conversations." /></div>
+            <div className="rounded-xl border border-border bg-surface p-6"><EmptyState icon={Check} title="No follow-ups" body="Scheduled follow-ups will appear here." /></div>
           ) : (
             <div className="grid min-h-[480px] gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
               <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">

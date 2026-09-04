@@ -19,5 +19,4 @@ export function ManagerInbox() {
 
 // SA-04: `ManagerLeads`, `Assign` and `Analytics` are GONE from this file.
 // The Leads board lives on as the CRM Pipeline tab (views/crm/CrmScreen.tsx),
-// Analytics is superseded by the Dashboard, and the assignment UI (mock,
-// unwired — ROLE-01 still owns the write path) sits on the CRM pipeline.
+// Analytics is superseded by the Dashboard, and assignments live in Todos.

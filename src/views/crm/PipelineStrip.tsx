@@ -10,11 +10,6 @@ import { formatINRCompact } from '../../ui/formatMoney'
 // lift (2026-07-30 ruling) applies to manager/admin CRM only, and this
 // component is only mounted there.
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 const numStyle = {
   fontFamily: 'var(--font-mono)',
   fontWeight: 'var(--weight-num)',
@@ -67,8 +62,7 @@ export function PipelineStrip({
             ].join(' ')}
           >
             <span
-              className={['text-2xs uppercase', active ? 'text-accent' : 'text-fg-subtle'].join(' ')}
-              style={capsStyle}
+              className={['text-2xs font-medium', active ? 'text-accent' : 'text-fg-subtle'].join(' ')}
             >
               {s.label}
             </span>
@@ -91,7 +85,7 @@ export function PipelineStrip({
 
       {/* Win rate — derived from decided leads only; dash until one decides. */}
       <div className="flex min-w-[5.5rem] shrink-0 flex-col items-start rounded-lg border border-border bg-surface-sunk px-3 py-2.5">
-        <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+        <span className="text-2xs font-medium text-fg-subtle">
           Win rate
         </span>
         <span className="mt-0.5 flex items-baseline gap-1.5">

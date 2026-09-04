@@ -23,7 +23,7 @@ vi.mock('../../lib/inbox-data', async (importOriginal) => {
   return {
     ...actual,
     useQueue: () => ({ items: queueItems, loading: false, error: null, reload: vi.fn() }),
-    usePreviews: () => ({ previews: new Map(), reload: vi.fn() }),
+    useSnippets: () => ({ snippets: new Map(), reload: vi.fn() }),
     useThread: () => ({ messages: [], traces: [], loading: false, error: null, reload: vi.fn(), setMessages: vi.fn() }),
     useLiveRefresh: () => ({ channelLive: false }),
   }
@@ -38,7 +38,6 @@ vi.mock('./QueueRow', () => ({
     <div data-testid={`conversation-${item.id}`}>{item.contact.external_id}</div>
   ),
 }))
-vi.mock('../email/EmailQueueRow', () => ({ EmailQueueRow: () => null }))
 vi.mock('../calls/CallButton', () => ({ CallButton: () => null }))
 
 const { InboxScreen } = await import('./InboxScreen')

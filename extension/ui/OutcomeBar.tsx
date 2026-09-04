@@ -236,7 +236,7 @@ export function OutcomeBar({
         </summary>
         <div className="grid grid-cols-2 gap-2 border-t border-border p-3">
           <label className="block">
-            <span className="label-caps mb-1 block">Stage</span>
+            <span className="mb-1 block text-xs font-medium text-fg-muted">Stage</span>
             <select value={stageKey} disabled={busy} onChange={(e) => onStageChange(e.target.value)} className={selectClass} aria-label="Stage">
               {stages.map((option) => (
                 <option key={option.key} value={option.key}>
@@ -246,7 +246,7 @@ export function OutcomeBar({
             </select>
           </label>
           <label className="block">
-            <span className="label-caps mb-1 block">Status</span>
+            <span className="mb-1 block text-xs font-medium text-fg-muted">Status</span>
             <select
               value={status}
               disabled={busy}

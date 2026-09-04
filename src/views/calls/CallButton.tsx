@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Check, Phone } from 'lucide-react'
-import type { CallOutcomePreview } from './callMocks'
+import type { CallOutcome } from './CallExperience'
 import { formatINR } from '../../ui/formatMoney'
 
 const CallExperience = lazy(() => import('./CallExperience').then((module) => ({ default: module.CallExperience })))
@@ -8,26 +8,23 @@ const CallExperience = lazy(() => import('./CallExperience').then((module) => ({
 export function CallButton({
   person,
   phone,
-  dealValue = 60000,
-  stage = 'Qualified',
+  dealValue = null,
+  stage = null,
   label = 'Call',
   variant = 'secondary',
   onBegin,
-  contactId = null,
+  contactId,
   leadId = null,
   conversationId = null,
 }: {
   person: string
   phone?: string | null
-  dealValue?: number
-  stage?: string
+  dealValue?: number | null
+  stage?: string | null
   label?: string
   variant?: 'primary' | 'secondary' | 'icon'
   onBegin?: () => void
-  /** Real contact id — when present, the call flow does real writes
-   *  (call_sessions/call_logs). Omit to keep a surface preview-only
-   *  (Email/Today-fixture/design-gallery routes — deliberately not wired). */
-  contactId?: string | null
+  contactId: string
   leadId?: string | null
   conversationId?: string | null
 }) {
@@ -52,7 +49,7 @@ export function CallButton({
         onClick={(event) => { event.stopPropagation(); onBegin?.(); setOpen(true) }}
         aria-label={variant === 'icon' ? `Call ${person}` : undefined}
         className={['inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border text-xs font-semibold transition-[background-color,border-color,transform] hover:-translate-y-px active:translate-y-0', cls].join(' ')}
-        title={contactId ? `Call${phone ? ` · ${phone}` : ''}` : `Preview click-to-call${phone ? ` · ${phone}` : ''}`}
+        title={`Call${phone ? ` · ${phone}` : ''}`}
       >
         <Phone aria-hidden size={15} />{variant !== 'icon' && label}
       </button>
@@ -60,16 +57,16 @@ export function CallButton({
         <Suspense fallback={<div className="fixed inset-0 z-[80] flex items-center justify-center bg-[var(--overlay)]" role="status"><span className="rounded-lg bg-surface px-4 py-3 text-xs font-semibold text-fg shadow-elev-3">Preparing call brief…</span></div>}>
           <CallExperience
             person={person}
-            phone={phone ?? 'Preview number'}
+            phone={phone ?? ''}
             dealValue={dealValue}
             stage={stage}
             contactId={contactId}
             leadId={leadId}
             conversationId={conversationId}
             onClose={() => setOpen(false)}
-            onComplete={(outcome: CallOutcomePreview, callbackAt?: string) => {
+            onComplete={(outcome: CallOutcome, callbackAt?: string) => {
               setConfirmation(
-                outcome === 'closed' ? `${person} closed · ${formatINR(dealValue)}` :
+                outcome === 'closed' ? `${person} · closed${dealValue ? ` · ${formatINR(dealValue)}` : ''}` :
                 outcome === 'callback' ? `Callback set · ${callbackAt}` :
                 outcome === 'objection' ? `${person} · call + objection logged` :
                 `${person} · call logged`,

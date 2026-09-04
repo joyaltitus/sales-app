@@ -104,7 +104,7 @@ export function useOwnWonValue(clientId: string | null, userId: string | null, m
       .eq('owner_id', userId)
       .eq('status', 'won')
       // `leads` has no `won_at`; `updated_at` is the documented won-at proxy (src/metrics/queries.ts,
-      // useTeamWinsThisMonth) — do not swap this for a real won-at column without updating both.
+      // DashboardScreen) — do not swap this for a real won-at column without updating both.
       .gte('updated_at', start)
       .lt('updated_at', end)
       .then(({ data, error: err }) => {

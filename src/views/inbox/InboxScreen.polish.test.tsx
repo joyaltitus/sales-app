@@ -26,7 +26,7 @@ vi.mock('../../lib/inbox-data', async (importOriginal) => {
   return {
     ...actual,
     useQueue: () => ({ items: queueItems, loading: false, error: null, reload: vi.fn() }),
-    usePreviews: () => ({ previews: new Map(), reload: vi.fn() }),
+    useSnippets: () => ({ snippets: new Map(), reload: vi.fn() }),
     useThread: () => ({ messages: [], traces: [], loading: false, error: null, reload: vi.fn(), setMessages: vi.fn() }),
     useLiveRefresh: () => ({ channelLive: false }),
   }

@@ -68,7 +68,7 @@ function RuleCard({
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="label-caps flex items-center gap-1.5 text-fg-subtle">
+        <span className="flex items-center gap-1.5 font-mono text-2xs text-fg-subtle">
           <Lock aria-hidden size={11} /> {rule.rule_key}
         </span>
         {!rule.active && <Chip tone="neutral">Off</Chip>}
@@ -80,7 +80,7 @@ function RuleCard({
       <p className="mt-2 text-xs leading-relaxed text-fg-muted">{triggerSentence(rule)}</p>
 
       <label className="mt-3 block">
-        <span className="label-caps">Reply</span>
+        <span className="text-xs font-medium text-fg-muted">Reply</span>
         <textarea
           className="mt-1 min-h-28 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
           value={text}
@@ -89,7 +89,7 @@ function RuleCard({
       </label>
 
       <label className="mt-3 block">
-        <span className="label-caps">Attach media</span>
+        <span className="text-xs font-medium text-fg-muted">Attach media</span>
         <select
           className="mt-1 h-10 w-full rounded-md border border-border bg-surface-raised px-2 text-sm text-fg"
           value={bundleKey}

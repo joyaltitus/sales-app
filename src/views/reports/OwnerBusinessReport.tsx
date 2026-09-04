@@ -2,8 +2,6 @@ import { useState } from 'react'
 import {
   Activity,
   CalendarCheck,
-  Check,
-  Download,
   IndianRupee,
   MessageSquareText,
   Printer,
@@ -24,7 +22,7 @@ import { ProductMark } from '../../ui/ProductMark'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatINR, formatINRCompact } from '../../ui/formatMoney'
 
-// The owner readout — S2-E2 replaced the demock empty state, and the sample
+// The owner readout — S2-E2 replaced the demock empty state and fixed figures
 // figures behind it, with the numbers the tenant already has:
 //
 //   campaign_roi_v  spend against what it bought (070, security_invoker,
@@ -59,7 +57,7 @@ function Metric({ icon: Icon, label, value, detail }: { icon: LucideIcon; label:
   return (
     <article className="owner-report-metric border-t-2 border-fg bg-surface px-4 py-4">
       <span className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-sunk text-fg-muted"><Icon aria-hidden size={15} /></span>
-      <p className="label-caps mt-4">{label}</p>
+      <p className="mt-4 text-xs font-medium text-fg-muted">{label}</p>
       <strong className="tnum mt-1 block text-2xl leading-none tracking-[-0.045em] text-fg">{value}</strong>
       <p className="mt-2 text-2xs leading-relaxed text-fg-muted">{detail}</p>
     </article>
@@ -107,33 +105,31 @@ function RoiTable({ rows }: { rows: CampaignRoi[] }) {
   )
 }
 
-export type OwnerReportPreview = { metrics?: MetricsResponse; roi?: CampaignRoi[]; targetValue?: number }
+export type OwnerReportDesignData = { metrics?: MetricsResponse; roi?: CampaignRoi[]; targetValue?: number }
 
-export default function OwnerBusinessReport({ preview }: { preview?: OwnerReportPreview } = {}) {
+export default function OwnerBusinessReport({ designData }: { designData?: OwnerReportDesignData } = {}) {
   const [period, setPeriod] = useState<OwnerReportPeriod>('month')
-  const [shareReady, setShareReady] = useState(false)
-  const [printPreview, setPrintPreview] = useState(false)
 
   const { activeClient } = useClient()
-  const clientId = preview ? null : (activeClient?.id ?? null)
+  const clientId = designData ? null : (activeClient?.id ?? null)
   const { data, loading, error } = useMetrics(WINDOW[period], clientId)
   const roi = useCampaignRoi(clientId)
   const { items: targets } = useTeamTargets(clientId, firstOfMonth())
 
-  const metrics = preview?.metrics ?? data
-  const roiRows = preview?.roi ?? roi.items
+  const metrics = designData?.metrics ?? data
+  const roiRows = designData?.roi ?? roi.items
   // The month's target is the sum of what every rep was set — the only target
   // this schema holds. A team with no targets set has no target line, which is
   // the truth; the alternative is a denominator nobody agreed to.
-  const target = preview?.targetValue ?? targets.reduce((sum, row) => sum + Number(row.target_value ?? 0), 0)
+  const target = designData?.targetValue ?? targets.reduce((sum, row) => sum + Number(row.target_value ?? 0), 0)
 
-  if (!preview && !clientId) {
+  if (!designData && !clientId) {
     return <section className="rounded-xl border border-border bg-surface"><EmptyState icon={Activity} title="No workspace" body="Pick a workspace to see its business report." /></section>
   }
-  if (!preview && loading) {
+  if (!designData && loading) {
     return <section className="space-y-3 rounded-xl border border-border bg-surface p-5" aria-label="Loading business report"><Skeleton className="h-20" /><div className="grid gap-3 sm:grid-cols-4"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div><Skeleton className="h-72" /></section>
   }
-  if (!preview && (error || !metrics)) {
+  if (!designData && (error || !metrics)) {
     return <section className="rounded-xl border border-border bg-surface"><ErrorState title="Couldn’t prepare the business report" body="The operating dashboard is still available. Retry before sharing this period’s summary." onRetry={() => setPeriod((value) => value)} /></section>
   }
   if (!metrics) return null
@@ -163,19 +159,16 @@ export default function OwnerBusinessReport({ preview }: { preview?: OwnerReport
   const attributedRevenue = roiRows.reduce((sum, row) => sum + Number(row.revenue_minor ?? 0), 0)
 
   return (
-    <section className={['owner-report rounded-xl border border-border bg-surface-raised p-4 shadow-elev-2 sm:p-6', printPreview ? 'owner-report-print-preview' : ''].join(' ')} aria-labelledby="owner-report-title">
+    <section className="owner-report rounded-xl border border-border bg-surface-raised p-4 shadow-elev-2 sm:p-6" aria-labelledby="owner-report-title">
       <header className="owner-report-header flex flex-wrap items-start justify-between gap-5">
-        <div className="flex items-start gap-3"><ProductMark size={42} /><div><p className="label-caps text-accent">Business report</p><h2 id="owner-report-title" className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-fg">The business, at a glance.</h2><p className="mt-1 text-xs text-fg-muted">{period === 'week' ? 'Last 7 days' : 'Last 30 days'} · {metrics.window.from} to {metrics.window.to}</p></div></div>
+        <div className="flex items-start gap-3"><ProductMark size={42} /><div><h2 id="owner-report-title" className="text-2xl font-semibold tracking-[-0.045em] text-fg">Business report</h2><p className="mt-1 text-xs text-fg-muted">{period === 'week' ? 'Last 7 days' : 'Last 30 days'} · {metrics.window.from} to {metrics.window.to}</p></div></div>
         <div className="owner-report-actions flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border bg-surface-sunk p-0.5" role="group" aria-label="Owner report period">
-            {(['week', 'month'] as OwnerReportPeriod[]).map((item) => <button key={item} type="button" onClick={() => { setPeriod(item); setShareReady(false) }} aria-pressed={period === item} className={['min-h-8 rounded-sm px-3 text-2xs font-semibold capitalize', period === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}>{item}</button>)}
+            {(['week', 'month'] as OwnerReportPeriod[]).map((item) => <button key={item} type="button" onClick={() => setPeriod(item)} aria-pressed={period === item} className={['min-h-8 rounded-sm px-3 text-2xs font-semibold capitalize', period === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}>{item}</button>)}
           </div>
-          <Button size="sm" variant="secondary" onClick={() => setPrintPreview((value) => !value)} aria-pressed={printPreview}><Printer aria-hidden size={14} /> Print preview</Button>
-          <Button size="sm" onClick={() => setShareReady(true)}><Download aria-hidden size={14} /> Share as PDF</Button>
+          <Button size="sm" variant="secondary" onClick={() => window.print()}><Printer aria-hidden size={14} /> Print</Button>
         </div>
       </header>
-      {shareReady && <div className="owner-report-actions mt-4 flex items-center gap-2 rounded-lg border border-success/25 bg-success-subtle px-3 py-2 text-xs font-semibold text-success" role="status"><Check aria-hidden size={14} /> PDF handoff preview is ready. No file was created or shared.</div>}
-      {printPreview && <p className="owner-report-actions mt-3 text-2xs font-semibold text-fg-muted">A4 print preview active — navigation and controls are removed in the real print stylesheet.</p>}
 
       <div className="mt-6 space-y-4">
         <section className="owner-report-metrics grid overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4" aria-label="Business summary metrics">

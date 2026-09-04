@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useClient } from '../../shell/ClientProvider'
-import { useQueue, usePreviews } from '../../lib/inbox-data'
+import { useQueue, useSnippets } from '../../lib/inbox-data'
 import {
   pausedThreads,
   useLatestTraceRoutes,
@@ -29,7 +29,7 @@ export function Health() {
   const clientId = activeClient?.id ?? null
 
   const { items, loading, error } = useQueue(clientId)
-  const { previews } = usePreviews(clientId)
+  const { snippets } = useSnippets(clientId)
   const { routes, loading: routesLoading } = useLatestTraceRoutes(clientId)
   const { items: optedOut, loading: contactsLoading } = useOptedOutContacts(clientId)
 
@@ -64,8 +64,7 @@ export function Health() {
   return (
     <div className="page-frame space-y-5">
       <header>
-        <div className="flex items-center gap-2 text-xs font-semibold text-success"><Activity aria-hidden size={14} /> Tenant status</div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Only show me what’s broken.</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-[-0.04em] text-fg"><Activity aria-hidden size={18} className="text-success" /> Health</h1>
         <p className="mt-1 text-sm text-fg-muted">Pauses, failed turns and consent exceptions across this workspace.</p>
       </header>
 
@@ -77,7 +76,7 @@ export function Health() {
         ] as const).map(([label, value, Icon, tone]) => (
           <div key={String(label)} className="rounded-lg border border-border bg-surface p-4 shadow-elev-1">
             <Icon aria-hidden size={17} className={String(tone)} />
-            <p className="label-caps mt-3">{String(label)}</p>
+            <p className="mt-3 text-xs font-medium text-fg-muted">{String(label)}</p>
             <strong className={['tnum mt-1 block text-2xl tracking-[-0.04em]', String(tone)].join(' ')}>{String(value)}</strong>
           </div>
         ))}
@@ -88,7 +87,7 @@ export function Health() {
       {paused.length === 0 ? (
         <SectionEmpty>The bot is running on every conversation.</SectionEmpty>
       ) : (
-        <ThreadList items={paused} previews={previews} cap={10} />
+        <ThreadList items={paused} snippets={snippets} cap={10} />
       )}
       </section>
 
@@ -97,7 +96,7 @@ export function Health() {
       {failing.length === 0 ? (
         <SectionEmpty>No conversation ended its last turn in an error.</SectionEmpty>
       ) : (
-        <ThreadList items={failing} previews={previews} cap={10} />
+        <ThreadList items={failing} snippets={snippets} cap={10} />
       )}
       </section>
 

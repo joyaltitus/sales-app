@@ -5,7 +5,7 @@ import {
   FACT_CATEGORY_LABEL,
   type LeadFact,
   type FactState,
-} from '../../lib/mock-wave3'
+} from '../../lib/lead-facts'
 
 // Lead Brain fact — the customer's own words distilled, never a black box:
 // state is explicit, confidence is shown, evidence is one tap away, and a

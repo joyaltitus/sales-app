@@ -10,7 +10,7 @@ import OwnerBusinessReport from './OwnerBusinessReport'
 
 function renderReport() {
   return render(
-    <OwnerBusinessReport preview={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 1_500_000 }} />,
+    <OwnerBusinessReport designData={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 1_500_000 }} />,
   )
 }
 
@@ -23,7 +23,7 @@ describe('Owner business report', () => {
   })
 
   it('says there is no target rather than dividing by one nobody set', () => {
-    render(<OwnerBusinessReport preview={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 0 }} />)
+    render(<OwnerBusinessReport designData={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 0 }} />)
     expect(screen.getByText('No target set for this month')).toBeInTheDocument()
     expect(screen.queryByText(/% of ₹/)).not.toBeInTheDocument()
   })
@@ -57,7 +57,7 @@ describe('Owner business report', () => {
     // closed would report a permission wall as a bad month.
     render(
       <OwnerBusinessReport
-        preview={{ metrics: { ...MOCK_METRICS, won_by_source: null }, roi: MOCK_ROI, targetValue: 1_500_000 }}
+        designData={{ metrics: { ...MOCK_METRICS, won_by_source: null }, roi: MOCK_ROI, targetValue: 1_500_000 }}
       />,
     )
     expect(screen.getByText('The business report is a manager view')).toBeInTheDocument()

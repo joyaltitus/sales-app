@@ -40,7 +40,7 @@ describe('ObjectionCapture call session lifecycle (AT-04)', () => {
     completeCall.mockResolvedValue({ ok: true, callLogId: 'cl-1' })
   })
 
-  it('opening "Log call result" and dismissing with "Not now" leaves no orphaned session in the database', async () => {
+  it('opening "Log outcome" and dismissing with "Not now" leaves no orphaned session in the database', async () => {
     const user = userEvent.setup()
 
     render(
@@ -52,15 +52,15 @@ describe('ObjectionCapture call session lifecycle (AT-04)', () => {
     )
 
     // Open sheet
-    await user.click(screen.getByRole('button', { name: /Log call result/i }))
-    expect(screen.getByText('How did it go?')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Log outcome/i }))
+    expect(screen.getByText('Outcome')).toBeInTheDocument()
 
     // No DB call yet on open
     expect(startCallSession).not.toHaveBeenCalled()
 
     // Dismiss with "Not now"
     await user.click(screen.getByRole('button', { name: /Not now/i }))
-    expect(screen.queryByText('How did it go?')).not.toBeInTheDocument()
+    expect(screen.queryByText('Outcome')).not.toBeInTheDocument()
 
     // Still no DB call made
     expect(startCallSession).not.toHaveBeenCalled()
@@ -78,7 +78,7 @@ describe('ObjectionCapture call session lifecycle (AT-04)', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /Log call result/i }))
+    await user.click(screen.getByRole('button', { name: /Log outcome/i }))
     await user.click(screen.getByRole('button', { name: 'Closed' }))
 
     expect(startCallSession).toHaveBeenCalledWith(

@@ -21,30 +21,16 @@ export function Panel({
   title,
   children,
   caption,
-  sample = false,
 }: {
   title: string
   children: React.ReactNode
   caption?: string
-  /** SA-05: per-panel honesty tag — real and sample numbers share one screen
-   *  now, so each panel declares itself. */
-  sample?: boolean
 }) {
   // UI-DESIGN-01 (audit A5): panel titles lead as real titles — the 12px caps
   // title made every panel whisper at the same volume as its own labels.
   return (
     <section className="rounded-lg border border-border bg-surface p-5 shadow-elev-1">
-      <h2 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
-        {title}
-        {sample && (
-          <span
-            className="rounded-pill border border-dashed border-border-strong px-1.5 text-2xs text-fg-subtle uppercase"
-            style={capsStyle}
-          >
-            Sample
-          </span>
-        )}
-      </h2>
+      <h2 className="flex items-baseline gap-2 text-sm font-semibold text-fg">{title}</h2>
       <div className="mt-3">{children}</div>
       {caption && <p className="mt-2 text-2xs text-fg-subtle">{caption}</p>}
     </section>
@@ -67,7 +53,7 @@ export function HeroStat({
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 overflow-hidden rounded-xl border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] px-5 py-5 shadow-elev-2">
       <div>
-        <div className="text-2xs text-fg-muted uppercase" style={capsStyle}>
+        <div className="text-xs font-medium text-fg-muted">
           {label}
         </div>
         <div
@@ -101,7 +87,7 @@ export function StatTile({
 }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-4 py-3 shadow-elev-1">
-      <div className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+      <div className="text-xs font-medium text-fg-subtle">
         {label}
       </div>
       <div

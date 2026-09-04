@@ -27,7 +27,7 @@ function rowFor(name: string): HTMLElement {
 
 describe('AttributionView — a dash is not a zero', () => {
   it('renders an unknown cost per lead as a dash, never as ₹0', () => {
-    render(<AttributionView preview={{ roi: MOCK_ROI, sightings: [] }} />)
+    render(<AttributionView designData={{ roi: MOCK_ROI, sightings: [] }} />)
     const cells = within(rowFor('Search')).getAllByRole('cell').map((c) => c.textContent)
     // spend, leads, won, revenue, cost/lead, cost/sale
     expect(cells[0]).toBe('₹18,000')
@@ -36,7 +36,7 @@ describe('AttributionView — a dash is not a zero', () => {
   })
 
   it('renders a known cost per lead in major units from a minor-unit row', () => {
-    render(<AttributionView preview={{ roi: MOCK_ROI, sightings: [] }} />)
+    render(<AttributionView designData={{ roi: MOCK_ROI, sightings: [] }} />)
     const cells = within(rowFor('Onam')).getAllByRole('cell').map((c) => c.textContent)
     expect(cells[0]).toBe('₹42,000')
     expect(cells[3]).toBe('₹6,30,000')
@@ -46,7 +46,7 @@ describe('AttributionView — a dash is not a zero', () => {
 
 describe('AttributionView — the unmatched-source inbox', () => {
   it('offers resolve and dismiss against the tenant’s campaigns', () => {
-    render(<AttributionView preview={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />)
+    render(<AttributionView designData={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />)
     expect(screen.getByText('120210000000999')).toBeInTheDocument()
     const picker = screen.getByLabelText(/campaign for 120210000000999/i)
     expect(within(picker).getByRole('option', { name: 'Onam 2026' })).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe('AttributionView — the unmatched-source inbox', () => {
   it('says plainly that resolving does not re-point past conversations', () => {
     // Nothing in the schema links a sighting to the conversations that produced
     // it, so the screen must not imply a retro-attribution it cannot perform.
-    render(<AttributionView preview={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />)
+    render(<AttributionView designData={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />)
     expect(screen.getByText(/to make future traffic land there too/i)).toBeInTheDocument()
   })
 })

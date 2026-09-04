@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import {
   getInboundMediaSignedUrl,
-  previewKind,
+  messageKind,
   type InboundMediaRow,
   type Message,
 } from '../../lib/inbox-data'
@@ -33,10 +33,7 @@ function Seam({ mark }: { mark: SeamMark }) {
   return (
     <div className="flex items-center gap-3 py-5" role="separator">
       <span aria-hidden className="h-px flex-1 bg-border-strong" />
-      <span
-        className="shrink-0 text-2xs whitespace-nowrap text-fg-muted uppercase"
-        style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-      >
+      <span className="shrink-0 text-2xs font-semibold whitespace-nowrap text-fg-muted">
         {mark.label}
         {mark.ruleKey && <span className="text-fg-subtle"> · {mark.ruleKey}</span>}
       </span>
@@ -49,10 +46,7 @@ function Seam({ mark }: { mark: SeamMark }) {
  *  hairline — those are the machine working normally, not a handover. */
 function InlineTag({ mark }: { mark: SeamMark }) {
   return (
-    <span
-      className="text-2xs text-fg-subtle uppercase"
-      style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-    >
+    <span className="text-2xs font-medium text-fg-subtle">
       {mark.label}
       {mark.ruleKey && ` · ${mark.ruleKey}`}
     </span>
@@ -101,7 +95,7 @@ function MediaAttachment({
     return <audio controls src={url} className="max-w-full" />
   }
 
-  const kind = previewKind(msgType)
+  const kind = messageKind(msgType)
   const Icon = kind === 'image' ? ImageIcon : kind === 'audio' ? Mic : FileText
   const filename = storagePath.split('/').pop() || fallbackText
 
@@ -217,7 +211,7 @@ export function Thread({
   messages: Message[]
   traces: Trace[]
   /** channel_message_id -> downloaded attachment (#90 Part 6). Optional so the
-   *  PreviewGallery mock caller (no live inbound_media reads) is unaffected. */
+   *  The design-gallery caller (without live inbound_media reads) is unaffected. */
   media?: Map<string, InboundMediaRow>
   onRetryFailed?: (id: string, body: string) => void
 }) {

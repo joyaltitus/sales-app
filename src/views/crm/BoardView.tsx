@@ -17,11 +17,6 @@ import { LeadQuickActions } from '../leads/LeadQuickActions'
 // library (§1.10 #17 spirit): the stage move lives in the drawer and on the
 // row list's select, both RLS-gated server-side.
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
 export const TEMP_META: Record<
@@ -38,8 +33,7 @@ export function TempBadge({ temp, overridden }: { temp: Temperature; overridden:
   const Icon = meta.icon
   return (
     <span
-      className={['flex shrink-0 items-center gap-1 text-2xs uppercase', meta.cls].join(' ')}
-      style={capsStyle}
+      className={['flex shrink-0 items-center gap-1 text-2xs font-medium', meta.cls].join(' ')}
       title={overridden ? `${meta.label} (set by hand)` : meta.label}
     >
       <Icon aria-hidden size={12} strokeWidth={1.75} />
@@ -116,8 +110,8 @@ export function BoardView({
               title={`${stage.label} — empty`}
             >
               <span
-                className="text-2xs text-fg-subtle uppercase"
-                style={{ ...capsStyle, writingMode: 'vertical-rl' }}
+                className="text-2xs font-medium text-fg-subtle"
+                style={{ writingMode: 'vertical-rl' }}
               >
                 {stage.label}
               </span>
@@ -136,7 +130,7 @@ export function BoardView({
             aria-label={`${stage.label}, ${leads.length} leads`}
           >
             <header className="flex items-baseline gap-2 px-3 pt-2.5 pb-2">
-              <h3 className="truncate text-2xs text-fg-muted uppercase" style={capsStyle}>
+              <h3 className="truncate text-2xs font-semibold text-fg-muted">
                 {stage.label}
               </h3>
               <span className="tnum text-xs text-fg-subtle" style={monoStyle}>
@@ -201,7 +195,7 @@ export function BoardView({
                           {name}
                         </span>
                         <ChannelIcon channel={lead.contact?.channel ?? null} size={13} />
-                        <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
+                        <CallButton person={name} phone={lead.contact?.external_id} dealValue={lead.est_value === null ? null : Number(lead.est_value)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
                         <button onClick={(event) => { event.stopPropagation(); setQuickLead(lead) }} aria-label={`Quick actions for ${name}`} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-surface-sunk hover:text-fg"><MoreHorizontal aria-hidden size={14} /></button>
                       </div>
                       <div className="mt-1.5 flex items-center gap-2.5">
@@ -223,10 +217,9 @@ export function BoardView({
                           {lead.status !== 'open' && (
                             <span
                               className={[
-                                'text-2xs uppercase',
+                                'text-2xs font-medium',
                                 lead.status === 'won' ? 'text-success' : 'text-danger',
                               ].join(' ')}
-                              style={capsStyle}
                             >
                               {lead.status}
                             </span>
@@ -234,10 +227,9 @@ export function BoardView({
                           {fu && (
                             <span
                               className={[
-                                'truncate text-2xs uppercase',
+                                'truncate text-2xs font-medium',
                                 fuOverdue ? 'text-danger' : 'text-fg-subtle',
                               ].join(' ')}
-                              style={capsStyle}
                             >
                               {fuOverdue ? 'Follow-up overdue' : 'Follow-up set'}
                             </span>
@@ -253,6 +245,6 @@ export function BoardView({
         )
       })}
     </div>
-    {quickLead && <LeadQuickActions open onClose={() => { setQuickLead(null); setCaptureOpen(false) }} person={quickLead.contact?.profile_name ?? quickLead.contact?.external_id ?? 'Unknown contact'} phone={quickLead.contact?.external_id} dealValue={Number(quickLead.est_value ?? 60000)} conversationId={quickLead.conversation_id} contactId={quickLead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />}
+    {quickLead && <LeadQuickActions open onClose={() => { setQuickLead(null); setCaptureOpen(false) }} person={quickLead.contact?.profile_name ?? quickLead.contact?.external_id ?? 'Unknown contact'} phone={quickLead.contact?.external_id} dealValue={quickLead.est_value === null ? null : Number(quickLead.est_value)} conversationId={quickLead.conversation_id} contactId={quickLead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />}
   </>
 }

@@ -153,7 +153,7 @@ function CohortCard({
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="label-caps text-fg-subtle">{new Date(batch.created_at).toLocaleDateString()}</span>
+        <span className="text-2xs text-fg-subtle">{new Date(batch.created_at).toLocaleDateString()}</span>
         <h3 className="text-sm font-semibold text-fg">{batch.filename ?? 'Uploaded file'}</h3>
         <Chip tone={batch.status === 'failed' ? 'danger' : batch.status === 'committed' ? 'success' : 'neutral'}>
           {STATUS_COPY[batch.status]}
@@ -210,16 +210,12 @@ function CohortCard({
             restricted. Only lift it if you have their consent.
           </p>
           <label className="mt-2 block">
-            <span className="label-caps">Type this code to confirm</span>
-            {/* Outside the label, because `label-caps` uppercases its content
-                and the database compares against `left(id::text, 8)` — a
-                lowercase uuid. An operator typing back exactly what they saw
-                would have been refused with no way to tell why. */}
+            <span className="text-xs font-medium text-fg-muted">Type this code to confirm</span>
             <span className="mt-0.5 block font-mono text-sm font-semibold text-fg">{confirmToken(batch.id)}</span>
             <Input className="mt-1" value={echo} onChange={(e) => setEcho(e.target.value)} aria-label="Confirmation code" />
           </label>
           <label className="mt-2 block">
-            <span className="label-caps">Where did their consent come from?</span>
+            <span className="text-xs font-medium text-fg-muted">Where did their consent come from?</span>
             <textarea
               className="mt-1 min-h-16 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
               value={reason}
@@ -285,7 +281,7 @@ function UploadCard({ clientId, onUploaded }: { clientId: string; onUploaded: ()
       </p>
 
       <label className="mt-3 block">
-        <span className="label-caps">File</span>
+        <span className="text-xs font-medium text-fg-muted">File</span>
         <input
           type="file"
           accept=".csv,text/csv"
@@ -295,7 +291,7 @@ function UploadCard({ clientId, onUploaded }: { clientId: string; onUploaded: ()
       </label>
 
       <fieldset className="mt-3">
-        <legend className="label-caps">Where did these people come from?</legend>
+        <legend className="text-xs font-medium text-fg-muted">Where did these people come from?</legend>
         <div className="mt-1 space-y-1">
           {PROVENANCE.map((p) => (
             <label key={p.value} className="flex items-center gap-2 text-sm text-fg">

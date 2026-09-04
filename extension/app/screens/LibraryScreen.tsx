@@ -118,7 +118,7 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
               aria-pressed={code === lang}
               onClick={() => { setLang(code); void savePrefs({ defaultLang: code }) }}
               className={[
-                'min-h-9 rounded-pill border px-3 text-xs font-medium uppercase transition-colors',
+                'min-h-9 rounded-pill border px-3 text-xs font-medium transition-colors',
                 code === lang
                   ? 'border-accent bg-accent-subtle text-accent'
                   : 'border-border bg-surface-raised text-fg-muted hover:border-border-strong hover:text-fg',

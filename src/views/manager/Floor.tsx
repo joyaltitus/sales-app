@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -7,22 +7,19 @@ import {
   CircleDot,
   Clock3,
   MessageSquareWarning,
-  Sparkles,
   TrendingUp,
 } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
-import { useQueue, usePreviews, useLiveRefresh } from '../../lib/inbox-data'
+import { useQueue, useSnippets, useLiveRefresh } from '../../lib/inbox-data'
 import { waitingLongest, unpickedEscalations } from '../../lib/landing-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Button } from '../../ui/Button'
-import { Chip } from '../../ui/Chip'
-import { Sheet } from '../../ui/Sheet'
 
 function Metric({ label, value, detail, tone = 'neutral' }: { label: string; value: string; detail: string; tone?: 'neutral' | 'danger' | 'success' }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-4 py-3.5 shadow-elev-1">
-      <p className="label-caps">{label}</p>
+      <p className="text-xs font-medium text-fg-muted">{label}</p>
       <div className="mt-2 flex items-end gap-2">
         <strong className={[
           'tnum text-2xl leading-none tracking-[-0.04em]',
@@ -41,7 +38,6 @@ function ExceptionRow({
   meta,
   to,
   danger = false,
-  onAsk,
 }: {
   icon: typeof Bot
   title: string
@@ -49,7 +45,6 @@ function ExceptionRow({
   meta: string
   to: string
   danger?: boolean
-  onAsk?: () => void
 }) {
   return (
     <article className="group grid gap-3 border-b border-border px-4 py-3.5 last:border-0 sm:grid-cols-[auto_1fr_auto] sm:items-center">
@@ -66,20 +61,19 @@ function ExceptionRow({
         </div>
         <p className="mt-1 text-xs leading-relaxed text-fg-muted">{detail}</p>
       </div>
-      <span className="flex items-center gap-1"><button onClick={onAsk} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg"><Sparkles aria-hidden size={12} /> Why?</button><Link to={to} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Resolve <ArrowRight aria-hidden size={14} /></Link></span>
+      <Link to={to} className="inline-flex min-h-11 items-center justify-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Resolve <ArrowRight aria-hidden size={14} /></Link>
     </article>
   )
 }
 
 export function Floor() {
-  const [copilotAsk, setCopilotAsk] = useState<string | null>(null)
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
   const { items, loading, error, reload } = useQueue(clientId)
-  const { previews, reload: reloadPreviews } = usePreviews(clientId)
+  const { snippets, reload: reloadSnippets } = useSnippets(clientId)
   useLiveRefresh(clientId, () => {
     void reload()
-    void reloadPreviews()
+    void reloadSnippets()
   })
 
   const waiting = useMemo(() => waitingLongest(items), [items])
@@ -109,7 +103,7 @@ export function Floor() {
   const firstHandover = unpicked[0]
   const combinedLiveException = !!oldest && oldest.id === firstHandover?.id
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
-  const oldestPreview = oldest ? previews.get(oldest.id) ?? 'Waiting for a reply' : ''
+  const oldestSnippet = oldest ? snippets.get(oldest.id)?.text ?? 'Waiting for a reply' : ''
   const openDecisionCount = (firstHandover ? 1 : 0) + (oldest && !combinedLiveException ? 1 : 0)
 
   return (
@@ -119,11 +113,10 @@ export function Floor() {
           <div className="flex items-center gap-2 text-xs font-semibold text-success">
             <CircleDot aria-hidden size={12} className="fill-success" /> Live floor
           </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Know where to step in.</h1>
-          <p className="mt-1 text-sm text-fg-muted">Decisions and risks first. Healthy work stays quiet.</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Floor</h1>
+          <p className="mt-1 text-sm text-fg-muted">Customer wait times and unassigned handovers.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Chip tone="neutral">Preview intelligence</Chip>
           <Link to="/dashboard"><Button variant="secondary" size="sm"><TrendingUp aria-hidden size={15} /> View analytics</Button></Link>
         </div>
       </header>
@@ -149,22 +142,20 @@ export function Floor() {
           <ExceptionRow
             icon={MessageSquareWarning}
             title={`${firstHandover.contact?.profile_name ?? 'Customer'} needs a human owner`}
-            detail={combinedLiveException ? `This is also the longest-waiting customer: “${oldestPreview}” Assign one owner and reply now.` : 'The bot handed this conversation over and stopped. Nobody has picked it up yet.'}
+            detail={combinedLiveException ? `This is also the longest-waiting customer: “${oldestSnippet}” Assign one owner and reply now.` : 'The bot handed this conversation over and stopped. Nobody has picked it up yet.'}
             meta={combinedLiveException ? 'Live · longest wait' : 'Live'}
             to={`/inbox?c=${encodeURIComponent(firstHandover.id)}`}
             danger
-            onAsk={() => setCopilotAsk('The customer asked a decision question after the bot paused. No rep has taken ownership, so every extra minute now reduces the chance of a same-day response.')}
           />
         )}
         {oldest && !combinedLiveException && (
           <ExceptionRow
             icon={Clock3}
             title={`${oldestName} is waiting longest`}
-            detail={`“${oldestPreview}”`}
+            detail={`“${oldestSnippet}”`}
             meta="Live"
             to={`/inbox?c=${encodeURIComponent(oldest.id)}`}
             danger={overdue15m.includes(oldest)}
-            onAsk={() => setCopilotAsk(`${oldestName} has waited longer than anyone else on the floor. Every extra minute lowers the chance of a same-day reply.`)}
           />
         )}
         {!oldest && !unpicked.length && (
@@ -174,9 +165,6 @@ export function Floor() {
         )}
       </section>
 
-      <Sheet open={!!copilotAsk} onClose={() => setCopilotAsk(null)} title="Copilot explanation">
-        <p className="label-caps text-accent">Why this needs attention · Preview</p><h3 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-fg">Act on the constraint, not the noise.</h3><p className="mt-3 text-sm leading-7 text-fg-muted">{copilotAsk}</p><div className="mt-5 rounded-lg border border-border bg-surface-sunk p-4"><p className="label-caps">Recommended next</p><p className="mt-2 text-sm font-semibold text-fg">Open the deal, verify the last promise, then approve or assign one owner.</p></div><p className="mt-3 text-2xs text-fg-subtle">Explanation uses sample signals and never changes work automatically.</p>
-      </Sheet>
     </div>
   )
 }

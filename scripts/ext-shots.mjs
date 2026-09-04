@@ -199,8 +199,8 @@ async function run() {
     await followed.waitForSelector('text=Before the call')
     await shoot(followed, '09-following-chat', theme)
 
-    await followed.getByText('Snippets', { exact: true }).click()
-    await shoot(followed, '10-snippets', theme)
+    await followed.getByRole('button', { name: /Too expensive/ }).click()
+    await shoot(followed, '10-objection', theme)
 
     await followed.getByRole('button', { name: 'Save conversation to CRM' }).click()
     await followed.waitForSelector('text=Save this conversation')

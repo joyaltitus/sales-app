@@ -19,11 +19,9 @@ const OwnerBusinessReport = lazy(() => import('../reports/OwnerBusinessReport'))
 
 // SA-05 company dashboard — manager/client_admin. REAL wherever the browser
 // already holds the data under RLS (conversations, leads, stages, follow_ups,
-// bookings, won-per-rep via useTeamWinsThisMonth — the same bounded reads the
-// other screens issue); SAMPLE-tagged where the honest number needs
-// server-side aggregation that doesn't exist yet (response time, per-day
-// volume, reply count/median-reply-time per rep — messages carry no cheap
-// channel/day rollup and no rep attribution browser-side).
+// bookings — the same bounded reads the other screens issue). Aggregated
+// response time, per-day volume and follow-up completion come from the existing
+// metrics endpoint.
 
 const D = 24 * 3_600_000
 type DashboardView = 'operate' | 'revenue' | 'report'
@@ -69,7 +67,7 @@ function AnalyticsKpi({
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-subtle text-accent"><Icon aria-hidden size={17} /></span>
         <MiniSpark values={values} />
       </div>
-      <p className="label-caps mt-4">{label}</p>
+      <p className="mt-4 text-xs font-medium text-fg-muted">{label}</p>
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <strong className="tnum text-2xl leading-none tracking-[-0.04em] text-fg">{value}</strong>
         {delta && <span className={['flex items-center gap-0.5 text-2xs font-semibold', good ? 'text-success' : 'text-danger'].join(' ')}><Delta aria-hidden size={12} />{delta}</span>}
@@ -172,21 +170,9 @@ export function DashboardScreen() {
     )
   }
 
-  const viewCopy: Record<DashboardView, { eyebrow: string; title: string; detail: string }> = {
-    operate: { eyebrow: 'Today', title: 'Run the floor without chasing updates.', detail: 'Live exceptions first; healthy work stays quiet.' },
-    revenue: { eyebrow: 'Revenue', title: 'Know what can close and where it is stuck.', detail: 'Live pipeline with a clearly labelled preview forecast.' },
-    report: { eyebrow: 'Owner view', title: 'The business, ready to forward.', detail: 'A clean weekly or monthly summary for leadership.' },
-  }
-
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="page-frame max-w-6xl space-y-6">
-        <header>
-          <p className="label-caps text-accent">{viewCopy[view].eyebrow}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">{viewCopy[view].title}</h1>
-          <p className="mt-1 text-sm text-fg-muted">{viewCopy[view].detail}</p>
-        </header>
-
         <nav className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunk p-1" aria-label="Dashboard views">
           {DASHBOARD_VIEWS.map((item) => <button key={item.key} onClick={() => setView(item.key)} aria-current={view === item.key ? 'page' : undefined} className={['flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold sm:flex-1', view === item.key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}><item.icon aria-hidden size={15} />{item.label}</button>)}
         </nav>

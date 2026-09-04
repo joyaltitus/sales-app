@@ -23,11 +23,6 @@ import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
 // so a concurrent move can't be silently overwritten. Inline panel on
 // desktop; the caller decides the container (§1.10 #12).
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
 const field =
@@ -35,7 +30,7 @@ const field =
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1 block text-2xs text-fg-subtle uppercase" style={capsStyle}>
+    <span className="mb-1 block text-xs font-medium text-fg-muted">
       {children}
     </span>
   )

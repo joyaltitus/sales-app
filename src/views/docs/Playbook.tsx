@@ -20,7 +20,7 @@ import { ReadView } from './playbook/ReadView'
 // extension uses to jump a manager straight into the right script.
 
 type PlaybookView = 'library' | 'editor' | 'taxonomy' | 'settings' | 'courses' | 'read'
-type PreviewState = 'ready' | 'loading' | 'error'
+type DisplayState = 'ready' | 'loading' | 'error'
 
 function LoadingGrid() {
   return (
@@ -32,7 +32,7 @@ function LoadingGrid() {
   )
 }
 
-export function Playbook({ canManage, previewState = 'ready' }: { canManage: boolean; previewState?: PreviewState }) {
+export function Playbook({ canManage, displayState = 'ready' }: { canManage: boolean; displayState?: DisplayState }) {
   const { activeClient } = useClient()
   const { session } = useAuth()
   const clientId = activeClient?.id ?? null
@@ -67,12 +67,12 @@ export function Playbook({ canManage, previewState = 'ready' }: { canManage: boo
   }, [deepLinked, canManage])
 
   const selected = activeScripts.find((s) => s.taxonomyId === selectedTaxonomyId) ?? activeScripts[0] ?? null
-  // The first course is the one previews merge from — managers want to see real
+  // The first course is the one merge fields use — managers want to see real
   // numbers, and a tenant's first active course is the one they sell most.
   const previewCourse = courses.courses[0] ?? null
 
-  if (previewState === 'loading' || library.loading) return <LoadingGrid />
-  if (previewState === 'error') {
+  if (displayState === 'loading' || library.loading) return <LoadingGrid />
+  if (displayState === 'error') {
     return (
       <ErrorState
         title="Couldn't load the Playbook"

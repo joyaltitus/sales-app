@@ -8,11 +8,6 @@ import { EmptyState } from '../../ui/EmptyState'
 // Workbench already issues browser-side under RLS). Read-only ledger: ref,
 // customer, when, guests, total, status, payment.
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
 function when(b: BookingRow): string {
@@ -64,7 +59,7 @@ export function BookingsTab() {
                   {when(b)}
                 </span>
                 {(b.guests ?? b.party_size) != null && (
-                  <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+                  <span className="text-2xs text-fg-subtle">
                     {b.guests ?? b.party_size} guests
                   </span>
                 )}

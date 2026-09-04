@@ -10,14 +10,8 @@ import { TodosTab } from './TodosTab'
 // (Joyal's ruling 2026-07-30 supersedes SA-04's rep exclusion): reps see
 // their own + unassigned leads (scoped in LeadsScreen, rendering-only).
 //
-// REAL vs SAMPLE:
-//   Pipeline   → REAL (board + drawer, RLS-gated writes; only the row-level
-//                assignment/objection selects remain SAMPLE)
-//   Follow-ups → REAL reads/actions, with marked local preview fixtures when a
-//                demo workspace has no rows
-//   Contacts   → REAL (SA-05)
-//   Bookings   → REAL (SA-05)
-//   Todos      → REAL (employee_todos, wired in the WIRE session)
+// Every tab reads live tenant data. Pipeline writes remain RLS-gated and Todos
+// use the employee_todos contract.
 //
 // The tab is URL-backed (`?tab=`) so a filtered view survives refresh, same
 // convention as the Inbox channel tabs.
@@ -48,10 +42,8 @@ export function CrmScreen() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-end justify-between gap-3 border-b border-border bg-surface px-4 pt-4 pb-3">
         <div>
-          <p className="label-caps text-accent">Revenue workspace</p>
-          <h1 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">CRM</h1>
+          <h1 className="text-lg font-semibold tracking-[-0.025em] text-fg">CRM</h1>
         </div>
-        <p className="hidden text-xs text-fg-muted sm:block">Move the work forward, not the rows around.</p>
       </div>
       <div
         role="tablist"
@@ -85,19 +77,5 @@ export function CrmScreen() {
         {tab === 'todos' && <TodosTab />}
       </div>
     </div>
-  )
-}
-
-/** Shared "this surface is sample data" banner — the visual contract that a
- *  tab is awaiting its wiring session. Deliberately quiet: a caption, not a
- *  toast (§1.10 #14 still binds). */
-export function SampleBanner({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      className="border-b border-border bg-surface-sunk px-4 py-1.5 text-2xs text-fg-subtle uppercase"
-      style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-    >
-      {children}
-    </p>
   )
 }
