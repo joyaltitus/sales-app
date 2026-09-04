@@ -54,8 +54,8 @@ export function ForecastWidget({
             {formatINRCompact(metrics.pipeline_weighted_total)} weighted pipeline
           </h2>
           <p className="mt-1 text-xs text-fg-muted">
-            Weighted by stage — each stage's raw value × its configured weight. Stage weights are
-            visible and editable only in wiring.
+            Weighted by stage — each stage's raw value × its configured weight. Stage weights come
+            from your workspace configuration.
           </p>
         </div>
       </header>
