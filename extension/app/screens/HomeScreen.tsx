@@ -138,7 +138,7 @@ export default function HomeScreen({
               <li key={item.lead_id}>
                 <ListRow
                   name={item.display_name}
-                  preview={item.stage_label}
+                  snippet={item.stage_label}
                   timestamp={item.due_at ? formatClock(item.due_at) : undefined}
                   onClick={() => onOpenLead(item)}
                   trailing={<Chip tone={item.reason === 'overdue' ? 'danger' : 'accent'}>{item.reason}</Chip>}

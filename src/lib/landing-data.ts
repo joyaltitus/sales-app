@@ -89,7 +89,7 @@ export function isOverdue(due_at: string, now: number = Date.now()): boolean {
 /**
  * The most recent trace route per conversation.
  *
- * Same shape as usePreviews: ONE bounded read ordered newest-first, reduced to
+ * Same shape as useSnippets: ONE bounded read ordered newest-first, reduced to
  * the first hit per conversation, rather than a query per row. TRACE_LIMIT is a
  * deliberate ceiling — a conversation whose newest trace falls outside it
  * simply has no entry here, which degrades to "not shown on Health" rather than

@@ -17,6 +17,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Interaction-heavy files share the transform pipeline during the full
+    // suite, so the default 5 s budget can expire while the same test remains
+    // fast in isolation. Keep the gate deterministic under parallel load.
+    testTimeout: 20_000,
     // src/lib/supabase.ts calls createClient() at module scope, and
     // createClient throws "supabaseUrl is required" on an empty value. Any test
     // that transitively imports it therefore needs these present — including a

@@ -166,7 +166,7 @@ export function GoLive({ preview }: { preview?: GoLiveCheck } = {}) {
     <div className="space-y-4 p-4">
       <header>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold text-fg">Ready to go live</h1>
+          <h1 className="text-lg font-semibold text-fg">Go live</h1>
           {check.ready
             ? <Chip tone="success">Ready</Chip>
             : <Chip tone="warn">{outstanding} still open</Chip>}

@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import type { LeadItem, LeadStage, FollowUpItem } from '../../lib/leads-data'
 import { waitStamp, urgency } from '../../lib/wait'
-import { AssignSelect } from '../crm/MockControls'
 import { Link } from 'react-router-dom'
 import { ChevronRight, MessageCircle, MoreHorizontal } from 'lucide-react'
 import { Avatar } from '../../ui/Avatar'
@@ -58,11 +57,6 @@ function stuckText(lead: LeadItem): string {
   return '—'
 }
 
-const capsStyle = {
-  fontWeight: 'var(--weight-caps)',
-  letterSpacing: 'var(--tracking-caps)',
-} as const
-
 export function LeadRow({
   lead,
   stage,
@@ -78,8 +72,7 @@ export function LeadRow({
   followUp: FollowUpItem | undefined
   canEditStage: boolean
   onStageChange: (stageId: string) => void
-  /** SA-04: CRM pipeline mounts add the SAMPLE assignment/objection controls
-   *  (Wave-1 backlog, unwired). The rep board never sets this. */
+  /** CRM pipeline rows add a compact call action on larger screens. */
   crm?: boolean
 }) {
   const [quickOpen, setQuickOpen] = useState(false)
@@ -148,10 +141,10 @@ export function LeadRow({
 
         {/* What is stuck — the line the rep actually reads. */}
         <div className="mt-1 truncate text-xs text-fg-muted">{stuckText(lead)}</div>
-        <div className="mt-2"><NextAction compact label={lead.next_action || 'Call and confirm the decision'} detail={lead.objection ? `Resolve ${lead.objection}` : undefined} /></div>
+        {lead.next_action && <div className="mt-2"><NextAction compact label={lead.next_action} detail={lead.objection ? `Resolve ${lead.objection}` : undefined} /></div>}
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-          {/* Stage as a micro-caps label (§1.6), not a coloured pill. Editable
+          {/* Stage as plain text, not a coloured pill. Editable
               only when the RLS wall (proved empirically, not asserted) will
               actually accept the write — this select GRANTS nothing, it is a
               rendering convenience; Postgres decides on every submit. */}
@@ -161,8 +154,7 @@ export function LeadRow({
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => onStageChange(e.target.value)}
               aria-label={`Stage for ${name}`}
-              className="rounded-sm border border-transparent bg-transparent py-0.5 pr-1 text-2xs text-fg-subtle uppercase hover:border-border focus:border-border-strong"
-              style={capsStyle}
+              className="rounded-sm border border-transparent bg-transparent py-0.5 pr-1 text-2xs font-medium text-fg-subtle hover:border-border focus:border-border-strong"
             >
               {stages.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -171,13 +163,13 @@ export function LeadRow({
               ))}
             </select>
           ) : (
-            <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+            <span className="text-2xs font-medium text-fg-subtle">
               {stage?.label ?? 'Unknown stage'}
             </span>
           )}
 
           {lead.temperature_override && (
-            <span className="text-2xs text-fg-subtle uppercase" style={capsStyle}>
+            <span className="text-2xs font-medium text-fg-subtle">
               {lead.temperature_override}
             </span>
           )}
@@ -194,24 +186,16 @@ export function LeadRow({
               earns its keep. */}
           {bucket && (
             <span
-              className={['text-2xs uppercase', bucket === 'overdue' ? 'text-danger' : 'text-fg-subtle'].join(
+              className={['text-2xs font-medium', bucket === 'overdue' ? 'text-danger' : 'text-fg-subtle'].join(
                 ' ',
               )}
-              style={capsStyle}
             >
               {FOLLOW_UP_LABEL[bucket]}
             </span>
           )}
 
-          {/* SA-04 SAMPLE controls (CRM mounts only): assignment + objection
-              capture from the Wave-1 backlog. Dashed border = not wired; they
-              hold state for the session and write nowhere. */}
           {crm && (
-            <span className="ml-auto flex shrink-0 items-center gap-2">
-              {/* Phone cards already carry a full-width Call button below; the icon would be a second one. */}
-              <span className="hidden sm:inline-flex"><CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} /></span>
-              <AssignSelect leadName={name} />
-            </span>
+            <span className="ml-auto hidden shrink-0 sm:inline-flex"><CallButton person={name} phone={lead.contact?.external_id} dealValue={lead.est_value === null ? null : Number(lead.est_value)} variant="icon" contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} /></span>
           )}
         </div>
 
@@ -225,7 +209,7 @@ export function LeadRow({
               <MessageCircle aria-hidden size={14} /> Message
             </Link>
           ) : <span />}
-          <CallButton person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
+          <CallButton person={name} phone={lead.contact?.external_id} dealValue={lead.est_value === null ? null : Number(lead.est_value)} contactId={lead.contact_id} leadId={lead.id} conversationId={lead.conversation_id} />
           {canEditStage && stages.findIndex((item) => item.id === lead.stage_id) < stages.length - 1 && (
             <button
               onClick={(e) => {
@@ -241,7 +225,7 @@ export function LeadRow({
           )}
         </div>
 
-        <LeadQuickActions open={quickOpen} onClose={() => { setQuickOpen(false); setCaptureOpen(false) }} person={name} phone={lead.contact?.external_id} dealValue={Number(lead.est_value ?? 60000)} conversationId={lead.conversation_id} contactId={lead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />
+        <LeadQuickActions open={quickOpen} onClose={() => { setQuickOpen(false); setCaptureOpen(false) }} person={name} phone={lead.contact?.external_id} dealValue={lead.est_value === null ? null : Number(lead.est_value)} conversationId={lead.conversation_id} contactId={lead.contact_id} captureOpen={captureOpen} onCaptureToggle={() => setCaptureOpen((value) => !value)} />
       </div>
     </div>
   )

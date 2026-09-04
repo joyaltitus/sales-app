@@ -133,11 +133,11 @@ export default function OptionsPage() {
       <Section title="Quiet hours" hint="Follow-up and new-lead notifications are held during this window. Set both to the same time to switch quiet hours off.">
         <div className="flex flex-wrap items-center gap-2">
           <label className="grid gap-1">
-            <span className="label-caps">From</span>
+            <span className="text-xs font-medium text-fg-muted">From</span>
             <Input type="time" value={prefs.quietFrom} onChange={(event) => update({ quietFrom: event.target.value })} />
           </label>
           <label className="grid gap-1">
-            <span className="label-caps">To</span>
+            <span className="text-xs font-medium text-fg-muted">To</span>
             <Input type="time" value={prefs.quietTo} onChange={(event) => update({ quietTo: event.target.value })} />
           </label>
         </div>

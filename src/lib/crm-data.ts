@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { parseFacts, type QueueItem } from './inbox-data'
-import type { LeadFact } from './mock-wave3'
+import type { LeadFact } from './lead-facts'
 
 // SA-05 CRM data layer — REAL PostgREST reads for the CRM tabs that shipped as
 // sample data in SA-04. Same laws as inbox-data.ts / leads-data.ts: explicit

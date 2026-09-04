@@ -27,7 +27,7 @@ const baseItem: QueueItem = {
 describe('QueueRow WhatsApp-like unread treatment', () => {
   it('renders high-contrast solid badge when unread_count > 0', () => {
     const item = { ...baseItem, unread_count: 3 }
-    render(<QueueRow item={item} preview="Fee structure enquiry" selected={false} onSelect={vi.fn()} />)
+    render(<QueueRow item={item} snippet="Fee structure enquiry" selected={false} onSelect={vi.fn()} />)
 
     const badge = screen.getByText('3')
     expect(badge).toBeInTheDocument()
@@ -38,20 +38,20 @@ describe('QueueRow WhatsApp-like unread treatment', () => {
 
   it('omits badge entirely when unread_count === 0', () => {
     const item = { ...baseItem, unread_count: 0 }
-    render(<QueueRow item={item} preview="Okay, thank you" selected={false} onSelect={vi.fn()} />)
+    render(<QueueRow item={item} snippet="Okay, thank you" selected={false} onSelect={vi.fn()} />)
 
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
   it('applies bold typography to customer name and preview for unread rows', () => {
     const unreadItem = { ...baseItem, unread_count: 2 }
-    const { rerender } = render(<QueueRow item={unreadItem} preview="Unread message" selected={false} onSelect={vi.fn()} />)
+    const { rerender } = render(<QueueRow item={unreadItem} snippet="Unread message" selected={false} onSelect={vi.fn()} />)
 
     const nameEl = screen.getByText('Anjali Ramesh')
     expect(nameEl.className).toContain('font-bold')
 
     const readItem = { ...baseItem, unread_count: 0 }
-    rerender(<QueueRow item={readItem} preview="Read message" selected={false} onSelect={vi.fn()} />)
+    rerender(<QueueRow item={readItem} snippet="Read message" selected={false} onSelect={vi.fn()} />)
     expect(nameEl.className).toContain('font-medium')
   })
 
@@ -60,7 +60,7 @@ describe('QueueRow WhatsApp-like unread treatment', () => {
     const now = Date.now()
     const fiveMinAgo = new Date(now - 5 * 60_000).toISOString()
     const unreadItem = { ...baseItem, unread_count: 1, last_customer_message_at: fiveMinAgo }
-    render(<QueueRow item={unreadItem} preview="Recent enquiry" selected={false} onSelect={vi.fn()} />)
+    render(<QueueRow item={unreadItem} snippet="Recent enquiry" selected={false} onSelect={vi.fn()} />)
 
     const stampEl = screen.getByText('5m')
     expect(stampEl.className).toContain('text-accent')
@@ -68,7 +68,7 @@ describe('QueueRow WhatsApp-like unread treatment', () => {
 
   it('preserves solid badge contrast when selected is true', () => {
     const item = { ...baseItem, unread_count: 1 }
-    render(<QueueRow item={item} preview="Test" selected={true} onSelect={vi.fn()} />)
+    render(<QueueRow item={item} snippet="Test" selected={true} onSelect={vi.fn()} />)
 
     const button = screen.getByRole('button')
     expect(button).toHaveAttribute('aria-current', 'true')
@@ -81,7 +81,7 @@ describe('QueueRow WhatsApp-like unread treatment', () => {
 
   it('caps right-edge metadata to 2 chips when bot_paused and unread coexist', () => {
     const item = { ...baseItem, unread_count: 2, bot_paused: true }
-    render(<QueueRow item={item} preview="Help needed" selected={false} onSelect={vi.fn()} assigneeLabel="You" />)
+    render(<QueueRow item={item} snippet="Help needed" selected={false} onSelect={vi.fn()} assigneeLabel="You" />)
 
     expect(screen.getByText('Needs human')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()

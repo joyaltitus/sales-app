@@ -109,7 +109,6 @@ export function AdminShell() {
         <nav className="hidden w-[var(--rail-w)] shrink-0 border-r border-border bg-surface px-3 py-4 md:block" aria-label="Primary">
           <div className="mb-4 px-3">
             <p className="label-caps">Admin workspace</p>
-            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Failures and policy exceptions, before volume.</p>
           </div>
           {RAIL.map((t) => (
             <NavLink

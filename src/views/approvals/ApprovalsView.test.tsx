@@ -43,7 +43,7 @@ describe('ApprovalsView — nobody clears their own', () => {
   it('offers a manager the button on a rep’s proposal', () => {
     render(
       <ApprovalsView
-        preview={{ groups: [GROUP], viewerId: 'mgr-1', viewerRole: 'manager', members: MEMBERS }}
+        designData={{ groups: [GROUP], viewerId: 'mgr-1', viewerRole: 'manager', members: MEMBERS }}
       />,
     )
     expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('ApprovalsView — nobody clears their own', () => {
   it('shows the proposer “awaiting manager”, never a button', () => {
     render(
       <ApprovalsView
-        preview={{ groups: [GROUP], viewerId: 'rep-1', viewerRole: 'agent', members: MEMBERS }}
+        designData={{ groups: [GROUP], viewerId: 'rep-1', viewerRole: 'agent', members: MEMBERS }}
       />,
     )
     expect(screen.getByText(/awaiting manager/i)).toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('ApprovalsView — nobody clears their own', () => {
     // manager authorise an action they cannot perform themselves.
     render(
       <ApprovalsView
-        preview={{
+        designData={{
           groups: [{ ...GROUP, proposerId: 'adm-1', steps: [{ ...GROUP.steps[0], proposerId: 'adm-1' }] }],
           viewerId: 'mgr-1',
           viewerRole: 'manager',
@@ -80,7 +80,7 @@ describe('ApprovalsView — nobody clears their own', () => {
   it('shows the approver what they are signing for', () => {
     render(
       <ApprovalsView
-        preview={{ groups: [GROUP], viewerId: 'mgr-1', viewerRole: 'manager', members: MEMBERS }}
+        designData={{ groups: [GROUP], viewerId: 'mgr-1', viewerRole: 'manager', members: MEMBERS }}
       />,
     )
     expect(screen.getByText('update_lead')).toBeInTheDocument()

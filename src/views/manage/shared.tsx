@@ -157,7 +157,7 @@ export function KeywordExpander({
 }) {
   return (
     <div>
-      <span className="label-caps">{label}</span>
+      <span className="text-xs font-medium text-fg-muted">{label}</span>
       <div className="mt-1 flex flex-wrap gap-1.5">
         {words.map((w) => (
           <button
@@ -207,7 +207,7 @@ export function CopyBox({ label, value, hint }: { label: string; value: string; 
   return (
     <div className="mt-3">
       <div className="flex items-center gap-2">
-        <span className="label-caps">{label}</span>
+        <span className="text-xs font-medium text-fg-muted">{label}</span>
         <button
           type="button"
           onClick={() => void copy()}

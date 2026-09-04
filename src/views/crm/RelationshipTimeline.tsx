@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AtSign, ChevronDown, Download, Mail, MessageCircle, Paperclip, Phone, RotateCcw } from 'lucide-react'
+import { AtSign, ChevronDown, MessageCircle, Phone } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useCallLogs } from '../../lib/calls-data'
 import { supabase } from '../../lib/supabase'
@@ -11,17 +11,8 @@ const CALL_OUTCOME_LABEL: Record<string, string> = {
 }
 
 type TimelineEvent =
-  | { id: string; kind: 'call'; at: string; actor: string | null; outcome: string; note: string | null; sample: false }
-  | { id: string; kind: 'message'; channel: 'whatsapp' | 'instagram'; direction: 'inbound' | 'outbound'; at: string; body: string; sample: false }
-  | { id: string; kind: 'email'; direction: 'inbound' | 'outbound'; at: string; subject: string; body: string; attachments?: { name: string; size: string }[]; sample: true }
-
-// Email is not a wired channel (deferred — WIRE-A2 scope). These two rows stay
-// sample-tagged and interleave with the real calls + messages below so the
-// timeline reads as one relationship, not two data sources bolted together.
-const EMAIL_EVENTS: TimelineEvent[] = [
-  { id: 'rel-email-1', kind: 'email', direction: 'outbound', at: 'Today · 12:24 pm', subject: 'Your two-instalment fee plan', body: 'Sharing the exact fee split and the Saturday batch details we discussed.', attachments: [{ name: 'Fee-plan.pdf', size: '184 KB' }], sample: true },
-  { id: 'rel-email-2', kind: 'email', direction: 'inbound', at: 'Yesterday · 6:10 pm', subject: 'Re: NEET repeaters — Saturday batch', body: 'Thanks, I have shared this with my parents. Is the seat held until Monday?', sample: true },
-]
+  | { id: string; kind: 'call'; at: string; actor: string | null; outcome: string; note: string | null }
+  | { id: string; kind: 'message'; channel: 'whatsapp' | 'instagram'; direction: 'inbound' | 'outbound'; at: string; body: string }
 
 function useContactMessages(clientId: string | null, contactId: string | null) {
   const [messages, setMessages] = useState<{ id: string; direction: string; body: string | null; created_at: string }[]>([])
@@ -75,7 +66,6 @@ export function RelationshipTimeline({ contactId }: { contactId: string }) {
     actor: c.actorName,
     outcome: CALL_OUTCOME_LABEL[c.outcome] ?? c.outcome,
     note: c.note,
-    sample: false,
   }))
   const messageEvents: TimelineEvent[] = messages
     .filter((m) => m.body)
@@ -86,35 +76,27 @@ export function RelationshipTimeline({ contactId }: { contactId: string }) {
       direction: m.direction === 'outbound' ? 'outbound' : 'inbound',
       at: m.created_at,
       body: m.body as string,
-      sample: false,
     }))
 
   const timeMs = (at: string) => {
     const parsed = Date.parse(at)
     return Number.isNaN(parsed) ? 0 : parsed
   }
-  const events = [...callEvents, ...messageEvents, ...EMAIL_EVENTS].sort((a, b) => {
-    // Real rows carry ISO timestamps; the two sample email rows carry display
-    // strings ("Today · 12:24 pm") that don't parse — pin them near the top
-    // rather than sorting them to 1970.
-    const am = a.sample ? Date.now() : timeMs(a.at)
-    const bm = b.sample ? Date.now() : timeMs(b.at)
-    return bm - am
-  })
+  const events = [...callEvents, ...messageEvents].sort((a, b) => timeMs(b.at) - timeMs(a.at))
 
   const formatAt = (event: TimelineEvent) =>
-    event.sample ? event.at : new Date(event.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+    new Date(event.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 
   return (
     <section aria-labelledby="relationship-title">
       <div className="flex items-end justify-between">
-        <div><p className="label-caps text-accent">Full relationship</p><h3 id="relationship-title" className="mt-1 text-sm font-semibold text-fg">Calls, messages and email</h3></div>
+        <div><p className="label-caps text-accent">Activity</p><h3 id="relationship-title" className="mt-1 text-sm font-semibold text-fg">Calls and messages</h3></div>
         <span className="text-2xs text-fg-subtle">Newest first</span>
       </div>
       {events.length === 0 && <p className="mt-4 text-xs text-fg-subtle">No activity on record yet.</p>}
       <ol className="relative mt-4 space-y-3 before:absolute before:top-5 before:bottom-5 before:left-[17px] before:w-px before:bg-border">
         {events.map((event) => {
-          const Icon = event.kind === 'call' ? Phone : event.kind === 'email' ? Mail : event.channel === 'instagram' ? AtSign : MessageCircle
+          const Icon = event.kind === 'call' ? Phone : event.channel === 'instagram' ? AtSign : MessageCircle
           const open = expanded === event.id
           return (
             <li key={event.id} className="relative flex gap-3">
@@ -126,11 +108,6 @@ export function RelationshipTimeline({ contactId }: { contactId: string }) {
                       <>
                         <p className="text-xs font-semibold text-fg">Call{event.actor ? ` · ${event.actor}` : ''}</p>
                         <p className="mt-1 text-2xs font-semibold text-success">{event.outcome}</p>
-                      </>
-                    ) : event.kind === 'email' ? (
-                      <>
-                        <p className="truncate text-xs font-semibold text-fg">{event.subject}</p>
-                        <p className="mt-1 text-2xs text-fg-muted">Email (preview) · {event.direction}</p>
                       </>
                     ) : (
                       <>
@@ -145,14 +122,6 @@ export function RelationshipTimeline({ contactId }: { contactId: string }) {
                 {open && (
                   <div className="mt-3 border-t border-border pt-3">
                     {event.kind === 'call' && <p className="text-xs leading-relaxed text-fg-muted">{event.note || 'No note added.'}</p>}
-                    {event.kind === 'email' && (
-                      <>
-                        <p className="text-xs leading-relaxed text-fg-muted">{event.body}</p>
-                        {event.attachments?.map((file) => (
-                          <span key={file.name} className="mt-2 inline-flex items-center gap-2 rounded-md border border-border bg-surface-sunk px-2.5 py-2 text-2xs text-fg-muted"><Paperclip aria-hidden size={12} />{file.name} · {file.size}<Download aria-hidden size={12} /></span>
-                        ))}
-                      </>
-                    )}
                     {event.kind === 'message' && <p className="text-xs leading-relaxed text-fg-muted">{event.body}</p>}
                   </div>
                 )}
@@ -161,7 +130,6 @@ export function RelationshipTimeline({ contactId }: { contactId: string }) {
           )
         })}
       </ol>
-      <button className="mt-4 flex min-h-9 w-full items-center justify-center gap-1.5 text-2xs font-semibold text-fg-muted hover:text-fg"><RotateCcw aria-hidden size={12} /> Load earlier activity</button>
     </section>
   )
 }

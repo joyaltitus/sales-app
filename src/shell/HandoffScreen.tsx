@@ -12,10 +12,7 @@ export function HandoffScreen({ role }: { role: Role }) {
   return (
     <div className="flex min-h-full items-center justify-center bg-canvas px-4">
       <div className="w-full max-w-md rounded-md border border-border bg-surface p-6 text-center">
-        <div className="label-caps mb-2">Wrong door</div>
-        <h1 className="mb-2 text-lg font-semibold text-fg">
-          This app is for reps and managers
-        </h1>
+        <h1 className="mb-2 text-lg font-semibold text-fg">Workspace access</h1>
         <p className="mb-5 text-sm text-fg-muted">
           Your role opens {who} in Workbench, not the Sales App.
         </p>

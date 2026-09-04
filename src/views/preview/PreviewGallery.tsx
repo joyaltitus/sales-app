@@ -46,19 +46,9 @@ import { TeamPage } from '../team/TeamPage'
 import { AiFeaturesCard } from '../settings/AiFeaturesCard'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { Playbook } from '../docs/Playbook'
-import { ObjectionsReview } from '../dashboard/ObjectionsReview'
-import { TODO_PREVIEW_ITEMS, TODO_REPS } from '../crm/todoMocks'
+import { TODO_PREVIEW_ITEMS, TODO_REPS } from './todoMocks'
 import { Avatar } from '../../ui/Avatar'
-import { CallButton } from '../calls/CallButton'
-import { RelationshipTimeline } from '../crm/RelationshipTimeline'
-import { EmailQueueRow } from '../email/EmailQueueRow'
-import EmailConversation from '../email/EmailConversation'
 import { ForecastWidget } from '../revenue/ForecastWidget'
-import SettingsPanel from '../rep/SettingsPanel'
-import MySeason from '../momentum/MySeason'
-import CompetitionConsole from '../momentum/CompetitionConsole'
-import { MomentumCard } from '../momentum/RepMomentum'
-import { AuthExperiencePreview } from '../../auth/LoginPage'
 import OwnerBusinessReport from '../reports/OwnerBusinessReport'
 import { Today } from '../rep/Today'
 import { FollowUpsTab } from '../crm/FollowUpsTab'
@@ -100,7 +90,7 @@ function InboxPreview() {
   const selectedName = selected.item.contact?.profile_name ?? selected.item.contact?.external_id ?? 'Conversation'
   return (
     <div className="grid overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2 lg:grid-cols-[360px_1fr]" data-testid="inbox-preview">
-      <div className="border-r border-border"><div className="space-y-3 border-b border-border p-4"><h3 className="text-lg font-semibold">Inbox</h3><div className="relative"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><Input className="pl-9" placeholder="Search conversations" /></div></div>{MOCK_QUEUE.map(({ item, preview, assignee }) => <QueueRow key={item.id} item={item} preview={preview} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)} assigneeLabel={assignee} />)}</div>
+      <div className="border-r border-border"><div className="space-y-3 border-b border-border p-4"><h3 className="text-lg font-semibold">Inbox</h3><div className="relative"><Search aria-hidden size={14} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><Input className="pl-9" placeholder="Search conversations" /></div></div>{MOCK_QUEUE.map(({ item, preview, assignee }) => <QueueRow key={item.id} item={item} snippet={preview} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)} assigneeLabel={assignee} />)}</div>
       <div className="app-grid min-h-[560px] overflow-hidden"><div className="border-b border-border bg-surface px-4 py-3"><p className="font-semibold" data-testid="open-chat-name">{selectedName}</p><p className="text-2xs text-success">● Conversation opened</p></div><Thread messages={MOCK_MESSAGES} traces={MOCK_TRACES} /></div>
     </div>
   )
@@ -167,23 +157,9 @@ export default function PreviewGallery() {
           <PhoneFrame><div className="min-h-[520px] bg-canvas px-3 pt-24"><div className="rounded-xl border border-border bg-surface p-3 shadow-elev-1"><p className="text-xs text-fg-muted">Customer: “The fee feels higher than the other academy.”</p></div><div className="mt-40 overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2"><ObjectionCapture contactId="preview-contact" source="chat" detected="price" compact onInsertScript={() => undefined} /><div className="border-t border-border p-3"><Input placeholder="Message customer…" /></div></div></div></PhoneFrame>
         </Section>
         <Section number="06" title="The Playbook" note="A living company standard: library, versioned editor, taxonomy governance and a day-one reading view."><Playbook canManage /></Section>
-        <Section number="07" title="Monday objection review" note="Frequency, capture behavior and script outcomes converge in a meeting mode with one decision per screen."><ObjectionsReview /></Section>
         <Section number="08" title="Manager todo push" note="Keyboard-fast assignment, visible team load and the same action language reps receive on Today."><TodoBoardPreview /></Section>
-        <Section number="09" title="Click-to-call and relationship history" note="Every call starts with a 15-second brief, returns into a two-tap outcome capture, and becomes part of the same customer timeline.">
-          <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[390px_minmax(0,1fr)]">
-            <PhoneFrame><div className="min-h-[620px] bg-canvas p-4"><p className="label-caps text-accent">Call layer · Preview</p><div className="mt-4 rounded-xl border border-border bg-surface p-4 shadow-elev-2"><div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-semibold text-fg">Anjali Ramesh</h3><p className="mt-1 text-xs text-fg-muted">Qualified · Price objection open</p></div><strong className="tnum text-md text-fg">₹60,000</strong></div><p className="mt-4 text-xs leading-relaxed text-fg-muted">Recommended: confirm the two-instalment plan, then ask for the decision.</p><div className="mt-4"><CallButton person="Anjali Ramesh" phone="+91 98765 42018" dealValue={60000} variant="primary" label="Brief me, then call" /></div></div><div className="mt-4 rounded-xl border border-dashed border-border-strong p-4"><p className="text-xs font-semibold text-fg">Try the complete flow</p><p className="mt-1 text-2xs leading-relaxed text-fg-muted">Brief → mock call → automatic outcome → objection or callback detail.</p></div></div></PhoneFrame>
-            <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-5 shadow-elev-2"><RelationshipTimeline contactId="preview-contact-anjali" /></div>
-          </div>
-        </Section>
-        <Section number="10" title="Email joins the unified Inbox" note="A subject-led queue row opens a true email thread with long-form bodies, attachments, collapsed quotes, templates and reviewed AI drafting.">
-          <div className="grid h-[780px] overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2 lg:grid-cols-[360px_minmax(0,1fr)]"><aside className="hidden border-r border-border bg-surface lg:block"><div className="border-b border-border p-4"><p className="label-caps text-info">Unified queue · Preview</p><h3 className="mt-1 text-lg font-semibold text-fg">Email, WhatsApp, Instagram</h3></div><EmailQueueRow selected onSelect={() => undefined} /></aside><EmailConversation canSend onBack={() => undefined} /></div>
-        </Section>
         <Section number="11" title="Revenue operating view" note="Weighted stage value, forecast scenarios, target pace and a copilot read focus the manager on the deals that can still change the month."><ForecastWidget /></Section>
-        <Section number="12" title="Connections and control" note="Gmail, client-level copilot autonomy and high-signal notifications sit in a searchable settings architecture with honest connection states."><div className="mx-auto max-w-2xl rounded-xl border border-border bg-canvas p-5 shadow-elev-2"><SettingsPanel /></div></Section>
-        <Section number="13" title="Rep momentum and My Season" note="Every visibility mode preserves a path to a good day. Points explain themselves, quiet hours remove pressure, and achievement stays restrained."><div className="grid gap-3 xl:grid-cols-4"><div><p className="label-caps mb-2">Full board policy</p><MomentumCard visibility="full_board" /></div><div><p className="label-caps mb-2">Top-3 policy</p><MomentumCard visibility="top_three" /></div><div><p className="label-caps mb-2">Private policy</p><MomentumCard visibility="private" /></div><div><p className="label-caps mb-2">Quiet hours</p><MomentumCard visibility="full_board" quietHours /></div></div><div className="mx-auto mt-8 max-w-2xl"><MySeason /></div></Section>
-        <Section number="14" title="Manager Momentum console" note="Rules, challenge design, both leagues, rookie ramp and care signals live under one manager-controlled policy with a rep preview beside every consequential setting."><CompetitionConsole /></Section>
-        <Section number="15" title="First impressions and auth edges" note="A mature product promise frames sign-in, while invite acceptance, recovery, failure and session-expiry states protect context and explain exactly what happens next."><AuthExperiencePreview /></Section>
-        <Section number="16" title="Owner business report" note="Revenue against target, open pipeline, return on campaign spend and buyer objections resolve into a one-page artifact built for a 30-second read and a clean A4 handoff. Every figure is sourced; nothing without a source is drawn."><OwnerBusinessReport preview={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 1500000 }} /></Section>
+        <Section number="16" title="Owner business report" note="Revenue against target, open pipeline, return on campaign spend and buyer objections resolve into a one-page artifact built for a 30-second read and a clean A4 handoff. Every figure is sourced; nothing without a source is drawn."><OwnerBusinessReport designData={{ metrics: MOCK_METRICS, roi: MOCK_ROI, targetValue: 1500000 }} /></Section>
         <Section number="17" title="Rep follow-ups and task details" note="Rows now open full context instead of exposing only quick actions: who, due promise, stage, deal value, last contact, next action and a clearly labeled local preview state."><div className="grid gap-6"><div data-testid="follow-ups-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><FollowUpsTab /></div><div data-testid="todos-preview" className="h-[760px] overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2"><TodosTab /></div></div></Section>
         <Section number="18" title="Team and access" note="The same roster, seen from the two levels that may open it: an admin who can mint managers and reps, and a manager who may only mint reps. The mint ladder is hub-service's; these screens simply stop offering a button that would come back role_above_caller.">
           <div className="grid gap-6 xl:grid-cols-2">
@@ -206,29 +182,29 @@ export default function PreviewGallery() {
           <div className="grid gap-6">
             <div data-testid="manage-products-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
               <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/setup — products, with the honesty lint firing on the second card</p>
-              <ManageView preview={{ tab: 'products', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
+              <ManageView designData={{ tab: 'products', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
             </div>
             <div data-testid="manage-replies-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
               <p className="label-caps border-b border-border px-4 py-2 text-accent">client_admin · /admin/setup — objection replies, trigger words read-only</p>
-              <ManageView preview={{ tab: 'replies', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
+              <ManageView designData={{ tab: 'replies', products: MOCK_PRODUCTS, faqs: MOCK_FAQS, profile: MOCK_PROFILE, rules: MOCK_RULES, campaigns: MOCK_CAMPAIGNS }} />
             </div>
           </div>
         </Section>
         <Section number="21" title="Attribution" note="What each campaign cost and what came back. A dash is not a zero: with no leads yet the cost per lead is unknown, and the view returns NULL rather than dividing — so the table says so instead of reporting free customers. Below it, the ad sources that reached us and matched nothing.">
           <div data-testid="attribution-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
             <p className="label-caps border-b border-border px-4 py-2 text-accent">manager · /manage/attribution</p>
-            <AttributionView preview={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />
+            <AttributionView designData={{ roi: MOCK_ROI, sightings: MOCK_SIGHTINGS }} />
           </div>
         </Section>
         <Section number="22" title="Approvals — the manager's signature" note="The same queue from both sides. A manager can clear a rep's proposal; the rep who raised it sees “awaiting manager” and no button, because nobody clears their own. The action still runs with the person who asked for it — approving supplies authority, not reach.">
           <div className="grid gap-6 xl:grid-cols-2">
             <div data-testid="approvals-manager-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
               <p className="label-caps border-b border-border px-4 py-2 text-accent">manager · /manage/approvals</p>
-              <ApprovalsView preview={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-2', viewerRole: 'manager', members: MOCK_TEAM }} />
+              <ApprovalsView designData={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-2', viewerRole: 'manager', members: MOCK_TEAM }} />
             </div>
             <div data-testid="approvals-proposer-preview" className="overflow-hidden rounded-xl border border-border bg-canvas shadow-elev-2">
               <p className="label-caps border-b border-border px-4 py-2 text-accent">the rep who proposed it · /rep</p>
-              <ApprovalsView preview={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-3', viewerRole: 'agent', members: MOCK_TEAM }} />
+              <ApprovalsView designData={{ groups: MOCK_APPROVAL_GROUPS, viewerId: 'u-3', viewerRole: 'agent', members: MOCK_TEAM }} />
             </div>
           </div>
         </Section>

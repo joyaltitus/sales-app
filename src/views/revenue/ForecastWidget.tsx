@@ -1,4 +1,4 @@
-import { IndianRupee, Sparkles, Target } from 'lucide-react'
+import { IndianRupee, Target } from 'lucide-react'
 import { EmptyState } from '../../ui/EmptyState'
 import { ErrorState } from '../../ui/ErrorState'
 import { Skeleton } from '../../ui/Skeleton'
@@ -49,13 +49,13 @@ export function ForecastWidget({
     >
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-4">
         <div>
-          <p className="label-caps text-accent">Revenue forecast · Estimated</p>
+          <p className="text-xs font-medium text-accent">Revenue forecast · Estimated</p>
           <h2 id="forecast-title" className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">
             {formatINRCompact(metrics.pipeline_weighted_total)} weighted pipeline
           </h2>
           <p className="mt-1 text-xs text-fg-muted">
-            Weighted by stage — each stage's raw value × its configured weight. Stage weights are
-            visible and editable only in wiring.
+            Weighted by stage — each stage's raw value × its configured weight. Stage weights come
+            from your workspace configuration.
           </p>
         </div>
       </header>
@@ -92,9 +92,6 @@ export function ForecastWidget({
         <p className="mt-3 flex items-center gap-1.5 text-2xs text-fg-subtle">
           <Target aria-hidden size={11} /> Percentages are each stage's weight — an estimate, not a
           modeled win probability.
-        </p>
-        <p className="mt-1 flex items-center gap-1.5 text-2xs text-fg-subtle">
-          <Sparkles aria-hidden size={11} /> No explanation drilldown yet — deferred (H.5).
         </p>
       </div>
     </section>

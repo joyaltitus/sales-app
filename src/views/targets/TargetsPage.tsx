@@ -129,7 +129,7 @@ function RepTargetRow({
           </p>
         </div>
         <label className="block">
-          <span className="label-caps text-fg-subtle">Target ₹</span>
+          <span className="text-xs font-medium text-fg-muted">Target ₹</span>
           <Input
             inputMode="numeric"
             value={value}
@@ -139,7 +139,7 @@ function RepTargetRow({
           />
         </label>
         <label className="block">
-          <span className="label-caps text-fg-subtle">Per won ₹</span>
+          <span className="text-xs font-medium text-fg-muted">Per won ₹</span>
           <Input
             inputMode="numeric"
             value={incentive}
@@ -149,7 +149,7 @@ function RepTargetRow({
           />
         </label>
         <label className="block">
-          <span className="label-caps text-fg-subtle">Bonus ₹</span>
+          <span className="text-xs font-medium text-fg-muted">Bonus ₹</span>
           <Input
             inputMode="numeric"
             value={bonus}

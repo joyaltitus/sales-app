@@ -77,9 +77,6 @@ export function TopBar() {
             {activeClient?.name ?? 'Sales App'}
           </span>
         )}
-        <span className="hidden text-2xs text-fg-subtle sm:block">
-          {desktopRole ? 'Sales operations' : 'Your workday'}
-        </span>
       </div>
 
       {/* Only REAL signals render here (audit A7): the hardcoded "AI on" chip

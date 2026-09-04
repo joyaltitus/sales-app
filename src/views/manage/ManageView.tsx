@@ -58,7 +58,7 @@ function StalenessBadge({ state }: { state: Staleness }) {
   )
 }
 
-export type ManagePreview = {
+export type ManageDesignData = {
   products?: Product[]
   faqs?: Faq[]
   profile?: Profile
@@ -70,37 +70,37 @@ export type ManagePreview = {
   clientName?: string
 }
 
-/** `preview` feeds the /preview gallery fixed rows with no session and no
+/** `designData` feeds the design gallery fixed rows with no session and no
  *  network: every hook below is called with `null` and the passed rows render
  *  instead. It never affects the signed-in path. Same shape as TeamPage's. */
-export function ManageView({ preview }: { preview?: ManagePreview } = {}) {
+export function ManageView({ designData }: { designData?: ManageDesignData } = {}) {
   const { activeClient } = useClient()
   const { session } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [previewTab, setPreviewTab] = useState<TabKey>(preview?.tab ?? 'products')
+  const [designTab, setDesignTab] = useState<TabKey>(designData?.tab ?? 'products')
 
-  const clientId = preview ? 'preview-client' : (activeClient?.id ?? null)
-  const userId = preview ? 'preview-user' : (session?.user?.id ?? null)
+  const clientId = designData ? 'design-client' : (activeClient?.id ?? null)
+  const userId = designData ? 'design-user' : (session?.user?.id ?? null)
 
   // The roster is already a tenant-scoped bounded read; reusing it gives the
   // history drawer real names instead of uuids.
-  const { items: team } = useTeam(preview ? null : clientId)
+  const { items: team } = useTeam(designData ? null : clientId)
   const names = useMemo(
     () => new Map(team.filter((m) => m.display_name).map((m) => [m.user_id, m.display_name as string])),
     [team],
   )
-  const { state: staleness } = useConfigStaleness(preview ? null : clientId)
+  const { state: staleness } = useConfigStaleness(designData ? null : clientId)
 
   const raw = searchParams.get('tab')
-  const tab: TabKey = preview
-    ? previewTab
+  const tab: TabKey = designData
+    ? designTab
     : raw && VALID.has(raw)
       ? (raw as TabKey)
       : 'products'
 
   const setTab = (next: TabKey) => {
-    if (preview) {
-      setPreviewTab(next)
+    if (designData) {
+      setDesignTab(next)
       return
     }
     const params = new URLSearchParams(searchParams)
@@ -119,8 +119,8 @@ export function ManageView({ preview }: { preview?: ManagePreview } = {}) {
     <div className="space-y-4 p-4">
       <header>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold text-fg">Your setup</h1>
-          <StalenessBadge state={preview ? { kind: 'unknown' } : staleness} />
+          <h1 className="text-lg font-semibold text-fg">Setup</h1>
+          <StalenessBadge state={designData ? { kind: 'unknown' } : staleness} />
         </div>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-fg-muted">
           What your assistant sells, says and knows. Every change here is recorded and can be put
@@ -145,13 +145,13 @@ export function ManageView({ preview }: { preview?: ManagePreview } = {}) {
         ))}
       </div>
 
-      {tab === 'products' && <ProductsTab {...tabProps} preview={preview?.products} />}
-      {tab === 'faqs' && <FaqsTab {...tabProps} preview={preview?.faqs} />}
-      {tab === 'profile' && <ProfileTab {...tabProps} preview={preview?.profile} />}
-      {tab === 'replies' && <RulesTab {...tabProps} preview={preview?.rules} />}
-      {tab === 'campaigns' && <CampaignsTab {...tabProps} preview={preview?.campaigns} />}
-      {tab === 'sources' && <LeadSources {...tabProps} preview={preview?.sources} />}
-      {tab === 'import' && <Import {...tabProps} preview={preview?.imports} />}
+      {tab === 'products' && <ProductsTab {...tabProps} preview={designData?.products} />}
+      {tab === 'faqs' && <FaqsTab {...tabProps} preview={designData?.faqs} />}
+      {tab === 'profile' && <ProfileTab {...tabProps} preview={designData?.profile} />}
+      {tab === 'replies' && <RulesTab {...tabProps} preview={designData?.rules} />}
+      {tab === 'campaigns' && <CampaignsTab {...tabProps} preview={designData?.campaigns} />}
+      {tab === 'sources' && <LeadSources {...tabProps} preview={designData?.sources} />}
+      {tab === 'import' && <Import {...tabProps} preview={designData?.imports} />}
     </div>
   )
 }

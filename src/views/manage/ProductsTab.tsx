@@ -86,7 +86,7 @@ function ProductCard({
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="label-caps flex items-center gap-1.5 text-fg-subtle">
+        <span className="flex items-center gap-1.5 font-mono text-2xs text-fg-subtle">
           <Lock aria-hidden size={11} /> {product.slug}
         </span>
         {!product.active && <Chip tone="neutral">Deactivated</Chip>}
@@ -102,11 +102,11 @@ function ProductCard({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-[2fr_1fr]">
         <label className="block">
-          <span className="label-caps">Name</span>
+          <span className="text-xs font-medium text-fg-muted">Name</span>
           <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="block">
-          <span className="label-caps">Price</span>
+          <span className="text-xs font-medium text-fg-muted">Price</span>
           <Input
             className="mt-1"
             inputMode="decimal"
@@ -118,7 +118,7 @@ function ProductCard({
       </div>
 
       <label className="mt-3 block">
-        <span className="label-caps">Description</span>
+        <span className="text-xs font-medium text-fg-muted">Description</span>
         <textarea
           className="mt-1 min-h-20 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
           value={description}
@@ -127,7 +127,7 @@ function ProductCard({
       </label>
 
       <label className="mt-3 block">
-        <span className="label-caps">Sell notes for the assistant</span>
+        <span className="text-xs font-medium text-fg-muted">Sell notes for the assistant</span>
         <textarea
           className="mt-1 min-h-20 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"
           value={aiInstruction}

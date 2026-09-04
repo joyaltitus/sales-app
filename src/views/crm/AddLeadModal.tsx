@@ -62,7 +62,7 @@ export function AddLeadModal({
 
   if (!open) return null
 
-  const phonePreview = phone.trim() ? formatPhone(phone.trim()) : null
+  const formattedPhone = phone.trim() ? formatPhone(phone.trim()) : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -148,7 +148,7 @@ export function AddLeadModal({
           {/* Contact Details (2 columns) */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+              <label className="block text-xs font-medium text-fg-muted">
                 Full Name
               </label>
               <input
@@ -160,7 +160,7 @@ export function AddLeadModal({
               />
             </div>
             <div>
-              <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+              <label className="block text-xs font-medium text-fg-muted">
                 Phone Number <span className="text-danger">*</span>
               </label>
               <div className="relative mt-1.5">
@@ -173,9 +173,9 @@ export function AddLeadModal({
                   className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
                 />
               </div>
-              {phonePreview && phonePreview !== phone && (
+              {formattedPhone && formattedPhone !== phone && (
                 <p className="mt-1 text-3xs text-fg-muted">
-                  Formatted: <span className="font-mono text-fg">{phonePreview}</span>
+                  Formatted: <span className="font-mono text-fg">{formattedPhone}</span>
                 </p>
               )}
             </div>
@@ -184,7 +184,7 @@ export function AddLeadModal({
           {/* Channel & Stage (2 columns) */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+              <label className="block text-xs font-medium text-fg-muted">
                 Source Channel
               </label>
               <select
@@ -200,7 +200,7 @@ export function AddLeadModal({
               </select>
             </div>
             <div>
-              <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+              <label className="block text-xs font-medium text-fg-muted">
                 Pipeline Stage <span className="text-danger">*</span>
               </label>
               <select
@@ -221,7 +221,7 @@ export function AddLeadModal({
           {/* Estimated Deal Value with Quick Presets */}
           <div>
             <div className="flex items-baseline justify-between">
-              <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+              <label className="block text-xs font-medium text-fg-muted">
                 Estimated Value (INR)
               </label>
               <div className="flex items-center gap-1">
@@ -253,7 +253,7 @@ export function AddLeadModal({
 
           {/* Next Action */}
           <div>
-            <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+            <label className="block text-xs font-medium text-fg-muted">
               Next Best Action
             </label>
             <input
@@ -267,7 +267,7 @@ export function AddLeadModal({
 
           {/* Note */}
           <div>
-            <label className="block text-2xs font-semibold text-fg-subtle uppercase tracking-wider">
+            <label className="block text-xs font-medium text-fg-muted">
               Initial Note / Requirement
             </label>
             <textarea

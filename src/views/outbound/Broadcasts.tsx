@@ -234,7 +234,7 @@ function NewBroadcast({
       {step === 1 && (
         <div className="space-y-3">
           <label className="block">
-            <span className="label-caps">Name (only you see this)</span>
+            <span className="text-xs font-medium text-fg-muted">Name (only you see this)</span>
             <Input
               className="mt-1"
               value={name}
@@ -245,7 +245,7 @@ function NewBroadcast({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="label-caps">Stage</span>
+              <span className="text-xs font-medium text-fg-muted">Stage</span>
               <select className={fieldClass()} value={filters.stage} onChange={(e) => setFilter('stage', e.target.value)}>
                 <option value="">any</option>
                 {stages.map((s) => (
@@ -254,7 +254,7 @@ function NewBroadcast({
               </select>
             </label>
             <label className="block">
-              <span className="label-caps">Status</span>
+              <span className="text-xs font-medium text-fg-muted">Status</span>
               <select className={fieldClass()} value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
                 <option value="">any</option>
                 <option value="open">open</option>
@@ -263,7 +263,7 @@ function NewBroadcast({
               </select>
             </label>
             <label className="block">
-              <span className="label-caps">Source</span>
+              <span className="text-xs font-medium text-fg-muted">Source</span>
               <select className={fieldClass()} value={filters.source} onChange={(e) => setFilter('source', e.target.value)}>
                 <option value="">any</option>
                 {sources.map((s) => (
@@ -272,7 +272,7 @@ function NewBroadcast({
               </select>
             </label>
             <label className="block">
-              <span className="label-caps">Channel</span>
+              <span className="text-xs font-medium text-fg-muted">Channel</span>
               <select className={fieldClass()} value={filters.channel} onChange={(e) => setFilter('channel', e.target.value)}>
                 <option value="">any</option>
                 <option value="whatsapp">whatsapp</option>
@@ -280,7 +280,7 @@ function NewBroadcast({
               </select>
             </label>
             <label className="block">
-              <span className="label-caps">Campaign</span>
+              <span className="text-xs font-medium text-fg-muted">Campaign</span>
               <select className={fieldClass()} value={filters.campaign} onChange={(e) => setFilter('campaign', e.target.value)}>
                 <option value="">any</option>
                 {campaigns.map((c) => (
@@ -289,15 +289,15 @@ function NewBroadcast({
               </select>
             </label>
             <label className="block">
-              <span className="label-caps">Name or number</span>
+              <span className="text-xs font-medium text-fg-muted">Name or number</span>
               <Input className="mt-1" value={filters.q} onChange={(e) => setFilter('q', e.target.value)} />
             </label>
             <label className="block">
-              <span className="label-caps">Min value ₹</span>
+              <span className="text-xs font-medium text-fg-muted">Min value ₹</span>
               <Input className="mt-1" type="number" value={filters.minv} onChange={(e) => setFilter('minv', e.target.value)} />
             </label>
             <label className="block">
-              <span className="label-caps">Max value ₹</span>
+              <span className="text-xs font-medium text-fg-muted">Max value ₹</span>
               <Input className="mt-1" type="number" value={filters.maxv} onChange={(e) => setFilter('maxv', e.target.value)} />
             </label>
           </div>
@@ -329,7 +329,7 @@ function NewBroadcast({
       {step === 2 && (
         <div className="space-y-3">
           <label className="block">
-            <span className="label-caps">Template</span>
+            <span className="text-xs font-medium text-fg-muted">Template</span>
             <select className={fieldClass()} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
               <option value="">select a template…</option>
               {templates.map((t) => (
@@ -356,7 +356,7 @@ function NewBroadcast({
               </p>
               {vars.map((v, i) => (
                 <label key={v} className="block">
-                  <span className="label-caps">{`{{${i + 1}}} ${v}`}</span>
+                  <span className="font-mono text-2xs text-fg-muted">{`{{${i + 1}}} ${v}`}</span>
                   <Input
                     className="mt-1"
                     value={params[i] ?? ''}

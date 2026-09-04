@@ -30,7 +30,7 @@ import { AddLeadModal } from '../crm/AddLeadModal'
 // attempt. Flipping this prop in devtools changes which control is painted
 // and nothing else.
 // SA-04: the CRM Pipeline tab mounts this same screen with `crm` — which adds
-// the pipeline value strip, search, a click-to-filter stage, and the SAMPLE
+// the pipeline value strip, search, a click-to-filter stage, and live
 // assignment/objection controls per row. The rep board mounts it bare and is
 // unchanged. One implementation, not a fork (same law as InboxScreen).
 export function LeadsScreen({ crm = false }: { crm?: boolean }) {

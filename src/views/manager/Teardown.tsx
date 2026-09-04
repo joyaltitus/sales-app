@@ -218,8 +218,6 @@ export function Teardown() {
   const vars = useMemo(
     () =>
       buildMergeVars({
-        contactName: 'Anjali',
-        repName: 'you',
         clientName: activeClient?.name ?? null,
         course: course ? { name: course.name, facts: course.facts } : null,
         salesConfig: {
@@ -266,9 +264,8 @@ export function Teardown() {
     <div className="page-frame max-w-[1500px] space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label-caps text-accent">Weekly teardown</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">What the floor heard this week.</h1>
-          <p className="mt-1 text-sm text-fg-muted">Fifteen minutes. One script fixed before anyone leaves.</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.04em] text-fg">Weekly teardown</h1>
+          <p className="mt-1 text-sm text-fg-muted">Review this week’s objections and update the company response.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border border-border bg-surface p-0.5">

@@ -20,9 +20,8 @@ export function DocsStudio() {
     <div className="page-frame max-w-[1500px] space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label-caps text-accent">{workspace === 'documents' ? 'Documents' : 'Company language'}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">{workspace === 'documents' ? 'Quote without the busywork.' : 'Turn field learning into the standard.'}</h1>
-          <p className="mt-1 text-sm text-fg-muted">{workspace === 'documents' ? 'Template, customer and approved terms are already in place.' : canManage ? 'Review, test and teach the counters your team can trust.' : 'The strongest company answer for every common objection.'}</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.04em] text-fg">{workspace === 'documents' ? 'Documents' : 'Playbook'}</h1>
+          <p className="mt-1 text-sm text-fg-muted">{workspace === 'documents' ? 'Quotations and other customer documents.' : canManage ? 'Review and maintain the company response to common objections.' : 'Company responses to common objections.'}</p>
         </div>
         <div className="flex rounded-md border border-border bg-surface-sunk p-0.5" role="tablist" aria-label="Docs workspace">
           {(['documents', 'playbook'] as const).map((item) => <button key={item} role="tab" aria-selected={workspace === item} onClick={() => setWorkspace(item)} className={['rounded-sm px-3 py-1.5 text-xs font-semibold capitalize', workspace === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}>{item}</button>)}

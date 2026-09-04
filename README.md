@@ -24,8 +24,7 @@ cp .env.example .env   # fill SUPABASE_URL + anon key
 npm install
 npm run dev
 ```
-Design routes (no auth): `/kitchen-sink` (primitives × 6 states), `/samples`
-(hue + font decision board).
+Design route (no auth): `/preview` (review-only hue + font direction gallery).
 
 ## Build / deploy
 `npm run build` → gates: first-load JS < 200KB gz + PWA assets present.

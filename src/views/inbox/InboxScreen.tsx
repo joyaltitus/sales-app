@@ -3,7 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Inbox as InboxIcon, MessageCircle, ArrowLeft, PanelRight, Radio, X } from 'lucide-react'
 import { useClient } from '../../shell/ClientProvider'
 import { useAuth } from '../../auth/AuthProvider'
-import { useQueue, usePreviews, useThread, useLiveRefresh, mergeOutbound, newOptimisticId, isWindowClosed } from '../../lib/inbox-data'
+import { useQueue, useSnippets, useThread, useLiveRefresh, mergeOutbound, newOptimisticId, isWindowClosed } from '../../lib/inbox-data'
 import type { QueueItem, OptimisticBubble, Message } from '../../lib/inbox-data'
 import { useTeammates, teammateLabel, useConvLead } from '../../lib/crm-data'
 import { markConversationRead } from '../../lib/crm-actions'
@@ -169,7 +169,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
   }, [deepLinkId])
 
   const { items, loading, error, reload: reloadQueue } = useQueue(clientId)
-  const { previews, reload: reloadPreviews } = usePreviews(clientId)
+  const { snippets, reload: reloadSnippets } = useSnippets(clientId)
   const {
     messages,
     traces,
@@ -187,9 +187,9 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
 
   const refreshAll = useCallback(() => {
     void reloadQueue()
-    void reloadPreviews()
+    void reloadSnippets()
     void reloadThread()
-  }, [reloadQueue, reloadPreviews, reloadThread])
+  }, [reloadQueue, reloadSnippets, reloadThread])
 
   // S1: paint an inbound Realtime INSERT into the open thread immediately —
   // no waiting on the 400ms debounced full refetch below. Ignored for any
@@ -204,7 +204,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     [selectedId, setThreadMessages],
   )
 
-  const { channelLive } = useLiveRefresh(clientId, refreshAll, onMessageInsert)
+  const { channelLive, connectionState } = useLiveRefresh(clientId, refreshAll, onMessageInsert)
 
   const onOptimisticSend = useCallback((body: string) => {
     const tempId = newOptimisticId()
@@ -479,8 +479,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <QueueRow
               key={item.id}
               item={item}
-              preview={previews.get(item.id)?.text ?? '—'}
-              previewKind={previews.get(item.id)?.kind ?? 'text'}
+              snippet={snippets.get(item.id)?.text ?? '—'}
+              snippetKind={snippets.get(item.id)?.kind ?? 'text'}
               selected={item.id === selectedId}
               onSelect={() => setSelectedId(item.id)}
               assigneeLabel={scope === 'all' ? labelFor(item.assigned_to) : null}
@@ -521,10 +521,8 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           )}
         </div>
         <span className="ml-auto flex shrink-0 items-center gap-2">
-          {!channelLive && (
-            <span className="hidden text-2xs text-fg-subtle sm:inline">Checking for updates</span>
-          )}
-          {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} dealValue={60000} variant="icon" contactId={selected.contact_id} conversationId={selectedId} />}
+          {connectionState === 'reconnecting' && <span className="hidden text-2xs text-warn sm:inline">Reconnecting…</span>}
+          {selected && <CallButton person={selectedName} phone={selected.contact?.external_id} variant="icon" contactId={selected.contact_id} conversationId={selectedId} />}
           {/* Rail toggle — sheet below xl, inline pane at xl+. Same button
               drives both so the xl+ pane is always closable (was stuck open,
               button used to vanish exactly at xl via `xl:hidden`). */}

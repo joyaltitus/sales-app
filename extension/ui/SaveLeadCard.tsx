@@ -49,7 +49,7 @@ function Field({ label, required, children }: {
 }) {
   return (
     <label className="grid gap-1">
-      <span className="label-caps">
+      <span className="text-xs font-medium text-fg-muted">
         {label}
         {required && <span aria-hidden className="ml-0.5 text-danger">*</span>}
         {required && <span className="sr-only"> (required)</span>}
@@ -161,7 +161,7 @@ export function SaveLeadCard({
         </Field>
 
         <div className="grid gap-1">
-          <span className="label-caps">Estimated value</span>
+          <span className="text-xs font-medium text-fg-muted">Estimated value</span>
           {/* Their own row: sharing a line with the label squeezed both, and the
               last preset fell off the edge of a 400px panel. */}
           <div className="no-scrollbar flex gap-1 overflow-x-auto pb-0.5">

@@ -47,7 +47,7 @@ function Msg({ m, onDecide, onSubmit }: {
   if (m.role === 'capabilities') {
     return (
       <div className="rounded-lg border border-border bg-surface p-3 shadow-elev-1">
-        <p className="label-caps mb-2">I couldn't turn that into a plan — try one of these instead</p>
+        <p className="mb-2 text-xs font-medium text-fg">Available actions</p>
         <div className="grid gap-1.5">
           {m.capabilities.map((c) => (
             <div key={c.tool} className="flex items-center gap-2 text-xs text-fg-muted">
@@ -214,8 +214,7 @@ export function AgentPanel() {
             <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-pill border-2 border-surface bg-success" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-md font-semibold tracking-[-0.02em] text-fg">Sales copilot</h2>
-            <p className="mt-0.5 text-2xs text-fg-muted">Prepares work, shows its plan, and acts only after you approve.</p>
+            <h2 className="text-md font-semibold tracking-[-0.02em] text-fg">Agent</h2>
           </div>
         </div>
         <div className="mt-3"><AnchorChip name="General" detail="No customer pinned to this session" /></div>
@@ -226,8 +225,8 @@ export function AgentPanel() {
           <>
             <div className="rounded-xl border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-4 shadow-elev-1">
               <WandSparkles aria-hidden size={20} className="text-accent" />
-              <h3 className="mt-3 text-lg font-semibold tracking-[-0.025em] text-fg">I found work worth moving.</h3>
-              <p className="mt-1 text-xs leading-relaxed text-fg-muted">Ask a question or pick a starter — every write shows its plan and waits for your approval.</p>
+              <h3 className="mt-3 text-lg font-semibold tracking-[-0.025em] text-fg">No conversation yet</h3>
+              <p className="mt-1 text-xs leading-relaxed text-fg-muted">Ask a question or choose a prompt.</p>
             </div>
             <div className="grid gap-2">
               {AGENT_STARTERS.map((s) => (

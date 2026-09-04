@@ -142,16 +142,16 @@ function SightingRow({
   )
 }
 
-export type AttributionPreview = { roi?: CampaignRoi[]; sightings?: Sighting[] }
+export type AttributionDesignData = { roi?: CampaignRoi[]; sightings?: Sighting[] }
 
-export function AttributionView({ preview }: { preview?: AttributionPreview } = {}) {
+export function AttributionView({ designData }: { designData?: AttributionDesignData } = {}) {
   const { activeClient } = useClient()
-  const clientId = preview ? 'preview-client' : (activeClient?.id ?? null)
-  const roi = useCampaignRoi(preview ? null : clientId)
-  const sightings = useSightings(preview ? null : clientId)
+  const clientId = designData ? 'design-client' : (activeClient?.id ?? null)
+  const roi = useCampaignRoi(designData ? null : clientId)
+  const sightings = useSightings(designData ? null : clientId)
 
-  const roiRows = preview?.roi ?? roi.items
-  const sightingRows = preview?.sightings ?? sightings.items
+  const roiRows = designData?.roi ?? roi.items
+  const sightingRows = designData?.sightings ?? sightings.items
 
   if (!clientId) {
     return <EmptyState title="No workspace" body="Pick a workspace to see its campaigns." />
@@ -171,9 +171,9 @@ export function AttributionView({ preview }: { preview?: AttributionPreview } = 
         <h2 className="label-caps mb-2 flex items-center gap-1.5">
           <TrendingUp aria-hidden size={13} /> Return on spend
         </h2>
-        {roi.error && !preview ? (
+        {roi.error && !designData ? (
           <ErrorState title="Couldn't load campaign returns." body={roi.error} onRetry={roi.reload} />
-        ) : roi.loading && !preview ? (
+        ) : roi.loading && !designData ? (
           <Skeleton className="h-48 w-full" />
         ) : roiRows.length === 0 ? (
           <EmptyState
@@ -195,13 +195,13 @@ export function AttributionView({ preview }: { preview?: AttributionPreview } = 
           it belonged to; to make future traffic land there too, add the id to that campaign's ad
           source ids under Your setup.
         </p>
-        {sightings.error && !preview ? (
+        {sightings.error && !designData ? (
           <ErrorState
             title="Couldn't load unmatched sources."
             body={sightings.error}
             onRetry={sightings.reload}
           />
-        ) : sightings.loading && !preview ? (
+        ) : sightings.loading && !designData ? (
           <Skeleton className="h-32 w-full" />
         ) : sightingRows.length === 0 ? (
           <EmptyState

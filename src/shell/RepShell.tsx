@@ -70,7 +70,6 @@ export function RepShell() {
           >
             <div className="w-[192px] px-3 pb-4">
               <p className="label-caps text-accent">My workspace</p>
-              <p className="mt-1 text-xs leading-relaxed text-fg-muted">Targets, customers and promises due today.</p>
             </div>
             <nav className="w-[192px] space-y-1" aria-label="Rep workspace">
               {TABS.map((tab) => (

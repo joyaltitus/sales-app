@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { Trace } from './seam'
-import type { LeadFact, FactCategory, FactState } from './mock-wave3'
+import type { LeadFact, FactCategory, FactState } from './lead-facts'
 
 // Inbox data layer. Plain PostgREST table reads only — no RPCs, no views, no
 // edge functions (direction §0.3, the Workbench behaviour reference).
@@ -252,22 +252,22 @@ export function useQueue(clientId: string | null) {
 }
 
 /**
- * Row previews. The queue row leads with the LAST INBOUND MESSAGE TEXT rather
+ * Row snippets. The queue row leads with the LAST INBOUND MESSAGE TEXT rather
  * than the name (§1.4), which `conversations` alone does not carry.
  *
  * One bounded read rather than a per-row query: the most recent inbound messages
  * client-wide, reduced to the newest per conversation. PREVIEW_LIMIT is a
  * deliberate ceiling, not a page-1 of infinite scroll (§1.10 #9) — a very long
- * tail conversation can fall outside it and simply renders without a preview
+ * tail conversation can fall outside it and simply renders without a snippet
  * line, which degrades to the contact name rather than to an error.
  */
-const PREVIEW_LIMIT = 600
+const SNIPPET_LIMIT = 600
 
-export type PreviewKind = 'text' | 'image' | 'audio' | 'document' | 'other'
+export type SnippetKind = 'text' | 'image' | 'audio' | 'document' | 'other'
 
-export type Preview = { text: string; kind: PreviewKind }
+export type ConversationSnippet = { text: string; kind: SnippetKind }
 
-export function previewKind(msgType: string): PreviewKind {
+export function messageKind(msgType: string): SnippetKind {
   if (msgType === 'image') return 'image'
   if (msgType === 'audio') return 'audio'
   if (msgType === 'document') return 'document'
@@ -275,12 +275,12 @@ export function previewKind(msgType: string): PreviewKind {
   return 'other'
 }
 
-export function usePreviews(clientId: string | null) {
-  const [previews, setPreviews] = useState<Map<string, Preview>>(new Map())
+export function useSnippets(clientId: string | null) {
+  const [snippets, setSnippets] = useState<Map<string, ConversationSnippet>>(new Map())
 
   const load = useCallback(async () => {
     if (!clientId) {
-      setPreviews(new Map())
+      setSnippets(new Map())
       return
     }
     const { data } = await supabase
@@ -288,9 +288,9 @@ export function usePreviews(clientId: string | null) {
       .select('conversation_id, body, transcription, msg_type, created_at')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
-      .limit(PREVIEW_LIMIT)
+      .limit(SNIPPET_LIMIT)
 
-    const next = new Map<string, Preview>()
+    const next = new Map<string, ConversationSnippet>()
     for (const row of (data ?? []) as {
       conversation_id: string
       body: string | null
@@ -299,7 +299,7 @@ export function usePreviews(clientId: string | null) {
     }[]) {
       // Rows arrive newest-first, so the first hit per conversation wins.
       if (next.has(row.conversation_id)) continue
-      const kind = previewKind(row.msg_type)
+      const kind = messageKind(row.msg_type)
       // A media-only row (no caption body, no transcript) gets a plain label
       // — the glyph in QueueRow carries the "this is media" signal, so the
       // text itself doesn't need to fake a caption.
@@ -309,14 +309,14 @@ export function usePreviews(clientId: string | null) {
         (kind === 'image' ? 'Photo' : kind === 'audio' ? 'Voice note' : kind === 'document' ? 'Document' : `[${row.msg_type}]`)
       next.set(row.conversation_id, { text, kind })
     }
-    setPreviews(next)
+    setSnippets(next)
   }, [clientId])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  return { previews, reload: load }
+  return { snippets, reload: load }
 }
 
 export function useThread(clientId: string | null, conversationId: string | null) {
@@ -424,9 +424,11 @@ export function useLiveRefresh(
   const insertCb = useRef(onMessageInsert)
   insertCb.current = onMessageInsert
   const [channelLive, setChannelLive] = useState(false)
+  const [connectionState, setConnectionState] = useState<'connecting' | 'live' | 'reconnecting'>('connecting')
 
   useEffect(() => {
     if (!clientId) return
+    setConnectionState('connecting')
     let timer: ReturnType<typeof setTimeout> | null = null
     // Debounced so a burst of inserts causes one refetch, not one per row
     // (Workbench uses 400ms; same here).
@@ -455,7 +457,11 @@ export function useLiveRefresh(
           ping()
         },
       )
-      .subscribe((status) => setChannelLive(status === 'SUBSCRIBED'))
+      .subscribe((status) => {
+        const live = status === 'SUBSCRIBED'
+        setChannelLive(live)
+        setConnectionState(live ? 'live' : status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' ? 'reconnecting' : 'connecting')
+      })
 
     const onFocus = () => cb.current()
     window.addEventListener('focus', onFocus)
@@ -471,7 +477,7 @@ export function useLiveRefresh(
     }
   }, [clientId])
 
-  return { channelLive }
+  return { channelLive, connectionState }
 }
 
 function inferCategory(key: string): FactCategory {

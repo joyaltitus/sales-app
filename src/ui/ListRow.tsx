@@ -3,7 +3,7 @@ import { Chip } from './Chip'
 
 type Props = {
   name: string
-  preview?: string
+  snippet?: string
   channel?: 'WA' | 'IG'
   assignee?: string
   unread?: boolean
@@ -13,12 +13,9 @@ type Props = {
   trailing?: ReactNode
 }
 
-// Inbox row anatomy (§C): name · one-line preview · channel badge · assignment
-// chip · unread as weight-shift not color flood. States: default/hover/active/
-// selected/unread. Dense row inside a generously padded frame.
 export function ListRow({
   name,
-  preview,
+  snippet,
   channel,
   assignee,
   unread,
@@ -37,12 +34,7 @@ export function ListRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span
-            className={[
-              'truncate text-sm text-fg',
-              unread ? 'font-bold' : 'font-medium',
-            ].join(' ')}
-          >
+          <span className={['truncate text-sm text-fg', unread ? 'font-bold' : 'font-medium'].join(' ')}>
             {name}
           </span>
           {channel && (
@@ -50,19 +42,12 @@ export function ListRow({
               {channel}
             </span>
           )}
-          {timestamp && (
-            <span className="ml-auto shrink-0 text-2xs text-fg-subtle tnum">{timestamp}</span>
-          )}
+          {timestamp && <span className="ml-auto shrink-0 text-2xs text-fg-subtle tnum">{timestamp}</span>}
         </div>
-        {preview && (
+        {snippet && (
           <div className="mt-0.5 flex items-center gap-2">
-            <span
-              className={[
-                'truncate text-xs',
-                unread ? 'text-fg-muted' : 'text-fg-subtle',
-              ].join(' ')}
-            >
-              {preview}
+            <span className={['truncate text-xs', unread ? 'text-fg-muted' : 'text-fg-subtle'].join(' ')}>
+              {snippet}
             </span>
             {assignee && (
               <Chip tone="neutral" className="ml-auto shrink-0">

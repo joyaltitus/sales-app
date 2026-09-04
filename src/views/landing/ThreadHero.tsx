@@ -45,17 +45,11 @@ export function ThreadHero({ item, preview }: { item: QueueItem; preview: string
           <p className="line-clamp-3 text-sm font-medium text-fg">{preview}</p>
           <div className="mt-2 flex items-center gap-2">
             <span className="truncate text-xs text-fg-subtle">{name}</span>
-            <span
-              className="shrink-0 text-2xs text-fg-subtle uppercase"
-              style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-            >
+            <span className="shrink-0 text-2xs font-medium text-fg-subtle">
               {channel === 'WhatsApp' ? 'WA' : 'IG'}
             </span>
             {item.bot_paused && (
-              <span
-                className="shrink-0 text-2xs text-warn uppercase"
-                style={{ fontWeight: 'var(--weight-caps)', letterSpacing: 'var(--tracking-caps)' }}
-              >
+              <span className="shrink-0 text-2xs font-medium text-warn">
                 Bot paused
               </span>
             )}

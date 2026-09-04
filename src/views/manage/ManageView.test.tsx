@@ -34,7 +34,7 @@ const ALL = {
 function renderTab(tab: 'products' | 'faqs' | 'profile' | 'replies' | 'campaigns') {
   return render(
     <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ManageView preview={{ ...ALL, tab }} />
+      <ManageView designData={{ ...ALL, tab }} />
     </MemoryRouter>,
   )
 }
@@ -76,7 +76,7 @@ describe('Profile tab', () => {
     // one, so this surface stages rather than going live on keystroke.
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ManageView preview={{ ...ALL, tab: 'profile' }} />
+        <ManageView designData={{ ...ALL, tab: 'profile' }} />
       </MemoryRouter>,
     )
     expect(screen.getByText(/Saving a draft changes nothing customers see/i)).toBeInTheDocument()

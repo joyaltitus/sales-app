@@ -167,7 +167,7 @@ export function CrmScreen({
             <li key={item.lead_id}>
               <ListRow
                 name={item.display_name}
-                preview={item.stage_label}
+                snippet={item.stage_label}
                 channel={LIST_CHANNEL[item.channel as keyof typeof LIST_CHANNEL]}
                 assignee={item.owner?.display_name ?? undefined}
                 timestamp={

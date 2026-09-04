@@ -293,7 +293,7 @@ export function ContextRail({
         {/* Label — which employee owns this chat. */}
         <div className="mt-3">
           <label className="block">
-            <span className="mb-1 block text-2xs text-fg-subtle uppercase" style={capsStyle}>
+            <span className="mb-1 block text-xs font-medium text-fg-muted">
               Labeled to
             </span>
             <select

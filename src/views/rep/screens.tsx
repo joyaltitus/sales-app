@@ -1,13 +1,8 @@
-import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../ui/EmptyState'
 import { Button } from '../../ui/Button'
 import { InboxScreen } from '../inbox/InboxScreen'
-import { Award, BookOpenText, Bot, ChevronRight, FileText, ReceiptText, Sparkles } from 'lucide-react'
-import { Skeleton } from '../../ui/Skeleton'
-
-const SettingsPanel = lazy(() => import('./SettingsPanel'))
-const MySeason = lazy(() => import('../momentum/MySeason'))
+import { BookOpenText, Bot, ChevronRight, FileText, ReceiptText, Sparkles } from 'lucide-react'
 
 // Rep view stubs (SA-00 scaffold). Real screens land in the ONB/FLW/inbox epics.
 function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -34,11 +29,8 @@ export function RepInbox() {
 // "More" holds the labeled doors (Joyal's doors model). A door whose flag is
 // off is not rendered — proven here by the flag-gated Product-AI door.
 export function More({ productAi }: { productAi: boolean }) {
-  const [view, setView] = useState<'workspace' | 'season'>('workspace')
   return (
     <Screen title="More">
-      <div className="mb-4 flex rounded-xl border border-border bg-surface-sunk p-1" role="tablist" aria-label="More view"><button role="tab" aria-selected={view === 'workspace'} onClick={() => setView('workspace')} className={['flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold', view === 'workspace' ? 'bg-surface text-fg shadow-elev-1' : 'text-fg-muted'].join(' ')}><Sparkles aria-hidden size={14} />Workspace</button><button role="tab" aria-selected={view === 'season'} onClick={() => setView('season')} className={['flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold', view === 'season' ? 'bg-surface text-fg shadow-elev-1' : 'text-fg-muted'].join(' ')}><Award aria-hidden size={14} />My season</button></div>
-      {view === 'season' ? <Suspense fallback={<div className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-56" /></div>}><MySeason /></Suspense> : <>
       <Link to="/agent" className="relative mb-4 block overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
         <span aria-hidden className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-signal opacity-20 blur-2xl" />
         <span className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-fg"><Sparkles aria-hidden size={19} /></span>
@@ -60,8 +52,6 @@ export function More({ productAi }: { productAi: boolean }) {
           </div>
         )}
       </div>
-      <Suspense fallback={<Skeleton className="mt-5 h-64" />}><SettingsPanel /></Suspense>
-      </>}
     </Screen>
   )
 }

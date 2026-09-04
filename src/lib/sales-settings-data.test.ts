@@ -113,8 +113,8 @@ describe('parseSalesConfig', () => {
   })
 
   it('ignores a junk token amount rather than rendering NaN into the pay text', () => {
-    expect(parseSalesConfig({ token_amount: 'lots' }).tokenAmount).toBe(500)
-    expect(parseSalesConfig({ token_amount: -20 }).tokenAmount).toBe(500)
+    expect(parseSalesConfig({ token_amount: 'lots' }).tokenAmount).toBeNull()
+    expect(parseSalesConfig({ token_amount: -20 }).tokenAmount).toBeNull()
     expect(parseSalesConfig({ token_amount: '750' }).tokenAmount).toBe(750)
   })
 })

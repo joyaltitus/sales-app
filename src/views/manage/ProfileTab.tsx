@@ -115,7 +115,7 @@ function ProfileForm({
         const meta = FIELD_LABEL[field]
         return (
           <label key={field} className="mt-3 block">
-            <span className="label-caps">{meta.label}</span>
+            <span className="text-xs font-medium text-fg-muted">{meta.label}</span>
             {meta.long ? (
               <textarea
                 className="mt-1 min-h-20 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-fg"

@@ -41,20 +41,19 @@ export type SalesConfig = {
   upiVpa: string
   upiPayee: string
   payUrl: string
-  tokenAmount: number
+  tokenAmount: number | null
   tokenNote: string
 }
 
-/** Safe defaults matter more than usual here: this drives which dialect tabs
- *  exist and what the seat-reservation text says. A tenant that has never
- *  opened the Settings tab still gets a working English playbook. */
+/** An unset tenant stays unset. English remains available because script base
+ *  bodies use it, but payment values are never invented. */
 export const SALES_CONFIG_DEFAULTS: SalesConfig = {
   languages: ['en'],
   defaultLang: 'en',
   upiVpa: '',
   upiPayee: '',
   payUrl: '',
-  tokenAmount: 500,
+  tokenAmount: null,
   tokenNote: '',
 }
 
@@ -80,14 +79,16 @@ export function parseSalesConfig(raw: unknown): SalesConfig {
   // 'en' is always offered: every script's base body is written in it, so a
   // tenant that removes it would strand its own fallback.
   const withEn = languages.includes('en') ? languages : ['en', ...languages]
-  const amount = Number(json.token_amount)
+  const amount = json.token_amount === null || json.token_amount === undefined || json.token_amount === ''
+    ? Number.NaN
+    : Number(json.token_amount)
   return {
     languages: withEn.length ? withEn : SALES_CONFIG_DEFAULTS.languages,
     defaultLang: str(json.default_lang, SALES_CONFIG_DEFAULTS.defaultLang),
     upiVpa: str(json.upi_vpa),
     upiPayee: str(json.upi_payee),
     payUrl: str(json.pay_url),
-    tokenAmount: Number.isFinite(amount) && amount > 0 ? Math.round(amount) : SALES_CONFIG_DEFAULTS.tokenAmount,
+    tokenAmount: Number.isFinite(amount) && amount > 0 ? Math.round(amount) : null,
     tokenNote: str(json.token_note),
   }
 }

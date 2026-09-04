@@ -6,7 +6,7 @@ import { Input } from '../../src/ui/Input'
 
 type Props = {
   snippets: Snippet[]
-  /** Sample values for {{var}} substitution in the preview, e.g. { name: 'Anjali' }. */
+  /** Values from the open chat used for {{var}} substitution. */
   vars?: Record<string, string>
   onInsert: (snippet: Snippet) => void
 }

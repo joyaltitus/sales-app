@@ -6,7 +6,7 @@ import type { InboundMediaRow, Message } from '../../lib/inbox-data'
 
 // #90 Part 6: the real signed-URL fetch hits Supabase Storage over the
 // network — mocked here so the bubble render tests stay hermetic. Everything
-// else in inbox-data (previewKind, types) passes through untouched.
+// else in inbox-data (messageKind, types) passes through untouched.
 const { getInboundMediaSignedUrl } = vi.hoisted(() => ({ getInboundMediaSignedUrl: vi.fn() }))
 vi.mock('../../lib/inbox-data', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/inbox-data')>()

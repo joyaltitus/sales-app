@@ -29,35 +29,16 @@ import { NextAction } from '../../ui/NextAction'
 
 // WIRE session: employee_todos + employee_targets are real tables now (see
 // migration 045_wave2_ddl_foundation.sql). This tab used to render
-// TODO_PREVIEW_ITEMS / TODO_REPS (todoMocks.ts) behind a SampleBanner; both
-// are gone from here (todoMocks.ts itself stays — src/views/preview/
-// PreviewGallery.tsx still imports it for the style gallery).
+// The gallery owns its fixed todo rows separately; this screen renders only
+// employee_todos and employee_targets.
 //
-// GAP: `employee_todos` has no priority column (checked the migration DDL —
-// title/assignee/due_at/status/source/ref_id/note/created_by/completed_at,
-// nothing else). Priority stays a client-side-only display concept: it's
-// captured at compose time and held in `priorityById`, a plain in-memory map
-// that seeds new rows created THIS session. It does not persist across a
-// reload, another device, or another user's session — there is nowhere to
-// write it. Rows loaded from the database (or from any other client) render
-// with the default "normal" tone.
-
-type TodoPriority = 'normal' | 'high' | 'urgent'
-
-const PRIORITY_TONE: Record<TodoPriority, 'neutral' | 'warn' | 'danger'> = {
-  normal: 'neutral',
-  high: 'warn',
-  urgent: 'danger',
-}
-
 function localDateValue(dayOffset: number) {
   const date = new Date()
   date.setDate(date.getDate() + dayOffset)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/** Presentation shape the row/detail components render — derived from a real
- *  `TodoItem` plus this-session-only priority. */
+/** Presentation shape the row/detail components render from a stored todo. */
 type TodoView = {
   id: string
   title: string
@@ -65,7 +46,6 @@ type TodoView = {
   dueLabel: string
   dueAt: string | null
   overdue: boolean
-  priority: TodoPriority
   status: 'open' | 'done'
   createdByName: string
 }
@@ -101,7 +81,7 @@ function formatDueLabel(dueAt: string | null, status: TodoStatus): { label: stri
   return { label: `${due.toLocaleDateString()} · ${time}`, overdue: false }
 }
 
-function toView(item: TodoItem, priorityById: Record<string, TodoPriority>): TodoView {
+function toView(item: TodoItem): TodoView {
   const { label, overdue } = formatDueLabel(item.due_at, item.status)
   return {
     id: item.id,
@@ -110,7 +90,6 @@ function toView(item: TodoItem, priorityById: Record<string, TodoPriority>): Tod
     dueLabel: label,
     dueAt: item.due_at,
     overdue,
-    priority: priorityById[item.id] ?? 'normal',
     status: item.status === 'done' ? 'done' : 'open',
     createdByName: item.createdByName ?? 'Manager',
   }
@@ -121,7 +100,7 @@ function AssignmentRow({ item, onToggle, onOpen }: { item: TodoView; onToggle: (
     <article className={['rounded-lg border bg-surface p-3 shadow-elev-1', item.overdue && item.status === 'open' ? 'border-[color-mix(in_srgb,var(--danger)_30%,var(--border))]' : 'border-border'].join(' ')}>
       <div className="flex items-start gap-3">
         <button onClick={onToggle} aria-label={`Mark ${item.title} ${item.status === 'done' ? 'open' : 'done'}`} aria-pressed={item.status === 'done'} className={['mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors', item.status === 'done' ? 'border-success bg-success text-white' : 'border-border-strong text-transparent hover:border-success hover:bg-success-subtle hover:text-success'].join(' ')}><Check aria-hidden size={13} strokeWidth={2.4} /></button>
-        <div className="min-w-0 flex-1"><h4 className={['text-xs font-semibold leading-relaxed', item.status === 'done' ? 'text-fg-subtle line-through' : 'text-fg'].join(' ')}>{item.title}</h4><div className="mt-2 flex flex-wrap items-center gap-1.5"><Chip tone={PRIORITY_TONE[item.priority]}>{item.priority}</Chip><span className={['text-2xs font-semibold', item.overdue && item.status === 'open' ? 'text-danger' : 'text-fg-muted'].join(' ')}>{item.overdue && item.status === 'open' ? 'Overdue · ' : ''}{item.dueLabel}</span></div></div>
+        <div className="min-w-0 flex-1"><h4 className={['text-xs font-semibold leading-relaxed', item.status === 'done' ? 'text-fg-subtle line-through' : 'text-fg'].join(' ')}>{item.title}</h4><div className="mt-2"><span className={['text-2xs font-semibold', item.overdue && item.status === 'open' ? 'text-danger' : 'text-fg-muted'].join(' ')}>{item.overdue && item.status === 'open' ? 'Overdue · ' : ''}{item.dueLabel}</span></div></div>
       </div>
       <div className="mt-2"><NextAction compact label={item.status === 'done' ? 'No action — completed' : item.overdue ? 'Complete or reassign now' : `Complete by ${item.dueLabel}`} /></div>
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-2.5"><span className="flex items-center gap-1.5"><Avatar name={item.assigneeName} size="sm" /><span className="text-2xs font-semibold text-fg-muted">{item.assigneeName}</span></span><button onClick={onOpen} className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-accent hover:bg-accent-subtle">View details <ChevronRight aria-hidden size={12} /></button></div>
@@ -133,7 +112,7 @@ function TodoDetail({ item, onToggle }: { item: TodoView; onToggle: () => void }
   return (
     <div className="space-y-5" data-testid="todo-details">
       <div>
-        <div className="flex flex-wrap items-center gap-2"><Chip tone={PRIORITY_TONE[item.priority]}>{item.priority} priority</Chip><Chip tone={item.status === 'done' ? 'success' : item.overdue ? 'danger' : 'accent'}>{item.status === 'done' ? 'Completed' : item.overdue ? 'Overdue' : 'Open'}</Chip></div>
+        <Chip tone={item.status === 'done' ? 'success' : item.overdue ? 'danger' : 'accent'}>{item.status === 'done' ? 'Completed' : item.overdue ? 'Overdue' : 'Open'}</Chip>
         <h3 className="mt-3 text-xl font-semibold leading-snug tracking-[-0.03em] text-fg">{item.title}</h3>
         <p className={['mt-2 flex items-center gap-1.5 text-xs font-semibold', item.overdue && item.status === 'open' ? 'text-danger' : 'text-fg-muted'].join(' ')}><Clock3 aria-hidden size={14} /> {item.dueLabel}</p>
       </div>
@@ -153,7 +132,7 @@ function TodoDetail({ item, onToggle }: { item: TodoView; onToggle: () => void }
         <p className="label-caps">Task activity</p>
         <ol className="mt-3 space-y-3 border-l border-border pl-4">
           <li><p className="text-xs font-semibold text-fg">Assigned by {item.createdByName}</p><p className="mt-0.5 text-2xs text-fg-muted">To {item.assigneeName}</p></li>
-          <li><p className="text-xs font-semibold text-fg">Due {item.dueLabel}</p><p className="mt-0.5 text-2xs text-fg-muted">Priority set to {item.priority}</p></li>
+          <li><p className="text-xs font-semibold text-fg">Due {item.dueLabel}</p></li>
           {item.status === 'done' && <li><p className="text-xs font-semibold text-success">Marked complete</p></li>}
         </ol>
       </section>
@@ -172,13 +151,12 @@ function ComposeSheet({
   open: boolean
   onClose: () => void
   roster: { user_id: string; display_name: string }[]
-  onCreate: (input: { title: string; assigneeIds: string[]; dueAt: string; priority: TodoPriority }) => void
+  onCreate: (input: { title: string; assigneeIds: string[]; dueAt: string }) => void
 }) {
   const [title, setTitle] = useState('')
   const [assigneeIds, setAssigneeIds] = useState<string[]>(() => (roster[0] ? [roster[0].user_id] : []))
   const [due, setDue] = useState<'Today' | 'Tomorrow' | 'Pick'>('Today')
   const [date, setDate] = useState(() => localDateValue(2))
-  const [priority, setPriority] = useState<TodoPriority>('normal')
 
   useEffect(() => {
     if (!assigneeIds.length && roster[0]) setAssigneeIds([roster[0].user_id])
@@ -187,17 +165,16 @@ function ComposeSheet({
   const create = () => {
     if (!title.trim() || !assigneeIds.length) return
     const dueDate = due === 'Today' ? localDateValue(0) : due === 'Tomorrow' ? localDateValue(1) : date
-    onCreate({ title: title.trim(), assigneeIds, dueAt: `${dueDate}T17:00:00+05:30`, priority })
+    onCreate({ title: title.trim(), assigneeIds, dueAt: `${dueDate}T17:00:00+05:30` })
     setTitle('')
     onClose()
   }
 
   return (
     <Sheet open={open} onClose={onClose} title="Assign a todo">
-      <label className="block"><span className="label-caps">Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) create() }} autoFocus placeholder="What needs to happen?" className="mt-2 h-11 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-fg placeholder:text-fg-subtle" /></label>
-      <fieldset className="mt-5"><legend className="label-caps">Assign to</legend><div className="mt-2 grid grid-cols-2 gap-2">{roster.map((rep) => { const selected = assigneeIds.includes(rep.user_id); return <button type="button" key={rep.user_id} onClick={() => setAssigneeIds((all) => selected ? all.filter((id) => id !== rep.user_id) : [...all, rep.user_id])} aria-pressed={selected} className={['flex min-h-12 items-center gap-2 rounded-md border px-2.5 text-left', selected ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'].join(' ')}><Avatar name={rep.display_name} size="sm" /><span className="min-w-0 flex-1 truncate text-xs font-semibold text-fg">{rep.display_name}</span>{selected && <Check aria-hidden size={13} className="text-accent" />}</button> })}{roster.length === 0 && <p className="col-span-2 text-xs text-fg-subtle">No teammates found for this workspace yet.</p>}</div></fieldset>
-      <fieldset className="mt-5"><legend className="label-caps">Due</legend><div className="mt-2 grid grid-cols-3 gap-1 rounded-md border border-border bg-surface-sunk p-1">{(['Today', 'Tomorrow', 'Pick'] as const).map((item) => <button type="button" key={item} onClick={() => setDue(item)} aria-pressed={due === item} className={['min-h-9 rounded-sm text-xs font-semibold', due === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted'].join(' ')}>{item}</button>)}</div>{due === 'Pick' && <input type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Todo due date" className="mt-2 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg" />}</fieldset>
-      <fieldset className="mt-5"><legend className="label-caps">Priority</legend><div className="mt-2 flex gap-2">{(['normal', 'high', 'urgent'] as const).map((item) => <button type="button" key={item} onClick={() => setPriority(item)} aria-pressed={priority === item} className={['min-h-9 flex-1 rounded-md border text-xs font-semibold capitalize', priority === item ? item === 'urgent' ? 'border-danger bg-danger-subtle text-danger' : item === 'high' ? 'border-warn bg-warn-subtle text-warn' : 'border-accent bg-accent-subtle text-accent' : 'border-border text-fg-muted'].join(' ')}>{item}</button>)}</div><p className="mt-2 text-2xs text-fg-subtle">Priority isn't stored yet — it shows for this session only.</p></fieldset>
+      <label className="block"><span className="text-xs font-medium text-fg-muted">Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) create() }} autoFocus placeholder="What needs to happen?" className="mt-2 h-11 w-full rounded-md border border-border bg-surface-raised px-3 text-sm text-fg placeholder:text-fg-subtle" /></label>
+      <fieldset className="mt-5"><legend className="text-xs font-medium text-fg-muted">Assign to</legend><div className="mt-2 grid grid-cols-2 gap-2">{roster.map((rep) => { const selected = assigneeIds.includes(rep.user_id); return <button type="button" key={rep.user_id} onClick={() => setAssigneeIds((all) => selected ? all.filter((id) => id !== rep.user_id) : [...all, rep.user_id])} aria-pressed={selected} className={['flex min-h-12 items-center gap-2 rounded-md border px-2.5 text-left', selected ? 'border-accent bg-accent-subtle' : 'border-border bg-surface'].join(' ')}><Avatar name={rep.display_name} size="sm" /><span className="min-w-0 flex-1 truncate text-xs font-semibold text-fg">{rep.display_name}</span>{selected && <Check aria-hidden size={13} className="text-accent" />}</button> })}{roster.length === 0 && <p className="col-span-2 text-xs text-fg-subtle">No teammates found for this workspace yet.</p>}</div></fieldset>
+      <fieldset className="mt-5"><legend className="text-xs font-medium text-fg-muted">Due</legend><div className="mt-2 grid grid-cols-3 gap-1 rounded-md border border-border bg-surface-sunk p-1">{(['Today', 'Tomorrow', 'Pick'] as const).map((item) => <button type="button" key={item} onClick={() => setDue(item)} aria-pressed={due === item} className={['min-h-9 rounded-sm text-xs font-semibold', due === item ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted'].join(' ')}>{item}</button>)}</div>{due === 'Pick' && <input type="date" value={date} onChange={(event) => setDate(event.target.value)} aria-label="Todo due date" className="mt-2 h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg" />}</fieldset>
       <Button size="lg" className="mt-6 w-full" onClick={create} disabled={!title.trim() || !assigneeIds.length}><Send aria-hidden size={15} /> Assign to {assigneeIds.length || 0}</Button>
       <p className="mt-2 text-center text-2xs text-fg-subtle">⌘ Enter to assign</p>
     </Sheet>
@@ -288,7 +265,7 @@ function SetTargetForm({
   )
 }
 
-export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 'loading' | 'empty' | 'error' }) {
+export function TodosTab({ displayState = 'ready' }: { displayState?: 'ready' | 'loading' | 'empty' | 'error' }) {
   const { session } = useAuth()
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
@@ -298,7 +275,6 @@ export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 
   const { items: todos, loading: todosLoading, error: todosError, reload } = useTodos(clientId)
   const { items: roster } = useProfiles(clientId)
 
-  const [priorityById, setPriorityById] = useState<Record<string, TodoPriority>>({})
   const [composeOpen, setComposeOpen] = useState(false)
   const [quickTitle, setQuickTitle] = useState('')
   const [quickAssignee, setQuickAssignee] = useState<string>('')
@@ -311,7 +287,7 @@ export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 
     if (!quickAssignee && roster[0]) setQuickAssignee(roster[0].user_id)
   }, [roster, quickAssignee])
 
-  const items = useMemo(() => todos.map((t) => toView(t, priorityById)), [todos, priorityById])
+  const items = useMemo(() => todos.map(toView), [todos])
 
   const toggle = async (id: string) => {
     if (!clientId) return
@@ -346,16 +322,11 @@ export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 
       setFormError(res.message)
       return
     }
-    setPriorityById((prev) => {
-      const next = { ...prev }
-      for (const id of res.ids) next[id] = 'normal'
-      return next
-    })
     setQuickTitle('')
     void reload()
   }
 
-  const createFull = async (input: { title: string; assigneeIds: string[]; dueAt: string; priority: TodoPriority }) => {
+  const createFull = async (input: { title: string; assigneeIds: string[]; dueAt: string }) => {
     if (!clientId || !userId) return
     const res = await createTodo({
       clientId,
@@ -368,11 +339,6 @@ export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 
       setFormError(res.message)
       return
     }
-    setPriorityById((prev) => {
-      const next = { ...prev }
-      for (const id of res.ids) next[id] = input.priority
-      return next
-    })
     void reload()
   }
 
@@ -398,19 +364,19 @@ export function TodosTab({ previewState = 'ready' }: { previewState?: 'ready' | 
   const repDone = myItems.filter((item) => item.status === 'done')
   const repOverdue = repOpen.filter((item) => item.overdue).length
 
-  if (previewState === 'loading' || todosLoading) return <div className="space-y-3 p-4"><Skeleton className="h-16" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
-  if (previewState === 'empty') return <EmptyState icon={ListTodo} title="No todos assigned." body={manager ? 'Create the first assignment from the quick bar.' : 'New manager assignments will land here and on Today.'} />
-  if (previewState === 'error' || todosError) return <ErrorState title="Couldn't load todos" body={todosError ?? 'Check the connection and retry.'} onRetry={() => void reload()} />
+  if (displayState === 'loading' || todosLoading) return <div className="space-y-3 p-4"><Skeleton className="h-16" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
+  if (displayState === 'empty') return <EmptyState icon={ListTodo} title="No todos assigned" body={manager ? 'Create the first assignment from the quick bar.' : 'New manager assignments will appear here and on Today.'} />
+  if (displayState === 'error' || todosError) return <ErrorState title="Couldn't load todos" body={todosError ?? 'Check the connection and retry.'} onRetry={() => void reload()} />
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto bg-canvas">
         <div className="page-frame max-w-[1400px] space-y-5">
-          <header className="flex flex-wrap items-end justify-between gap-3"><div><p className="label-caps text-accent">{manager ? 'Manager assignment desk' : 'Assigned to you'}</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-fg">{manager ? 'Push the next action, not another message.' : 'Clear what your manager sent.'}</h2><p className="mt-1 text-xs text-fg-muted">{manager ? 'Create in one line, add context only when it matters.' : 'Done and snooze stay consistent with your Today stack.'}</p></div>{manager && <Button onClick={() => setComposeOpen(true)}><Plus aria-hidden size={15} /> Full assignment</Button>}</header>
+          <header className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-semibold tracking-[-0.03em] text-fg">{manager ? 'Team todos' : 'My todos'}</h2><p className="mt-1 text-xs text-fg-muted">{manager ? 'Create and review assigned work.' : 'Open and completed assignments.'}</p></div>{manager && <Button onClick={() => setComposeOpen(true)}><Plus aria-hidden size={15} /> New todo</Button>}</header>
 
           {formError && <p className="rounded-md border border-danger/30 bg-danger-subtle px-3 py-2 text-xs font-semibold text-danger">{formError}</p>}
 
-          {manager && <section className="rounded-xl border border-border bg-surface p-3 shadow-elev-2"><div className="flex flex-col gap-2 sm:flex-row"><div className="relative min-w-0 flex-1"><ListTodo aria-hidden size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><input value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void createQuick()} placeholder="Assign a todo…" aria-label="Quick todo title" className="h-11 w-full rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg placeholder:text-fg-subtle" /></div><select value={quickAssignee} onChange={(event) => setQuickAssignee(event.target.value)} aria-label="Quick todo assignee" className="h-11 rounded-md border border-border bg-surface px-3 text-sm text-fg">{roster.map((rep) => <option key={rep.user_id} value={rep.user_id}>{rep.display_name}</option>)}</select><button className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg" title="Due today"><CalendarDays aria-hidden size={14} /> Today</button><Button size="lg" onClick={() => void createQuick()} disabled={!quickTitle.trim() || !quickAssignee || busy}>Assign</Button></div><p className="mt-2 px-1 text-2xs text-fg-subtle">Enter to assign · Defaults to today, 5pm</p></section>}
+          {manager && <section className="rounded-xl border border-border bg-surface p-3 shadow-elev-2"><div className="flex flex-col gap-2 sm:flex-row"><div className="relative min-w-0 flex-1"><ListTodo aria-hidden size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-subtle" /><input value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void createQuick()} placeholder="Assign a todo…" aria-label="Quick todo title" className="h-11 w-full rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg placeholder:text-fg-subtle" /></div><select value={quickAssignee} onChange={(event) => setQuickAssignee(event.target.value)} aria-label="Quick todo assignee" className="h-11 rounded-md border border-border bg-surface px-3 text-sm text-fg">{roster.map((rep) => <option key={rep.user_id} value={rep.user_id}>{rep.display_name}</option>)}</select><span className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted"><CalendarDays aria-hidden size={14} /> Today</span><Button size="lg" onClick={() => void createQuick()} disabled={!quickTitle.trim() || !quickAssignee || busy}>Assign</Button></div><p className="mt-2 px-1 text-2xs text-fg-subtle">Enter to assign · Due today at 5 pm</p></section>}
 
           {manager && <section><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-fg">Team load</h3><span className="label-caps">Open / done / overdue</span></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{summaries.map((rep) => <article key={rep.id} className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3 shadow-elev-1"><Avatar name={rep.name} size="md" /><div className="min-w-0 flex-1"><h4 className="truncate text-xs font-semibold text-fg">{rep.name}</h4><p className="mt-1 text-2xs text-fg-muted"><strong className="tnum text-fg">{rep.open}</strong> open · {rep.done} done</p></div>{rep.overdue > 0 ? <span className="flex items-center gap-1 text-2xs font-semibold text-danger"><CircleAlert aria-hidden size={12} /> {rep.overdue}</span> : <Check aria-hidden size={15} className="text-success" />}</article>)}{roster.length === 0 && <p className="col-span-full rounded-lg border border-dashed border-border p-4 text-center text-xs text-fg-subtle">No teammates found for this workspace yet.</p>}</div></section>}
 

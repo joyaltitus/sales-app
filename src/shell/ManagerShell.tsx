@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes, Navigate } from 'react-router-dom'
-import { Rows3, Inbox, Users, LayoutDashboard, FileText, CircleDot, Sparkles, Wrench, UsersRound, Target, TrendingUp, ShieldCheck, Megaphone, FileCheck2 } from 'lucide-react'
+import { Rows3, Inbox, Users, LayoutDashboard, FileText, Wrench, UsersRound, Target, TrendingUp, ShieldCheck, Megaphone, FileCheck2 } from 'lucide-react'
 import { useClient } from './ClientProvider'
 import { useQueue } from '../lib/inbox-data'
 import { TopBar } from './TopBar'
@@ -41,8 +41,8 @@ const ApprovalsView = lazy(() => import('../views/approvals/ApprovalsView').then
 //
 // SA-04 rail change (ruling 2026-07-30, §S6): `Leads` folded into CRM as its
 // Pipeline tab; the `Assign` and `Analytics` stubs are gone — Analytics is
-// superseded by Dashboard, and the assignment UI (mock, unwired) lives on the
-// CRM pipeline per the Wave-1 backlog. Old paths redirect, nothing 404s.
+// superseded by Dashboard, and assignments live in the CRM Todos tab. Old
+// paths redirect, nothing 404s.
 const RAIL = [
   { to: '/', label: 'Floor', icon: Rows3, end: true },
   { to: '/inbox', label: 'Inbox', icon: Inbox },
@@ -86,7 +86,6 @@ export function ManagerShell() {
         >
           <div className="mb-4 px-3">
             <p className="label-caps">Workspace</p>
-            <p className="mt-1 text-xs leading-relaxed text-fg-muted">Exceptions first. Everything else second.</p>
           </div>
           {RAIL.map((t) => (
             <NavLink
@@ -114,16 +113,6 @@ export function ManagerShell() {
               )}
             </NavLink>
           ))}
-          <div className="mt-auto rounded-lg border border-border bg-[linear-gradient(145deg,var(--surface-raised),var(--surface-sunk))] p-3 shadow-elev-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-fg">
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-accent-subtle text-accent">
-                <Sparkles aria-hidden size={14} />
-                <CircleDot aria-hidden size={7} className="absolute -right-0.5 -bottom-0.5 fill-signal text-signal" />
-              </span>
-              AI is standing by
-            </div>
-            <p className="mt-2 text-2xs leading-relaxed text-fg-muted">Drafts, summaries and approvals stay reviewable.</p>
-          </div>
         </nav>
         <main className="app-grid min-w-0 flex-1 overflow-y-auto">
           <ErrorBoundary>

@@ -45,7 +45,7 @@ export function ObjectionCapture({
   contactId: string
   source: 'chat' | 'crm'
   /** AI-detect chips are NOT wired (employee-core v1) — this stays whatever
-   *  sample key the caller hardcodes; the "Detected" affordance below is a
+   *  fixed key the caller supplies; the "Detected" affordance below is a
    *  UI hint only, never written anywhere. */
   detected?: string | null
   leadId?: string | null
@@ -222,7 +222,7 @@ export function ObjectionCapture({
         <p className="label-caps">Objection</p>
         {source === 'chat' && (
           <button onClick={() => void openCallSheet()} className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg">
-            <PhoneCall aria-hidden size={12} /> Log call result
+            <PhoneCall aria-hidden size={12} /> Log outcome
           </button>
         )}
       </div>
@@ -271,7 +271,7 @@ export function ObjectionCapture({
         {activeScript ? (
           <div>
             <div className="flex items-center justify-between gap-3">
-              <span className="label-caps text-accent">{activeScript.fallback ? 'Testing (no standard yet)' : 'Company standard'} · v{activeScript.version}</span>
+              <span className="text-xs font-medium text-accent">{activeScript.fallback ? 'No company standard yet' : 'Company standard'} · v{activeScript.version}</span>
             </div>
             <h3 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">{activeScript.headline}</h3>
             <div className="my-5 border-y border-border py-5"><ScriptCopy paragraphs={activeScript.paragraphs} /></div>
@@ -284,7 +284,7 @@ export function ObjectionCapture({
               <p className="mt-1 text-2xs text-fg-muted">One tap helps the team improve this script.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button onClick={() => void giveFeedback('worked')} aria-pressed={feedback === 'worked'} className={['inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border text-xs font-semibold', feedback === 'worked' ? 'border-success bg-success-subtle text-success' : 'border-border bg-surface text-fg-muted'].join(' ')}><ThumbsUp aria-hidden size={14} /> Worked</button>
-                <button onClick={() => void giveFeedback('missed')} aria-pressed={feedback === 'missed'} className={['inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border text-xs font-semibold', feedback === 'missed' ? 'border-danger bg-danger-subtle text-danger' : 'border-border bg-surface text-fg-muted'].join(' ')}><ThumbsDown aria-hidden size={14} /> Didn’t</button>
+                <button onClick={() => void giveFeedback('missed')} aria-pressed={feedback === 'missed'} className={['inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border text-xs font-semibold', feedback === 'missed' ? 'border-danger bg-danger-subtle text-danger' : 'border-border bg-surface text-fg-muted'].join(' ')}><ThumbsDown aria-hidden size={14} /> Missed</button>
               </div>
             </div>
           </div>
@@ -312,8 +312,7 @@ export function ObjectionCapture({
         <Button className="mt-4 w-full" onClick={() => void saveNoteSheet()}>Save context</Button>
       </Sheet>
 
-      <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="How did it go?">
-        <p className="text-xs text-fg-muted">Fast enough to capture before the next call. Dismiss anytime.</p>
+      <Sheet open={callOpen} onClose={() => setCallOpen(false)} title="Outcome">
         <div className="mt-4 grid grid-cols-2 gap-2">
           {['Closed', 'Progressing', 'Objection', 'No answer'].map((outcomeLabel) => (
             <button

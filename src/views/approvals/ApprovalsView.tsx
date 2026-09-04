@@ -134,26 +134,26 @@ function GroupCard({
   )
 }
 
-export type ApprovalsPreview = {
+export type ApprovalsDesignData = {
   groups: ApprovalGroup[]
   viewerId: string
   viewerRole: Role
   members: { user_id: string; display_name: string | null; role: Role }[]
 }
 
-export function ApprovalsView({ preview }: { preview?: ApprovalsPreview } = {}) {
+export function ApprovalsView({ designData }: { designData?: ApprovalsDesignData } = {}) {
   const { activeClient } = useClient()
   const { session } = useAuth()
-  const clientId = preview ? 'preview-client' : (activeClient?.id ?? null)
-  const live = usePendingApprovals(preview ? null : clientId)
-  const { items: team } = useTeam(preview ? null : clientId)
+  const clientId = designData ? 'design-client' : (activeClient?.id ?? null)
+  const live = usePendingApprovals(designData ? null : clientId)
+  const { items: team } = useTeam(designData ? null : clientId)
 
-  const members = preview?.members ?? team
+  const members = designData?.members ?? team
   const byUser = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members])
 
-  const groups = preview?.groups ?? live.groups
-  const viewerId = preview ? preview.viewerId : (session?.user?.id ?? null)
-  const viewerRole = preview ? preview.viewerRole : activeClient?.role
+  const groups = designData?.groups ?? live.groups
+  const viewerId = designData ? designData.viewerId : (session?.user?.id ?? null)
+  const viewerRole = designData ? designData.viewerRole : activeClient?.role
 
   if (!clientId) {
     return <EmptyState title="No workspace" body="Pick a workspace to see its approvals." />
@@ -169,9 +169,9 @@ export function ApprovalsView({ preview }: { preview?: ApprovalsPreview } = {}) 
         </p>
       </header>
 
-      {live.error && !preview ? (
+      {live.error && !designData ? (
         <ErrorState title="Couldn't load approvals." body={live.error} onRetry={live.reload} />
-      ) : live.loading && !preview ? (
+      ) : live.loading && !designData ? (
         <div className="space-y-3">
           <Skeleton className="h-40 w-full" />
         </div>

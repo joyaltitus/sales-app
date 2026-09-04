@@ -207,11 +207,7 @@ export function ReadView({
           P
         </span>
         <div className="relative">
-          <p className="label-caps text-accent">Your field guide</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.055em] text-fg">The Playbook</h2>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-fg-muted">
-            Listen fully. Name the real concern. Start from the company's strongest line — then say it like you.
-          </p>
+          <h2 className="text-3xl font-semibold tracking-[-0.055em] text-fg">Playbook</h2>
           <div className="mt-4 flex flex-wrap gap-1" role="group" aria-label="Dialect">
             {languages.map((code) => (
               <button

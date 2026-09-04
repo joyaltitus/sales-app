@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -8,18 +8,15 @@ import {
   ChevronRight,
   CircleAlert,
   Clock3,
-  Flame,
   MessageCircle,
   Phone,
-  Sunrise,
   Target,
   TimerReset,
-  Trophy,
   X,
 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
-import { useQueue, usePreviews } from '../../lib/inbox-data'
+import { useQueue, useSnippets } from '../../lib/inbox-data'
 import { completeFollowUp, snoozeFollowUp, useFollowUps } from '../../lib/leads-data'
 import { waitingLongest, isOverdue } from '../../lib/landing-data'
 import { useTodos, toggleTodo } from '../../lib/todos-data'
@@ -28,34 +25,9 @@ import { firstOfMonth, useTarget } from '../../lib/targets-data'
 import { isSubscribed, pushSupported, subscribe } from '../../lib/push'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
-import { Chip } from '../../ui/Chip'
 import { Avatar } from '../../ui/Avatar'
-import { FOLLOW_UP_PREVIEW_ITEMS } from '../crm/followUpMocks'
-import { CallButton } from '../calls/CallButton'
-
-const TodayIntelligence = lazy(() => import('./TodayIntelligence'))
 
 type LocalState = 'active' | 'done' | 'snoozed'
-
-type CallbackPreview = {
-  id: string
-  person: string
-  phone: string
-  dueLabel: string
-  reason: string
-  dealValue: number
-  sample: true
-}
-
-const CALLBACK_PREVIEW: CallbackPreview = {
-  id: 'phase3-callback-anjali',
-  person: 'Anjali Ramesh',
-  phone: '+91 98765 42018',
-  dueLabel: 'Today · 4:00 pm',
-  reason: 'Confirm the two-instalment plan and ask for the decision.',
-  dealValue: 60000,
-  sample: true,
-}
 
 function ProgressRing({ value }: { value: number }) {
   const radius = 38
@@ -271,14 +243,13 @@ export function Today() {
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
   const { items, loading, error } = useQueue(clientId)
-  const { previews } = usePreviews(clientId)
+  const { snippets } = useSnippets(clientId)
   const { items: liveFollowUps, loading: followUpsLoading, error: followUpsError, reload: reloadFollowUps } = useFollowUps(clientId)
   const { items: todos } = useTodos(clientId)
   const { stats } = useRepDailyStats(clientId, userId)
   const { item: target } = useTarget(clientId, userId, firstOfMonth())
 
-  const usingSampleFollowUps = !followUpsLoading && liveFollowUps.length === 0
-  const followUps = usingSampleFollowUps ? FOLLOW_UP_PREVIEW_ITEMS : liveFollowUps
+  const followUps = liveFollowUps
 
   const waiting = useMemo(() => waitingLongest(items), [items])
   const oldest = waiting[0] ?? null
@@ -314,26 +285,20 @@ export function Today() {
 
   const progressPct = stats.followUpsPlanned > 0 ? Math.round((stats.followUpsDone / stats.followUpsPlanned) * 100) : 0
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
-  const oldestPreview = oldest ? previews.get(oldest.id)?.text ?? 'A customer is waiting for your reply.' : null
+  const oldestSnippet = oldest ? snippets.get(oldest.id)?.text ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
   const openTodos = myOpenTodos.filter((todo) => !local[todo.id]).length
   const endOfToday = new Date()
   endOfToday.setHours(23, 59, 59, 999)
   const pendingCount = followUps.filter((item) => !local[item.id] && new Date(item.due_at).getTime() <= endOfToday.getTime()).length
   const workLeft = pendingCount + openTodos
-  const callbackAlreadyScheduled = usingSampleFollowUps && FOLLOW_UP_PREVIEW_ITEMS.some((item) => item.person === CALLBACK_PREVIEW.person)
-
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-6 sm:pt-7 lg:px-6 lg:pb-10">
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-accent">
-            <Sunrise aria-hidden size={14} /> Your day is ready
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-fg">Good morning.</h1>
-          <p className="mt-1 text-sm text-fg-muted">See the target, clear the promises, then work the queue.</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.045em] text-fg">Today</h1>
+          <p className="mt-1 text-sm text-fg-muted">Scheduled follow-ups, assigned tasks, and waiting replies.</p>
         </div>
-        <Chip tone="accent"><Flame aria-hidden size={12} /> {stats.streakDays} days</Chip>
       </header>
 
       <NotifyMeBanner />
@@ -356,7 +321,6 @@ export function Today() {
           </div>
         </div>
         <p className="mt-4 text-2xs text-fg-muted">{stats.repliesToday} repl{stats.repliesToday === 1 ? 'y' : 'ies'} sent today{stats.responseTrend ? ` · ${stats.responseTrend}` : ''}</p>
-        {usingSampleFollowUps && <p className="mt-2 rounded-md border border-dashed border-border bg-surface-sunk px-3 py-2 text-2xs text-fg-muted">Preview test data — no live follow-ups were returned for this workspace.</p>}
       </section>
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -370,19 +334,6 @@ export function Today() {
         </div>
 
         <div className="space-y-3">
-          {!callbackAlreadyScheduled && !local[CALLBACK_PREVIEW.id] && (
-            <PriorityCard
-              icon={Phone}
-              eyebrow={`Callback · ${CALLBACK_PREVIEW.dueLabel} · Preview`}
-              title={`Call ${CALLBACK_PREVIEW.person}`}
-              detail={CALLBACK_PREVIEW.reason}
-              tone="warn"
-              action={<CallButton person={CALLBACK_PREVIEW.person} phone={CALLBACK_PREVIEW.phone} dealValue={CALLBACK_PREVIEW.dealValue} variant="icon" />}
-              onDone={() => setLocal((state) => ({ ...state, [CALLBACK_PREVIEW.id]: 'done' }))}
-              onSnooze={() => setLocal((state) => ({ ...state, [CALLBACK_PREVIEW.id]: 'snoozed' }))}
-            />
-          )}
-
           {visibleOverdue.map((followUp) => !local[followUp.id] && (
             <PriorityCard
               key={followUp.id}
@@ -398,11 +349,11 @@ export function Today() {
               }
               onDone={() => {
                 setLocal((state) => ({ ...state, [followUp.id]: 'done' }))
-                if (clientId && !usingSampleFollowUps) void completeFollowUp(clientId, followUp.id).then(reloadFollowUps)
+                if (clientId) void completeFollowUp(clientId, followUp.id).then(reloadFollowUps)
               }}
               onSnooze={() => {
                 setLocal((state) => ({ ...state, [followUp.id]: 'snoozed' }))
-                if (clientId && !usingSampleFollowUps) void snoozeFollowUp(clientId, followUp.id).then(reloadFollowUps)
+                if (clientId) void snoozeFollowUp(clientId, followUp.id).then(reloadFollowUps)
               }}
             />
           ))}
@@ -445,30 +396,24 @@ export function Today() {
         </section>
 
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-5">
-          <Suspense fallback={<Skeleton className="h-40 w-full" />}><TodayIntelligence /></Suspense>
           {oldest ? (
             <section className="relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
               <span aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-signal opacity-20 blur-3xl" />
               <div className="relative">
                 <div className="flex items-center justify-between gap-3"><p className="label-caps text-accent">Customer waiting</p><span className="tnum inline-flex items-center gap-1 text-2xs font-semibold text-danger"><Clock3 aria-hidden size={12} /> Longest</span></div>
                 <h2 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">Reply to {oldestName}</h2>
-                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestPreview}”</p>
-                <div className="mt-3 flex items-center gap-2"><strong className="tnum text-lg text-fg">₹60,000</strong><span className="text-2xs text-fg-muted">open deal · customer is waiting</span></div>
-                <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-3"><Link to={`/inbox?c=${encodeURIComponent(oldest.id)}`} className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link><CallButton person={oldestName} phone={oldest?.contact?.external_id} dealValue={60000} label="Call" /></div>
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestSnippet}”</p>
+                <div className="mt-5"><Link to={`/inbox?c=${encodeURIComponent(oldest.id)}`} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link></div>
               </div>
             </section>
           ) : (
-            <section className="rounded-xl border border-border bg-surface p-5 shadow-elev-1"><EmptyState icon={Trophy} title="Inbox clear. Nicely done." body="Use the breathing room to rescue a lead that has gone quiet." /></section>
+            <section className="rounded-xl border border-border bg-surface p-5 shadow-elev-1"><EmptyState icon={MessageCircle} title="Inbox clear" body="No customer replies are waiting." /></section>
           )}
         </aside>
       </div>
 
       {Object.values(local).some((state) => state === 'done') && (
-        <div className="relative mt-5 flex items-center gap-3 overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--success)_25%,var(--border))] bg-success-subtle p-4 text-success" role="status">
-          <span aria-hidden className="absolute -right-3 -top-8 text-7xl font-bold text-success opacity-10">₹</span>
-          <span className="flex h-8 w-8 items-center justify-center rounded-pill bg-surface"><Trophy aria-hidden size={16} /></span>
-          <p className="relative text-xs font-semibold"><span className="block text-md tracking-[-0.02em]">₹60,000 moved forward.</span><span className="mt-1 block font-normal text-success">Nice. The next close is one action closer.</span></p>
-        </div>
+        <p className="mt-5 rounded-lg bg-success-subtle p-3 text-xs font-semibold text-success" role="status"><Check aria-hidden size={14} className="mr-1.5 inline" /> Work item completed.</p>
       )}
     </div>
   )
