@@ -147,14 +147,14 @@ export function ManagerShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-10 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="flex shrink-0 overflow-x-auto border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
             to={href(t.to)}
             end={t.end}
             className={({ isActive }) => [
-              'flex min-h-14 flex-col items-center justify-center gap-1 text-2xs font-medium',
+              'flex min-h-14 min-w-11 flex-1 shrink-0 flex-col items-center justify-center gap-1 text-2xs font-medium',
               isActive ? 'text-accent' : 'text-fg-subtle',
             ].join(' ')}
           >
