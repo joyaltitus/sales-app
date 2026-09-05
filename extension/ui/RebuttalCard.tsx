@@ -42,7 +42,7 @@ export function RebuttalCard({
         <button
           type="button"
           onClick={onBack}
-          className="flex min-h-9 min-w-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-fg-muted hover:bg-surface-sunk hover:text-fg"
+          className="flex min-h-11 min-w-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-fg-muted hover:bg-surface-sunk hover:text-fg"
         >
           <ArrowLeft aria-hidden size={13} strokeWidth={2} className="shrink-0" />
           <span className="truncate">back to {backLabel}</span>
@@ -72,7 +72,7 @@ export function RebuttalCard({
             type="button"
             onClick={onExpand}
             aria-label={`Open ${script.label} in full`}
-            className="shrink-0 rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
           >
             <Maximize2 aria-hidden size={14} strokeWidth={1.9} />
           </button>

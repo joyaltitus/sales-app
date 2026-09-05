@@ -63,7 +63,7 @@ export function RoadmapStage({
                   <button
                     type="button"
                     onClick={() => onSelect(index)}
-                    className="flex min-h-9 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left text-xs text-fg-subtle transition-colors hover:bg-surface-sunk hover:text-fg"
+                    className="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-left text-xs text-fg-subtle transition-colors hover:bg-surface-sunk hover:text-fg"
                   >
                     <span className="w-4 shrink-0 text-2xs font-semibold tnum">{index + 1}</span>
                     <PlaybookIcon name={step.script.icon} size={13} />
@@ -73,7 +73,7 @@ export function RoadmapStage({
                     type="button"
                     onClick={() => onExpand(step)}
                     aria-label={`Open ${step.script.label} in full`}
-                    className="shrink-0 rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
+                    className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
                   >
                     <Maximize2 aria-hidden size={13} strokeWidth={1.9} />
                   </button>
@@ -102,7 +102,7 @@ export function RoadmapStage({
                       type="button"
                       onClick={() => onExpand(step)}
                       aria-label={`Open ${step.script.label} in full`}
-                      className="shrink-0 rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
+                      className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
                     >
                       <Maximize2 aria-hidden size={14} strokeWidth={1.9} />
                     </button>
@@ -122,7 +122,7 @@ export function RoadmapStage({
                             aria-pressed={on}
                             onClick={() => onHook(key)}
                             className={[
-                              'min-h-9 flex-1 rounded-md border px-1 text-2xs font-semibold transition-colors',
+                              'min-h-11 flex-1 rounded-md border px-1 text-2xs font-semibold transition-colors',
                               on ? 'border-accent bg-accent-subtle text-accent' : 'border-border bg-surface-sunk text-fg-muted hover:text-fg',
                             ].join(' ')}
                           >

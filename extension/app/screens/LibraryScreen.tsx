@@ -108,6 +108,7 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search scripts…"
         aria-label="Search scripts"
+        className="min-h-11"
       />
       {langs.length > 1 && (
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Dialect">
@@ -118,7 +119,7 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
               aria-pressed={code === lang}
               onClick={() => { setLang(code); void savePrefs({ defaultLang: code }) }}
               className={[
-                'min-h-9 rounded-pill border px-3 text-xs font-medium transition-colors',
+                'min-h-11 rounded-pill border px-3 text-xs font-medium transition-colors',
                 code === lang
                   ? 'border-accent bg-accent-subtle text-accent'
                   : 'border-border bg-surface-raised text-fg-muted hover:border-border-strong hover:text-fg',

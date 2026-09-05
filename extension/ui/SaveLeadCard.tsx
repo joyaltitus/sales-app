@@ -106,7 +106,7 @@ export function SaveLeadCard({
         <UserPlus aria-hidden size={15} strokeWidth={1.9} className="shrink-0 text-accent" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{title ?? 'Not in your CRM yet'}</h2>
         {onDismiss && (
-          <Button variant="ghost" size="sm" onClick={onDismiss}>
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={onDismiss}>
             Not now
           </Button>
         )}
@@ -137,7 +137,7 @@ export function SaveLeadCard({
 
       <div className="mt-3 grid gap-2.5">
         <Field label="Name">
-          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="e.g. Rahul Sharma" />
+          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="e.g. Rahul Sharma" className="min-h-11" />
         </Field>
 
         <Field label="Phone" required>
@@ -147,6 +147,7 @@ export function SaveLeadCard({
             inputMode="tel"
             autoComplete="off"
             placeholder="+91 98765 43210"
+            className="min-h-11"
           />
         </Field>
 
@@ -182,7 +183,7 @@ export function SaveLeadCard({
                 key={preset.value}
                 type="button"
                 onClick={() => setEstValue(String(preset.value))}
-                className="min-h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-2xs font-semibold text-fg-muted transition-colors hover:border-accent hover:text-accent"
+                className="min-h-11 shrink-0 rounded-md border border-border bg-surface px-2 text-2xs font-semibold text-fg-muted transition-colors hover:border-accent hover:text-accent"
               >
                 {preset.label}
               </button>
@@ -195,6 +196,7 @@ export function SaveLeadCard({
             autoComplete="off"
             placeholder="₹60,000"
             aria-label="Estimated value"
+            className="min-h-11"
           />
         </div>
 
@@ -204,6 +206,7 @@ export function SaveLeadCard({
             onChange={(event) => setNextAction(event.target.value)}
             autoComplete="off"
             placeholder="e.g. Send the fee structure"
+            className="min-h-11"
           />
         </Field>
 

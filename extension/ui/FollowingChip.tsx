@@ -28,7 +28,7 @@ export function FollowingChip({ enabled, chatName, onToggle }: Props) {
       aria-checked={enabled}
       onClick={() => onToggle(!enabled)}
       className={[
-        'flex min-h-8 w-full items-center gap-1.5 border-b border-border px-3 py-1.5 text-2xs transition-colors select-none',
+        'flex min-h-11 w-full items-center gap-1.5 border-b border-border px-3 py-1.5 text-2xs transition-colors select-none',
         enabled ? 'bg-accent-subtle text-accent' : 'bg-surface text-fg-subtle hover:text-fg-muted',
       ].join(' ')}
     >
