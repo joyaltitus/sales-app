@@ -59,6 +59,12 @@ export function RepShell() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-accent focus:shadow-elev-2"
+      >
+        Skip to content
+      </a>
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <div className="relative hidden lg:block">
@@ -109,7 +115,7 @@ export function RepShell() {
           </button>
         </div>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <main id="main-content" className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 lg:pb-0">
           <ErrorBoundary>
             <Suspense
               fallback={
