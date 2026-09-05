@@ -14,6 +14,18 @@ precacheAndRoute(self.__WB_MANIFEST)
 // of failing, so the app never looks dead on a dropped connection (useOnline.ts).
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
 
+// REG-057. Without this a freshly installed worker sits in `waiting` for as
+// long as ANY tab of this origin stays open, so a deploy could take days to
+// reach a rep who never closes the app. The page asks; this answers. Deliberately
+// NOT an unconditional skipWaiting() at install time: that swaps the build under
+// a rep mid-call with no warning, which is the failure this one is trading
+// against.
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
+  if ((event.data as { type?: string } | null)?.type === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
+})
+
 interface PushPayload {
   title: string
   body?: string | null
