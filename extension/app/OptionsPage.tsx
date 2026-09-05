@@ -134,11 +134,11 @@ export default function OptionsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <label className="grid gap-1">
             <span className="text-xs font-medium text-fg-muted">From</span>
-            <Input type="time" value={prefs.quietFrom} onChange={(event) => update({ quietFrom: event.target.value })} />
+            <Input type="time" value={prefs.quietFrom} onChange={(event) => update({ quietFrom: event.target.value })} className="min-h-11" />
           </label>
           <label className="grid gap-1">
             <span className="text-xs font-medium text-fg-muted">To</span>
-            <Input type="time" value={prefs.quietTo} onChange={(event) => update({ quietTo: event.target.value })} />
+            <Input type="time" value={prefs.quietTo} onChange={(event) => update({ quietTo: event.target.value })} className="min-h-11" />
           </label>
         </div>
       </Section>
@@ -181,6 +181,7 @@ export default function OptionsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-11 w-11"
                   aria-label={`Delete ${snippet.title}`}
                   onClick={() => void removeSnippet(snippet.id).then(setSnippets)}
                 >
@@ -191,7 +192,7 @@ export default function OptionsPage() {
           </ul>
         )}
         <div className="grid gap-2 rounded-md border border-border bg-surface-sunk p-3">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name, e.g. Fee structure" />
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name, e.g. Fee structure" className="min-h-11" />
           <textarea
             value={body}
             maxLength={MAX_SNIPPET_CHARS}

@@ -92,7 +92,7 @@ export function CrmScreen({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search name or number…"
               aria-label="Search leads"
-              className="pl-8"
+              className="min-h-11 pl-8"
             />
           </div>
           <Button size="sm" className="h-11 shrink-0 px-3" onClick={onAddLead}>
@@ -112,7 +112,7 @@ export function CrmScreen({
                 aria-pressed={active}
                 onClick={() => onDateFilter(filter.key)}
                 className={[
-                  'min-h-8 shrink-0 rounded-pill border px-2.5 text-2xs font-semibold whitespace-nowrap transition-colors select-none',
+                  'min-h-11 shrink-0 rounded-pill border px-2.5 text-2xs font-semibold whitespace-nowrap transition-colors select-none',
                   active
                     ? 'border-[color-mix(in_srgb,var(--accent)_18%,transparent)] bg-accent-subtle text-accent'
                     : 'border-border bg-surface-sunk text-fg-muted hover:text-fg',
@@ -128,7 +128,7 @@ export function CrmScreen({
       {refreshError && items.length > 0 && (
         <div role="alert" className="flex min-h-10 items-center gap-2 bg-warn-subtle px-3 py-2 text-xs text-warn">
           <span className="min-w-0 flex-1">Cached leads are shown. Check your connection, then retry.</span>
-          <Button variant="ghost" size="sm" onClick={onRetry}>Retry</Button>
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={onRetry}>Retry</Button>
         </div>
       )}
 

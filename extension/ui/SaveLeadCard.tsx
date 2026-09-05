@@ -42,6 +42,17 @@ function seedFrom(query: string): { name: string; phone: string } {
   return /\p{L}/u.test(trimmed) ? { name: trimmed, phone: '' } : { name: '', phone: trimmed }
 }
 
+/**
+ * A chat display name is the contact's name when saved, the number itself
+ * when not. Route it through the same split so a numeric header fills phone
+ * only and leaves name empty.
+ */
+function seedFromChat(chat: OpenChat): { name: string; phone: string } {
+  const split = seedFrom(chat.displayName)
+  if (split.name) return { name: chat.displayName, phone: chat.phoneE164 ?? '' }
+  return { name: '', phone: chat.phoneE164 ?? split.phone }
+}
+
 function Field({ label, required, children }: {
   label: string
   required?: boolean
@@ -67,7 +78,7 @@ export function SaveLeadCard({
   chat, stages, stagesLoading, busy, message,
   initialQuery, title, hint, openChat, onSave, onDismiss,
 }: Props) {
-  const seed = chat ? { name: chat.displayName, phone: chat.phoneE164 ?? '' } : seedFrom(initialQuery ?? '')
+  const seed = chat ? seedFromChat(chat) : seedFrom(initialQuery ?? '')
   const [name, setName] = useState(seed.name)
   const [phone, setPhone] = useState(withPhonePrefix(seed.phone))
   const [channel, setChannel] = useState(chat ? 'whatsapp' : 'phone')
@@ -95,7 +106,7 @@ export function SaveLeadCard({
         <UserPlus aria-hidden size={15} strokeWidth={1.9} className="shrink-0 text-accent" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{title ?? 'Not in your CRM yet'}</h2>
         {onDismiss && (
-          <Button variant="ghost" size="sm" onClick={onDismiss}>
+          <Button variant="ghost" size="sm" className="min-h-11" onClick={onDismiss}>
             Not now
           </Button>
         )}
@@ -113,8 +124,9 @@ export function SaveLeadCard({
           variant="secondary"
           className="mt-2 min-h-11 w-full"
           onClick={() => {
-            setName(openChat.displayName)
-            setPhone(withPhonePrefix(openChat.phoneE164 ?? ''))
+            const next = seedFromChat(openChat)
+            setName(next.name)
+            setPhone(withPhonePrefix(next.phone))
             setChannel('whatsapp')
           }}
         >
@@ -125,7 +137,7 @@ export function SaveLeadCard({
 
       <div className="mt-3 grid gap-2.5">
         <Field label="Name">
-          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="e.g. Rahul Sharma" />
+          <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" placeholder="e.g. Rahul Sharma" className="min-h-11" />
         </Field>
 
         <Field label="Phone" required>
@@ -135,6 +147,7 @@ export function SaveLeadCard({
             inputMode="tel"
             autoComplete="off"
             placeholder="+91 98765 43210"
+            className="min-h-11"
           />
         </Field>
 
@@ -170,7 +183,7 @@ export function SaveLeadCard({
                 key={preset.value}
                 type="button"
                 onClick={() => setEstValue(String(preset.value))}
-                className="min-h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-2xs font-semibold text-fg-muted transition-colors hover:border-accent hover:text-accent"
+                className="min-h-11 shrink-0 rounded-md border border-border bg-surface px-2 text-2xs font-semibold text-fg-muted transition-colors hover:border-accent hover:text-accent"
               >
                 {preset.label}
               </button>
@@ -181,8 +194,9 @@ export function SaveLeadCard({
             onChange={(event) => setEstValue(event.target.value)}
             inputMode="numeric"
             autoComplete="off"
-            placeholder="₹60,000"
+            placeholder="₹60K"
             aria-label="Estimated value"
+            className="min-h-11"
           />
         </div>
 
@@ -192,6 +206,7 @@ export function SaveLeadCard({
             onChange={(event) => setNextAction(event.target.value)}
             autoComplete="off"
             placeholder="e.g. Send the fee structure"
+            className="min-h-11"
           />
         </Field>
 

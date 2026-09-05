@@ -45,6 +45,13 @@ describe('LibraryScreen', () => {
     expect(within(card).getByText('61%')).toBeInTheDocument()
   })
 
+  it('shows samples, never raw {{placeholders}}, in the card preview', async () => {
+    render(<LibraryScreen identity={identity} />)
+    const card = (await screen.findByText('The offer')).closest('button')!
+    expect(card.textContent).not.toMatch(/\{\{/)
+    expect(card.textContent).toMatch(/Sample course/)
+  })
+
   it('searches over labels and bodies', async () => {
     const user = userEvent.setup()
     render(<LibraryScreen identity={identity} />)

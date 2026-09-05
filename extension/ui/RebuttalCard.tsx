@@ -42,7 +42,7 @@ export function RebuttalCard({
         <button
           type="button"
           onClick={onBack}
-          className="flex min-h-9 min-w-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-fg-muted hover:bg-surface-sunk hover:text-fg"
+          className="flex min-h-11 min-w-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-fg-muted hover:bg-surface-sunk hover:text-fg"
         >
           <ArrowLeft aria-hidden size={13} strokeWidth={2} className="shrink-0" />
           <span className="truncate">back to {backLabel}</span>
@@ -72,7 +72,7 @@ export function RebuttalCard({
             type="button"
             onClick={onExpand}
             aria-label={`Open ${script.label} in full`}
-            className="shrink-0 rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md p-1.5 text-fg-subtle hover:bg-surface-sunk hover:text-fg"
           >
             <Maximize2 aria-hidden size={14} strokeWidth={1.9} />
           </button>
@@ -80,13 +80,23 @@ export function RebuttalCard({
         {picked.paragraphs.length === 0 ? (
           <p className="text-xs text-fg-subtle">No script written for this objection yet.</p>
         ) : (
-          <ul className="space-y-1">
-            {picked.paragraphs.slice(0, 3).map((paragraph, index) => (
-              <li key={index} className="line-clamp-2 text-xs leading-relaxed break-words text-fg-muted">
-                {highlighted(paragraph, vars)}
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="space-y-1">
+              {picked.paragraphs.slice(0, 3).map((paragraph, index) => (
+                <li key={index} className="line-clamp-2 text-xs leading-relaxed break-words text-fg-muted">
+                  {highlighted(paragraph, vars)}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={onExpand}
+              aria-label={`Show full ${script.label}`}
+              className="mt-1 flex min-h-11 w-full items-center justify-center rounded-md text-xs font-medium text-accent hover:bg-surface-sunk"
+            >
+              More
+            </button>
+          </>
         )}
         <div className="mt-2 flex items-center gap-1.5">
           <Button variant="secondary" size="sm" className="min-h-11 flex-1" disabled={busy || picked.paragraphs.length === 0} onClick={onInsert}>

@@ -70,7 +70,7 @@ export function ObjectionChips({ scripts, activeKey, onPick }: Props) {
             aria-pressed={active}
             onClick={() => onPick(script)}
             className={[
-              'flex min-h-9 max-w-full min-w-0 items-center gap-1.5 rounded-pill border px-2.5 text-xs font-medium transition-colors select-none',
+              'flex min-h-11 max-w-full min-w-0 items-center gap-1.5 rounded-pill border px-2.5 text-xs font-medium transition-colors select-none',
               active
                 ? 'border-accent bg-accent-subtle text-accent'
                 : 'border-border bg-surface-raised text-fg-muted hover:border-border-strong hover:text-fg',
