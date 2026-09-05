@@ -162,7 +162,7 @@ export function EditorView({
         </aside>
       )}
 
-      <main className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2">
+      <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2">
         <header className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-raised p-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export function EditorView({
             )}
           </div>
         </div>
-      </main>
+      </section>
 
       <Sheet
         open={promoteOpen}
