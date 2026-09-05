@@ -310,8 +310,20 @@ export function TodosTab({ displayState = 'ready' }: { displayState?: 'ready' | 
     const current = todos.find((t) => t.id === id)
     if (!current) return
     const nextStatus: TodoStatus = current.status === 'done' ? 'pending' : 'done'
-    const res = await toggleTodo(clientId, id, nextStatus)
-    if (res.ok) void reload()
+    const res = await toggleTodo(clientId, id, nextStatus, current.status)
+    if (res.ok) {
+      setFormError(null)
+      void reload()
+      return
+    }
+    // A denial here is usually someone else having moved the same todo, so
+    // reload to show what it actually says now, and say why nothing changed.
+    setFormError(
+      res.reason === 'denied'
+        ? 'That todo was changed by someone else. It has been refreshed.'
+        : res.message ?? 'The todo could not be updated.',
+    )
+    void reload()
   }
 
   const openDetail = (id: string | null) => {

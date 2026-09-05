@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, CircleAlert, PhoneCall, RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Sheet } from '../../ui/Sheet'
@@ -71,6 +71,11 @@ export function ObjectionCapture({
 
   const [callOpen, setCallOpen] = useState(false)
   const [callStage, setCallStage] = useState<'pick' | 'objection'>('pick')
+  // Twin of the CallExperience defect, never filed by the audit: the outcome
+  // buttons carry no busy guard, so two taps minted two ids and forked the
+  // call_sessions upsert. This sheet REOPENS within one mount, so the id is
+  // re-minted when the sheet opens rather than at mount — one id per call.
+  const callRequestId = useRef(crypto.randomUUID())
   const [callConfirm, setCallConfirm] = useState<string | null>(null)
 
   const { script: activeScript, loading: scriptLoading } = useActiveScript(clientId, logged)
@@ -185,6 +190,7 @@ export function ObjectionCapture({
   const openCallSheet = () => {
     setCallOpen(true)
     setCallStage('pick')
+    callRequestId.current = crypto.randomUUID()
   }
 
   const finishCallOutcome = async (outcome: CallOutcome, taxonomyKey?: string) => {
@@ -196,7 +202,7 @@ export function ObjectionCapture({
       conversationId,
       actorId,
       surface: 'objection-capture',
-      clientRequestId: crypto.randomUUID(),
+      clientRequestId: callRequestId.current,
     })
     if (!sessionRes.ok) {
       setError(sessionRes.message)

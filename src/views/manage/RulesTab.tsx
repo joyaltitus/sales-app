@@ -57,9 +57,13 @@ function RuleCard({
 
   const save = async () => {
     if (text.trim() === '') return
+    // `userId ?? ''` used to stand in the call below, which sends an empty
+    // string as the acting user rather than not writing at all. Same guard as
+    // CampaignsTab's save paths.
+    if (!userId) return
     setBusy(true)
     setFailure(null)
-    const res = await editRuleResponse(clientId, rule.rule_key, text.trim(), bundleKey || null, userId ?? '')
+    const res = await editRuleResponse(clientId, rule.rule_key, text.trim(), bundleKey || null, userId)
     setBusy(false)
     if (res.ok) onChanged()
     else setFailure(res.code)

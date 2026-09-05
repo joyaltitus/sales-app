@@ -118,7 +118,10 @@ export function GoLive({ preview }: { preview?: GoLiveCheck } = {}) {
   }, [load, preview])
 
   async function ack(item: string) {
-    if (!clientId) return
+    // Without this the RPC received p_auth_user_id: null and answered with a
+    // generic refusal, which read as "the write failed" rather than "you are
+    // not signed in". The button is disabled for the same reason.
+    if (!clientId || !userId) return
     setBusy(item)
     setFailure(null)
     const { data, error: err } = await supabase.rpc('pm_ack_go_live_item', {
@@ -205,7 +208,13 @@ export function GoLive({ preview }: { preview?: GoLiveCheck } = {}) {
                 detail={entry.acked && entry.acked_at ? `Confirmed ${new Date(entry.acked_at).toLocaleDateString()}` : undefined}
                 action={
                   entry.acked ? null : (
-                    <Button size="sm" variant="secondary" disabled={busy === key} onClick={() => void ack(key)}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy === key || !userId}
+                      title={userId ? undefined : 'Sign in again to confirm this item.'}
+                      onClick={() => void ack(key)}
+                    >
                       {busy === key ? 'Saving…' : 'Mark done'}
                     </Button>
                   )

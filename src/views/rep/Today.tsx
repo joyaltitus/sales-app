@@ -381,7 +381,18 @@ export function Today() {
               }
               onDone={() => {
                 setLocal((state) => ({ ...state, [pendingTodo.id]: 'done' }))
-                if (clientId) void toggleTodo(clientId, pendingTodo.id, 'done')
+                // The paint is optimistic; the write can still be refused. Fired
+                // and forgotten, a denial left the rep looking at a todo marked
+                // done that the manager still sees as open. Put the card back.
+                if (clientId) {
+                  void toggleTodo(clientId, pendingTodo.id, 'done', 'pending').then((res) => {
+                    if (res.ok) return
+                    setLocal((state) => {
+                      const { [pendingTodo.id]: _undone, ...rest } = state
+                      return rest
+                    })
+                  })
+                }
               }}
               onSnooze={() => setLocal((state) => ({ ...state, [pendingTodo.id]: 'snoozed' }))}
             />

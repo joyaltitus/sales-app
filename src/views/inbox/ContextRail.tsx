@@ -213,6 +213,18 @@ export function ContextRail({
   const { items: notes, reload: reloadNotes } = useNotes(clientId, { conversationId: item.id })
   const [noteDraft, setNoteDraft] = useState('')
   const [noteErr, setNoteErr] = useState(false)
+  // Delete used to discard its WriteResult and reload regardless, so a refused
+  // delete made the row vanish and reappear with nothing said. Same error slot
+  // as submitNote below.
+  const deleteNoteRow = async (noteId: string) => {
+    setNoteErr(false)
+    const res = await deleteNote(clientId, noteId)
+    if (!res.ok) {
+      setNoteErr(true)
+      return
+    }
+    void reloadNotes()
+  }
   const submitNote = async () => {
     const body = noteDraft.trim()
     if (!body) return
@@ -522,7 +534,7 @@ export function ContextRail({
               </p>
             </div>
             <button
-              onClick={() => void deleteNote(clientId, n.id).then(() => void reloadNotes())}
+              onClick={() => void deleteNoteRow(n.id)}
               aria-label="Delete note"
               className="rounded-sm p-1 text-fg-subtle opacity-0 group-hover:opacity-100 hover:bg-surface-sunk hover:text-danger"
             >
@@ -545,7 +557,7 @@ export function ContextRail({
             Add
           </Button>
         </div>
-        {noteErr && <p className="text-2xs text-danger">Couldn't save the note. Try again.</p>}
+        {noteErr && <p role="alert" className="text-2xs text-danger">That note change didn't go through. Try again.</p>}
       </div>
     </div>
   )
