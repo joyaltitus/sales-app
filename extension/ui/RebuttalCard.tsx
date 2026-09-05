@@ -80,13 +80,23 @@ export function RebuttalCard({
         {picked.paragraphs.length === 0 ? (
           <p className="text-xs text-fg-subtle">No script written for this objection yet.</p>
         ) : (
-          <ul className="space-y-1">
-            {picked.paragraphs.slice(0, 3).map((paragraph, index) => (
-              <li key={index} className="line-clamp-2 text-xs leading-relaxed break-words text-fg-muted">
-                {highlighted(paragraph, vars)}
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="space-y-1">
+              {picked.paragraphs.slice(0, 3).map((paragraph, index) => (
+                <li key={index} className="line-clamp-2 text-xs leading-relaxed break-words text-fg-muted">
+                  {highlighted(paragraph, vars)}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={onExpand}
+              aria-label={`Show full ${script.label}`}
+              className="mt-1 flex min-h-11 w-full items-center justify-center rounded-md text-xs font-medium text-accent hover:bg-surface-sunk"
+            >
+              More
+            </button>
+          </>
         )}
         <div className="mt-2 flex items-center gap-1.5">
           <Button variant="secondary" size="sm" className="min-h-11 flex-1" disabled={busy || picked.paragraphs.length === 0} onClick={onInsert}>
