@@ -194,7 +194,7 @@ export function SaveLeadCard({
             onChange={(event) => setEstValue(event.target.value)}
             inputMode="numeric"
             autoComplete="off"
-            placeholder="₹60,000"
+            placeholder="₹60K"
             aria-label="Estimated value"
             className="min-h-11"
           />
