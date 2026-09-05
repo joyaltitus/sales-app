@@ -110,7 +110,7 @@ export function BoardView({
               title={`${stage.label} — empty`}
             >
               <span
-                className="text-2xs font-medium text-fg-subtle"
+                className="text-2xs font-medium text-fg-muted"
                 style={{ writingMode: 'vertical-rl' }}
               >
                 {stage.label}
@@ -133,18 +133,18 @@ export function BoardView({
               <h3 className="truncate text-2xs font-semibold text-fg-muted">
                 {stage.label}
               </h3>
-              <span className="tnum text-xs text-fg-subtle" style={monoStyle}>
+              <span className="tnum text-xs text-fg-muted" style={monoStyle}>
                 {leads.length}
               </span>
               {value > 0 && (
-                <span className="tnum ml-auto text-2xs text-fg-subtle" style={monoStyle}>
+                <span className="tnum ml-auto text-2xs text-fg-muted" style={monoStyle}>
                   {formatINRCompact(value)}
                 </span>
               )}
             </header>
             <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-1.5 pb-1.5">
               {leads.length === 0 ? (
-                <p className="px-2 py-4 text-center text-2xs text-fg-subtle">Nothing here.</p>
+                <p className="px-2 py-4 text-center text-2xs text-fg-muted">Nothing here.</p>
               ) : (
                 leads.map((lead) => {
                   const name =

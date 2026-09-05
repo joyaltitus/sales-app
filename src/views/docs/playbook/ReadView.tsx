@@ -137,7 +137,7 @@ function ReadSection({
     <section className="grid gap-5 px-6 py-8 sm:grid-cols-[90px_minmax(0,1fr)] sm:px-10">
       <div>
         {index !== null && (
-          <span className="tnum text-3xl font-semibold tracking-[-0.05em] text-border-strong">
+          <span className="tnum text-3xl font-semibold tracking-[-0.05em] text-fg-subtle">
             {String(index).padStart(2, '0')}
           </span>
         )}

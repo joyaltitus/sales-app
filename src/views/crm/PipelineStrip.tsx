@@ -85,7 +85,7 @@ export function PipelineStrip({
 
       {/* Win rate — derived from decided leads only; dash until one decides. */}
       <div className="flex min-w-[5.5rem] shrink-0 flex-col items-start rounded-lg border border-border bg-surface-sunk px-3 py-2.5">
-        <span className="text-2xs font-medium text-fg-subtle">
+        <span className="text-2xs font-medium text-fg-muted">
           Win rate
         </span>
         <span className="mt-0.5 flex items-baseline gap-1.5">
@@ -93,7 +93,7 @@ export function PipelineStrip({
             {byStage.winRate == null ? '—' : `${byStage.winRate}%`}
           </span>
           {byStage.winRate != null && (
-            <span className="tnum text-2xs text-fg-subtle" style={{ fontFamily: 'var(--font-mono)' }}>
+            <span className="tnum text-2xs text-fg-muted" style={{ fontFamily: 'var(--font-mono)' }}>
               {byStage.won}W {byStage.lost}L
             </span>
           )}
