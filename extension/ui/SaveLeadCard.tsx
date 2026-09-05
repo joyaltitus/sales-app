@@ -42,6 +42,17 @@ function seedFrom(query: string): { name: string; phone: string } {
   return /\p{L}/u.test(trimmed) ? { name: trimmed, phone: '' } : { name: '', phone: trimmed }
 }
 
+/**
+ * A chat display name is the contact's name when saved, the number itself
+ * when not. Route it through the same split so a numeric header fills phone
+ * only and leaves name empty.
+ */
+function seedFromChat(chat: OpenChat): { name: string; phone: string } {
+  const split = seedFrom(chat.displayName)
+  if (split.name) return { name: chat.displayName, phone: chat.phoneE164 ?? '' }
+  return { name: '', phone: chat.phoneE164 ?? split.phone }
+}
+
 function Field({ label, required, children }: {
   label: string
   required?: boolean
@@ -67,7 +78,7 @@ export function SaveLeadCard({
   chat, stages, stagesLoading, busy, message,
   initialQuery, title, hint, openChat, onSave, onDismiss,
 }: Props) {
-  const seed = chat ? { name: chat.displayName, phone: chat.phoneE164 ?? '' } : seedFrom(initialQuery ?? '')
+  const seed = chat ? seedFromChat(chat) : seedFrom(initialQuery ?? '')
   const [name, setName] = useState(seed.name)
   const [phone, setPhone] = useState(withPhonePrefix(seed.phone))
   const [channel, setChannel] = useState(chat ? 'whatsapp' : 'phone')
@@ -113,8 +124,9 @@ export function SaveLeadCard({
           variant="secondary"
           className="mt-2 min-h-11 w-full"
           onClick={() => {
-            setName(openChat.displayName)
-            setPhone(withPhonePrefix(openChat.phoneE164 ?? ''))
+            const next = seedFromChat(openChat)
+            setName(next.name)
+            setPhone(withPhonePrefix(next.phone))
             setChannel('whatsapp')
           }}
         >
