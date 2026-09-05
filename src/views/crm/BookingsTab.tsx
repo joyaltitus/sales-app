@@ -13,13 +13,17 @@ const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 /** These columns arrive as raw ISO strings and were rendered verbatim, so a row
  *  read `2026-09-14T00:00:00.000Z → 2026-09-16T00:00:00.000Z`. Formatted the
  *  way FollowUpsTab formats its own dates. A value that is not a date is left
- *  exactly as it came rather than being guessed at. */
+ *  exactly as it came rather than being guessed at.
+ *  Locale and time zone are PINNED: these are date-only columns stored as
+ *  `T00:00:00.000Z`, so the system zone would render 14 Sep as 13 Sep for any
+ *  user west of UTC, and the system locale would reorder the parts per machine
+ *  (CI runs en-US). `TargetsPage` pins UTC for the same reason. */
 function day(value: string | null | undefined): string | null {
   if (!value) return null
   const at = new Date(value)
   return Number.isNaN(at.getTime())
     ? value
-    : at.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+    : at.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
 function when(b: BookingRow): string {
