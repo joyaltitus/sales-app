@@ -35,6 +35,36 @@ function group(scripts: Rebuttal[]): Group[] {
   ].filter((entry) => entry.scripts.length > 0)
 }
 
+/** Neutral samples for the Library preview only. The send-time merge is
+ *  untouched: this fills what the Library cannot know (no lead, no course)
+ *  so no raw {{…}} reaches the screen. */
+const PREVIEW_SAMPLES: Record<string, string> = {
+  name: 'Asha',
+  'course.name': 'Sample course',
+  'course.fee': '₹85,000',
+  'course.emi': '₹7,100',
+  'course.emi_months': '12',
+  'course.duration': '6 months',
+  'course.batch_start': '15 Oct',
+  'course.usp': 'placement support',
+  'course.proof': '312 alumni placed last year',
+  'pay.amount': '₹2,000',
+  'pay.url': 'pay-link',
+  'pay.upi': 'sample@upi',
+  'callback.when': 'tomorrow, 5 pm',
+}
+
+const PREVIEW_TOKEN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g
+
+/** Preview-only merge: samples for every token in this text, real values win. */
+function previewVars(text: string, base: Record<string, string>): Record<string, string> {
+  const next: Record<string, string> = { ...PREVIEW_SAMPLES, ...base }
+  for (const match of text.matchAll(PREVIEW_TOKEN)) {
+    if (!(match[1] in next)) next[match[1]] = 'Sample'
+  }
+  return next
+}
+
 export default function LibraryScreen({ identity }: { identity: PanelIdentity }) {
   const library = usePlaybookLibrary(identity.clientId, identity.userId)
   const [lang, setLang] = useState(DEFAULT_LANG)
@@ -52,8 +82,10 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
     return () => { alive = false }
   }, [library.config?.default_lang])
 
-  // No lead and no course on this screen, so course tokens stay visible — which
-  // is right: the Library shows the script, not one customer's version of it.
+  // No lead and no course on this screen, so the send-time merge only knows
+  // the rep and the client. The CARD and SHEET previews below layer neutral
+  // samples over that (see PREVIEW_SAMPLES): a preview showing {{course.fee}}
+  // teaches the rep to distrust the preview, while the composer fills it.
   const vars = useMemo(
     () => ({ rep: identity.displayName, 'client.name': identity.clientName }),
     [identity.clientName, identity.displayName],
@@ -154,7 +186,9 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
                   <WinRateChip script={script} />
                 </span>
                 <span className="line-clamp-2 w-full text-xs leading-relaxed break-words text-fg-muted">
-                  {picked.paragraphs[0] ? highlighted(picked.paragraphs[0], vars) : 'No approved copy yet.'}
+                  {picked.paragraphs[0]
+                    ? highlighted(picked.paragraphs[0], previewVars(toText(picked.paragraphs), vars))
+                    : 'No approved copy yet.'}
                 </span>
               </button>
             )
@@ -169,7 +203,7 @@ export default function LibraryScreen({ identity }: { identity: PanelIdentity })
           langs={langs}
           lang={lang}
           onLang={(code) => { setLang(code); void savePrefs({ defaultLang: code }) }}
-          vars={vars}
+          vars={previewVars(toText(resolveParagraphs(open.body, lang).paragraphs), vars)}
           spins={spinsFor(library.spins, open.script_id)}
           canEditStandard={identity.role === 'manager' || identity.role === 'client_admin'}
           onSaveSpin={(spinLang, body) => void saveSpin(open, spinLang, body)}
