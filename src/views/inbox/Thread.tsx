@@ -116,16 +116,22 @@ function MediaAttachment({
 function Bubble({
   message,
   media,
-  onRetryFailed,
+  onCopyToComposer,
 }: {
   message: Message
   /** The message's downloaded attachment, if the ingestion pipeline actually
    *  stored one (#90 Part 6) — most historical media messages have none yet. */
   media?: InboundMediaRow
-  /** S1 (issue #15): retry affordance for a bubble the browser sent locally
+  /** S1 (issue #15): recovery affordance for a bubble the browser sent locally
    *  and never reconciled — only wired for synthetic `optimistic:` ids;
-   *  a real failed row has no client-side retry route. */
-  onRetryFailed?: (id: string, body: string) => void
+   *  a real failed row has no client-side recovery route.
+   *
+   *  It does NOT resend. InboxScreen drops the failed bubble and seeds the
+   *  composer with its text, so the rep decides whether to send again. The
+   *  button used to say "Tap to retry", which promised something no code here
+   *  did (Joyal, 2026-09-05: rename, do not implement resend — a real resend
+   *  re-enters the send path from a screen that owns no `sending` state). */
+  onCopyToComposer?: (id: string, body: string) => void
 }) {
   // Bubbles by direction/sender_type. Inbound is the customer; outbound is
   // either the bot or a human agent, and the thread does not pretend they are
@@ -135,7 +141,7 @@ function Bubble({
   const fromHuman = message.sender_type === 'agent'
   const failed = message.delivery_status === 'failed'
   const pending = message.delivery_status === 'pending'
-  const retryable = failed && message.id.startsWith('optimistic:') && !!onRetryFailed
+  const recoverable = failed && message.id.startsWith('optimistic:') && !!onCopyToComposer
 
   const text =
     message.body ??
@@ -183,18 +189,23 @@ function Bubble({
               ? <CheckCheck aria-label="Read" size={13} className="text-info" />
               : <Check aria-label={message.delivery_status || 'Sent'} size={13} className="text-fg-subtle" />
         )}
-        {failed && retryable && (
+        {/* `failure_reason` is whatever the upstream channel said — this is how
+            a raw Graph API string reached a bubble on a screen the rep reads
+            beside the customer's own words. It stays out of the bubble; the data
+            attribute keeps it reachable for support without rendering it. */}
+        {failed && recoverable && (
           <button
             type="button"
-            onClick={() => onRetryFailed?.(message.id, message.body ?? '')}
+            data-failure-reason={message.failure_reason ?? undefined}
+            onClick={() => onCopyToComposer?.(message.id, message.body ?? '')}
             className="text-2xs text-danger underline decoration-dotted hover:text-danger"
           >
-            {message.failure_reason ?? "Didn't send"} · Tap to retry
+            Didn't send · Copy to composer
           </button>
         )}
-        {failed && !retryable && (
-          <span className="text-2xs text-danger">
-            {message.failure_reason ?? "Didn't send"}
+        {failed && !recoverable && (
+          <span className="text-2xs text-danger" data-failure-reason={message.failure_reason ?? undefined}>
+            Didn't send
           </span>
         )}
       </div>
@@ -205,7 +216,7 @@ function Bubble({
 export function Thread({
   messages,
   traces,
-  onRetryFailed,
+  onCopyToComposer,
   media = EMPTY_MEDIA,
 }: {
   messages: Message[]
@@ -213,7 +224,7 @@ export function Thread({
   /** channel_message_id -> downloaded attachment (#90 Part 6). Optional so the
    *  The design-gallery caller (without live inbound_media reads) is unaffected. */
   media?: Map<string, InboundMediaRow>
-  onRetryFailed?: (id: string, body: string) => void
+  onCopyToComposer?: (id: string, body: string) => void
 }) {
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -274,7 +285,7 @@ export function Thread({
           <Bubble
             message={m}
             media={m.channel_message_id ? media.get(m.channel_message_id) : undefined}
-            onRetryFailed={onRetryFailed}
+            onCopyToComposer={onCopyToComposer}
           />
           {tagsFor.get(m.id) && (
             <div className="flex justify-end gap-2 px-1">

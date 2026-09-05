@@ -351,7 +351,7 @@ describe('revertTo — replays `before` through the same door, never a raw rewin
     expect(rpcCalls[1].args).toMatchObject({ p_spend_minor: 250000 })
   })
 
-  it('stops at the gate — a restore whose code word now collides does not report success', async () => {
+  it('reports a HALF-restored campaign when the gate refuses the code words', async () => {
     responses.set('campaigns', { data: [{ id: 'row-1' }], error: null })
     rpcResponses.set('pm_set_campaign_trigger', {
       data: {
@@ -379,7 +379,13 @@ describe('revertTo — replays `before` through the same door, never a raw rewin
       },
       USER,
     )
-    expect(res).toEqual({ ok: false, code: 'collision' })
+    // FLIPPED from `{ ok: false, code: 'collision' }`. The old shape was
+    // indistinguishable from a refusal that changed nothing, and HistoryDrawer
+    // rendered exactly those words — while the campaigns row, `active`
+    // included, had already committed on the line above.
+    expect(res).toEqual({ ok: false, code: 'partial:collision', detail: 'code words' })
+    // The row DID change. That is the whole point of the partial code.
+    expect(opArgs(lastCall('campaigns'), 'update')).toHaveLength(1)
     // The spend leg must not run once the gate refused.
     expect(rpcCalls.map((c) => c.fn)).toEqual(['pm_set_campaign_trigger'])
   })

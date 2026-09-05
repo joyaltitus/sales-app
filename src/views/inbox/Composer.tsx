@@ -217,10 +217,17 @@ type SendState =
   | { kind: 'idle' }
   | { kind: 'sending' }
   | { kind: 'sent' }
-  | { kind: 'error'; message: string; unauthorized?: boolean; configuredAccess?: boolean }
+  | { kind: 'error'; message: string; code?: string; unauthorized?: boolean; configuredAccess?: boolean }
 
 // Every failure the hub-service matrix can produce, in the rep's words. Never
 // name the machinery: no status codes, no route names, no `PM_GATEWAY_KEY`.
+//
+// This is the GLOSS, not the whole answer. It resolves the HTTP status only, so
+// on its own it collapsed window_closed, params_mismatch and opted_out — three
+// different things for the rep to do next — into one "couldn't be sent as
+// written". hub-service is the authority on why a write was refused (see the
+// note in lib/api.ts), so its code is now shown verbatim beside this sentence,
+// the same way TeamPage shows a refusal. Reworded here, it would be invented.
 function explain(kind: string, configuredAccess: boolean): string {
   switch (kind) {
     case 'unauthorized':
@@ -373,6 +380,7 @@ export function Composer({
     setState({
       kind: 'error',
       message: explain(res.kind, configuredAccess),
+      code: 'code' in res ? res.code : undefined,
       unauthorized: res.kind === 'unauthorized',
       configuredAccess,
     })
@@ -387,6 +395,7 @@ export function Composer({
           className="border-b border-border bg-danger-subtle px-4 py-2 text-xs text-danger"
         >
           {state.message}
+          {state.code ? <span className="ml-1.5 font-mono font-semibold">{state.code}</span> : null}
           {state.unauthorized && !state.configuredAccess && (
             <Button
               size="sm"

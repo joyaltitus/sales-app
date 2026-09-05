@@ -215,7 +215,9 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     if (ok) return // stays pending until an authoritative row reconciles it (mergeOutbound)
     setOptimistic((prev) => prev.map((b) => (b.tempId === tempId ? { ...b, status: 'failed' } : b)))
   }, [])
-  const onRetryFailed = useCallback((tempId: string, body: string) => {
+  // Named for what it does: drop the failed bubble and put its text back in the
+  // composer. It is not a resend, and the button no longer claims to be one.
+  const onCopyToComposer = useCallback((tempId: string, body: string) => {
     setOptimistic((prev) => prev.filter((b) => b.tempId !== tempId))
     setDraftSeed((prev) => ({ n: (prev?.n ?? 0) + 1, text: body }))
   }, [])
@@ -550,7 +552,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         ) : !selected && messages.length === 0 ? (
           <EmptyState icon={MessageCircle} title="Conversation unavailable" body="It may have moved outside your current access or been removed. Return to the queue and choose another chat." />
         ) : (
-          <Thread messages={displayMessages} traces={traces} media={media} onRetryFailed={onRetryFailed} />
+          <Thread messages={displayMessages} traces={traces} media={media} onCopyToComposer={onCopyToComposer} />
         )}
       </div>
 
