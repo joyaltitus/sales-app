@@ -91,6 +91,14 @@ export const WRITE_REGISTRY: Record<OutboxEntry['kind'], (entry: OutboxEntry) =>
       text(args, 'expected_status'),
       text(args, 'action') as 'done' | 'snooze1d' | 'snooze3d' | 'cancel',
     )
+    // `expected_status` is frozen at enqueue, so once the row moves past it the
+    // conditional `.eq('status', ...)` matches 0 rows and updateFollowUp reports
+    // 'denied' on EVERY future replay. Throwing would stop `drain` at index 0 on
+    // every reconnect, stranding every entry queued behind it, forever. For a
+    // conditional status transition "no row matched" means someone already moved
+    // it: done, not failed. (A true RLS denial is indistinguishable here and is
+    // swallowed too — a lost status flip beats a permanently deadlocked queue.)
+    if (!result.ok && result.reason === 'denied') return
     assertOk(result)
   },
   /**

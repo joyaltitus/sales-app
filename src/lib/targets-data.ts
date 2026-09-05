@@ -31,6 +31,28 @@ export function firstOfMonth(date: Date = new Date()): string {
   return `${y}-${m}-01`
 }
 
+/** Nothing in this product is a hundred-million-rupee monthly target; a number
+ *  that large is a typo or a paste, not an intent. */
+const MONEY_MAX = 100_000_000
+
+/** Targets are money. Refuse anything that is not a finite, non-negative number
+ *  BEFORE it reaches the upsert — a NaN here would land as a real target.
+ *
+ *  Lives beside the upsert rather than in a screen because BOTH target editors
+ *  (TargetsPage and the Todos SetTargetForm) write the same row through the same
+ *  `client_id,user_id,month` conflict target: one of them coercing junk to 0
+ *  silently zeroes a rep's month.
+ *
+ *  Returns null for empty, so callers decide whether blank means "no change" or
+ *  "zero" — it never decides that for them.
+ */
+export function parseMoney(raw: string): number | null {
+  if (raw.trim() === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0 || n > MONEY_MAX) return null
+  return Math.round(n)
+}
+
 export async function readOwnTarget(clientId: string, userId: string, month: string) {
   return supabase
     .from('employee_targets')

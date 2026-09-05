@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { useClient } from '../../shell/ClientProvider'
 import { useTeam } from '../../lib/team-data'
 import type { TeamMember } from '../../lib/team-data'
-import { firstOfMonth, upsertTarget, useTeamTargets } from '../../lib/targets-data'
+import { firstOfMonth, parseMoney, upsertTarget, useTeamTargets } from '../../lib/targets-data'
 import type { TargetItem } from '../../lib/targets-data'
 import { Button } from '../../ui/Button'
 import { Input } from '../../ui/Input'
@@ -25,17 +25,6 @@ import { Skeleton } from '../../ui/Skeleton'
 // `employee_targets_write` is manager|client_admin; a rep may read their own row
 // and never write one. This screen is not that wall — it just does not paint a
 // form the server would refuse.
-const MONEY_MAX = 100_000_000
-
-/** Rows are money. Refuse anything that is not a finite, non-negative number
- *  BEFORE it reaches the upsert — a NaN here would land as a real target. */
-function parseMoney(raw: string): number | null {
-  if (raw.trim() === '') return null
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n < 0 || n > MONEY_MAX) return null
-  return Math.round(n)
-}
-
 function monthLabel(month: string): string {
   const d = new Date(`${month}T00:00:00Z`)
   return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })
