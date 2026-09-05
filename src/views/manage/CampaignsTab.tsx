@@ -39,8 +39,15 @@ import type { TabProps } from './shared'
 // in it quietly rewrites every cost-per-lead number on the attribution screen.
 
 /** Money is stored in MINOR units (paise). Converting at the two edges — here
- *  and in the ROI table — keeps a float out of the middle. */
-function toMinor(major: string): number | null {
+ *  and in the ROI table — keeps a float out of the middle.
+ *
+ *  The empty guard is load-bearing, not defensive: `Number('')` is `0`, which is
+ *  finite and non-negative, so without it clearing the field yields `0` rather
+ *  than `null`. `spendDirty` then reads `0 !== campaign.spend_minor` — TRUE for
+ *  every campaign that has a recorded spend — enabling Save and writing zero
+ *  over the ROI denominator. Same contract as `parseMoney` in TargetsPage. */
+export function toMinor(major: string): number | null {
+  if (major.trim() === '') return null
   const n = Number(major)
   if (!Number.isFinite(n) || n < 0) return null
   return Math.round(n * 100)

@@ -16,6 +16,7 @@ import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
 import { formatINR } from '../../ui/formatMoney'
 import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // SA-05 context rail — the Workbench Inbox right rail rebuilt in the Board
 // language, for manager AND rep alike (capability differences are RLS's job,
@@ -53,6 +54,7 @@ export function ContextRail({
   /** Push the AI draft reply into the composer. */
   onUseDraft: (text: string) => void
 }) {
+  const rolePath = useRolePath()
   const { session } = useAuth()
   const userId = session?.user?.id ?? null
   const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
@@ -213,6 +215,18 @@ export function ContextRail({
   const { items: notes, reload: reloadNotes } = useNotes(clientId, { conversationId: item.id })
   const [noteDraft, setNoteDraft] = useState('')
   const [noteErr, setNoteErr] = useState(false)
+  // Delete used to discard its WriteResult and reload regardless, so a refused
+  // delete made the row vanish and reappear with nothing said. Same error slot
+  // as submitNote below.
+  const deleteNoteRow = async (noteId: string) => {
+    setNoteErr(false)
+    const res = await deleteNote(clientId, noteId)
+    if (!res.ok) {
+      setNoteErr(true)
+      return
+    }
+    void reloadNotes()
+  }
   const submitNote = async () => {
     const body = noteDraft.trim()
     if (!body) return
@@ -343,7 +357,7 @@ export function ContextRail({
       <div className="space-y-2 border-b border-border px-4 py-4">
         <div className="flex items-baseline justify-between">
           <SectionTitle>Lead</SectionTitle>
-          <Link to="/crm" className="text-2xs text-fg-muted hover:text-fg">
+          <Link to={rolePath('/crm')} className="text-2xs text-fg-muted hover:text-fg">
             CRM →
           </Link>
         </div>
@@ -522,7 +536,7 @@ export function ContextRail({
               </p>
             </div>
             <button
-              onClick={() => void deleteNote(clientId, n.id).then(() => void reloadNotes())}
+              onClick={() => void deleteNoteRow(n.id)}
               aria-label="Delete note"
               className="rounded-sm p-1 text-fg-subtle opacity-0 group-hover:opacity-100 hover:bg-surface-sunk hover:text-danger"
             >
@@ -545,7 +559,7 @@ export function ContextRail({
             Add
           </Button>
         </div>
-        {noteErr && <p className="text-2xs text-danger">Couldn't save the note. Try again.</p>}
+        {noteErr && <p role="alert" className="text-2xs text-danger">That note change didn't go through. Try again.</p>}
       </div>
     </div>
   )

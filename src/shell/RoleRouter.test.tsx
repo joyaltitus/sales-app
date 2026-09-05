@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientOption, Role } from './ClientProvider'
@@ -18,8 +19,9 @@ vi.mock('./HandoffScreen', () => ({
   HandoffScreen: ({ role }: { role: Role }) => <div>STUB HandoffScreen role={role}</div>,
 }))
 
-const { mockUseClient } = vi.hoisted(() => ({ mockUseClient: vi.fn() }))
+const { mockUseClient, signOut } = vi.hoisted(() => ({ mockUseClient: vi.fn(), signOut: vi.fn() }))
 vi.mock('./ClientProvider', () => ({ useClient: mockUseClient }))
+vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ signOut }) }))
 
 // Import AFTER the mocks are registered.
 const { RoleRouter } = await import('./RoleRouter')
@@ -36,12 +38,16 @@ function renderWith(state: {
   activeClient: ClientOption | null
   loading?: boolean
   path?: string
+  failure?: 'expired' | 'failed' | null
+  reload?: () => void
 }) {
   mockUseClient.mockReturnValue({
     activeClient: state.activeClient,
     loading: state.loading ?? false,
     clients: state.activeClient ? [state.activeClient] : [],
     setActiveClientId: vi.fn(),
+    failure: state.failure ?? null,
+    reload: state.reload ?? vi.fn(),
   })
   return render(
     <MemoryRouter
@@ -99,6 +105,39 @@ describe('RoleRouter — the role wall', () => {
     renderWith({ activeClient: null, loading: true })
     expect(screen.queryByText('No workspace yet')).not.toBeInTheDocument()
     expect(screen.queryByText(/STUB (Rep|Manager|Admin)Shell/)).not.toBeInTheDocument()
+  })
+
+  // REG-031. An expired token and a login with no team both arrive as an empty
+  // client list. Telling the first "your login isn't attached to a team" sends
+  // an operator to their admin over something only they can fix.
+  it('says the session expired instead of blaming the membership', async () => {
+    const user = userEvent.setup()
+    renderWith({ activeClient: null, failure: 'expired' })
+
+    expect(screen.getByText('Your session expired')).toBeInTheDocument()
+    expect(screen.queryByText('No workspace yet')).not.toBeInTheDocument()
+    expect(screen.queryByText(/isn't attached to a team/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/STUB (Rep|Manager|Admin)Shell/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /sign in again/i }))
+    expect(signOut).toHaveBeenCalled()
+  })
+
+  it('offers a retry when the membership read simply failed', async () => {
+    const user = userEvent.setup()
+    const reload = vi.fn()
+    renderWith({ activeClient: null, failure: 'failed', reload })
+
+    expect(screen.getByText(/Couldn't load your workspaces/i)).toBeInTheDocument()
+    expect(screen.queryByText('No workspace yet')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /try again|retry/i }))
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('still says "No workspace yet" for a login that genuinely has no team', () => {
+    renderWith({ activeClient: null, failure: null })
+    expect(screen.getByText('No workspace yet')).toBeInTheDocument()
   })
 })
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import { Sheet } from '../../ui/Sheet'
+import { useRolePath } from '../../shell/RoleRouter'
 
 const AgentPanel = lazy(() => import('./AgentPanel').then((module) => ({ default: module.AgentPanel })))
 
@@ -11,10 +12,11 @@ const AgentPanel = lazy(() => import('./AgentPanel').then((module) => ({ default
 export function AgentLauncher() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const rolePath = useRolePath()
 
   const launch = () => {
     if (window.matchMedia('(min-width: 640px)').matches) setOpen(true)
-    else navigate('/agent')
+    else navigate(rolePath('/agent'))
   }
 
   return (

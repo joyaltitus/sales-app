@@ -17,9 +17,15 @@ import type { MetricsResponse } from '../../lib/metrics-data'
 export function ForecastWidget({
   metrics,
   loading = false,
+  onRetry,
 }: {
   metrics?: MetricsResponse | null
   loading?: boolean
+  /** The widget takes `metrics` as a prop, so it cannot refetch anything
+   *  itself. It used to render a Retry button wired to `() => undefined`. It
+   *  now shows one only when the screen that owns the read hands it a real
+   *  one. */
+  onRetry?: () => void
 }) {
   if (loading) return <Skeleton className="h-72" />
   const stages = metrics?.pipeline_stage_weighted ?? []
@@ -28,7 +34,7 @@ export function ForecastWidget({
       <ErrorState
         title="Couldn’t load the forecast"
         body="The last good snapshot remains unchanged. Retry when connected."
-        onRetry={() => undefined}
+        onRetry={onRetry}
       />
     )
   }

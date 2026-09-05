@@ -754,13 +754,24 @@ export async function revertTo(
       trigger.ctwa_source_ids ?? [],
       userId,
     )
-    if (!triggerRes.ok) return { ok: false, code: triggerRes.code }
+    // The table update above has ALREADY COMMITTED by the time we get here, and
+    // pm_set_campaign_trigger commits too, so there is no ordering of these
+    // three legs that removes the partial window — only a pm_revert_campaign
+    // RPC could, and that SQL is not in this repo (Phase 3). Do not reorder
+    // them; report the partial state instead of claiming nothing changed.
+    //
+    // This matters more than it looks: `active` is in REVERTABLE.campaigns, so
+    // a refused trigger leg can leave a campaign switched back ON while still
+    // carrying today's code words.
+    if (!triggerRes.ok) return { ok: false, code: `partial:${triggerRes.code}`, detail: 'code words' }
     if (typeof before.spend_minor === 'number') {
-      return setCampaignSpend(clientId, key, before.spend_minor, userId)
+      const spendRes = await setCampaignSpend(clientId, key, before.spend_minor, userId)
+      if (!spendRes.ok) return { ok: false, code: `partial:${spendRes.code}`, detail: 'spend' }
     }
   }
   return { ok: true }
 }
+
 
 // ---------------------------------------------------------------------------
 // Staleness badge — is the last scored config still the config we are running?

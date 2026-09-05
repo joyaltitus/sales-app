@@ -187,3 +187,47 @@ describe('InboxScreen S1 polish acceptance tests (sales-app#21)', () => {
     expect(queueItems[0].unread_count).toBe(1)
   })
 })
+
+// REG-005 / REG-002. Two small lies of presentation: the counter said
+// "1 conversations", and the status chip row hid its own scrollbar, so at 1440
+// the fifth chip was clipped to a single letter with nothing saying the row
+// continued.
+describe('InboxScreen header polish', () => {
+  function renderInbox() {
+    return render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <InboxScreen canSend={false} />
+      </MemoryRouter>,
+    )
+  }
+
+  it('says "1 conversation", not "1 conversations"', () => {
+    queueItems.splice(0, queueItems.length, { ...sampleConversation, unread_count: 1 })
+    renderInbox()
+
+    expect(screen.getByText('1 conversation in view')).toBeInTheDocument()
+    expect(screen.queryByText('1 conversations in view')).not.toBeInTheDocument()
+  })
+
+  it('still pluralises for two', () => {
+    queueItems.splice(
+      0,
+      queueItems.length,
+      { ...sampleConversation, unread_count: 1 },
+      { ...sampleConversation, id: 'conv-2', unread_count: 0 },
+    )
+    renderInbox()
+
+    expect(screen.getByText('2 conversations in view')).toBeInTheDocument()
+  })
+
+  it('shows every status chip instead of clipping the row behind a hidden scrollbar', () => {
+    queueItems.splice(0, queueItems.length, { ...sampleConversation, unread_count: 1 })
+    renderInbox()
+
+    const strip = screen.getByRole('group', { name: 'Status filter' })
+    expect(strip.className).toContain('flex-wrap')
+    expect(strip.className).not.toContain('no-scrollbar')
+    expect(strip.className).not.toContain('overflow-x-auto')
+  })
+})

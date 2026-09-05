@@ -24,6 +24,7 @@ import { ErrorState } from '../../ui/ErrorState'
 import { Sheet } from '../../ui/Sheet'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatINR, formatINRCompact } from '../../ui/formatMoney'
+import { useRolePath } from '../../shell/RoleRouter'
 type FollowUpView = FollowUpItem & {
   person: string
   phone: string
@@ -93,6 +94,7 @@ function FollowUpDetails({
   error: boolean
   onAction: (action: 'done' | 'snooze1d' | 'snooze3d') => void
 }) {
+  const rolePath = useRolePath()
   const overdue = new Date(item.due_at).getTime() < Date.now()
   return (
     <div className="space-y-5" data-testid="follow-up-details">
@@ -129,7 +131,7 @@ function FollowUpDetails({
       <div className="grid grid-cols-2 gap-2">
         <Button onClick={() => onAction('done')} disabled={busy}><Check aria-hidden size={15} /> Mark done</Button>
         {item.conversationId ? (
-          <Link to={`/inbox?c=${encodeURIComponent(item.conversationId)}`} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"><MessageCircle aria-hidden size={15} /> Open chat</Link>
+          <Link to={rolePath(`/inbox?c=${encodeURIComponent(item.conversationId)}`)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"><MessageCircle aria-hidden size={15} /> Open chat</Link>
         ) : (
           <button disabled className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-border bg-surface-sunk px-3 text-xs font-semibold text-fg-subtle"><MessageCircle aria-hidden size={15} /> No chat linked</button>
         )}

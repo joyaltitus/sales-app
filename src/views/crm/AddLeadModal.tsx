@@ -3,7 +3,7 @@ import { X, UserPlus } from 'lucide-react'
 import type { LeadStage } from '../../lib/leads-data'
 import { createLead } from '../../lib/crm-actions'
 import { useAuth } from '../../auth/AuthProvider'
-import { formatPhone } from '../../lib/phone'
+import { cleanPhoneForWhatsApp, formatPhone } from '../../lib/phone'
 import { CHANNELS, VALUE_PRESETS } from '../../lib/lead-fields'
 import { Button } from '../../ui/Button'
 
@@ -63,11 +63,26 @@ export function AddLeadModal({
   if (!open) return null
 
   const formattedPhone = phone.trim() ? formatPhone(phone.trim()) : null
+  // Mirrors create_manual_lead's own branch: it normalises digits for these two
+  // channels and leaves every other identifier alone.
+  const isDialable = channel === 'phone' || channel === 'whatsapp'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!phone.trim()) {
       setError('Please enter a phone number or contact identifier.')
+      return
+    }
+    // create_manual_lead strips everything but digits for phone/whatsapp and only
+    // refuses the result when it is EMPTY. So "abc" is refused by the database,
+    // but "+91" survives as the identifier "91" and mints a permanent contact
+    // that no real number can ever reclaim — the unique index is on
+    // (client_id, channel, external_id). Ten digits is the shortest thing that
+    // can be a real number, so refuse anything below it here, before the write.
+    // Other channels carry handles, not digits; the RPC does not strip those and
+    // neither does this.
+    if (isDialable && cleanPhoneForWhatsApp(phone).length < 10) {
+      setError('Please enter a complete phone number — at least 10 digits.')
       return
     }
     if (!stageId) {
@@ -78,7 +93,11 @@ export function AddLeadModal({
     setBusy(true)
     setError(null)
 
-    const parsedVal = estValue.trim() ? Number(estValue.replace(/[^0-9.]/g, '')) : null
+    // Strip FIRST, then decide. `Number('')` is 0, so parsing "abc" (which
+    // strips to "") used to persist a real ₹0 valuation that fed forecast and
+    // attribution as though someone had entered it.
+    const cleanedValue = estValue.replace(/[^0-9.]/g, '')
+    const parsedVal = cleanedValue === '' ? null : Number(cleanedValue)
 
     const res = await createLead(clientId, {
       profileName: name.trim(),
@@ -147,10 +166,10 @@ export function AddLeadModal({
 
           {/* Contact Details (2 columns) */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-fg-muted">
+            <label className="block">
+              <span className="block text-xs font-medium text-fg-muted">
                 Full Name
-              </label>
+              </span>
               <input
                 type="text"
                 value={name}
@@ -158,21 +177,23 @@ export function AddLeadModal({
                 placeholder="e.g. Rahul Sharma"
                 className="mt-1.5 h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
               />
-            </div>
+            </label>
             <div>
-              <label className="block text-xs font-medium text-fg-muted">
-                Phone Number <span className="text-danger">*</span>
-              </label>
-              <div className="relative mt-1.5">
+              {/* The formatted-phone hint is a <p>, which a <label> may not
+                  contain, so the label wraps only the field itself. */}
+              <label className="block">
+                <span className="block text-xs font-medium text-fg-muted">
+                  Phone Number <span className="text-danger">*</span>
+                </span>
                 <input
                   type="text"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. 98765 43210"
-                  className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
+                  className="mt-1.5 h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
                 />
-              </div>
+              </label>
               {formattedPhone && formattedPhone !== phone && (
                 <p className="mt-1 text-3xs text-fg-muted">
                   Formatted: <span className="font-mono text-fg">{formattedPhone}</span>
@@ -183,10 +204,10 @@ export function AddLeadModal({
 
           {/* Channel & Stage (2 columns) */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-fg-muted">
+            <label className="block">
+              <span className="block text-xs font-medium text-fg-muted">
                 Source Channel
-              </label>
+              </span>
               <select
                 value={channel}
                 onChange={(e) => setChannel(e.target.value)}
@@ -198,11 +219,11 @@ export function AddLeadModal({
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-fg-muted">
+            </label>
+            <label className="block">
+              <span className="block text-xs font-medium text-fg-muted">
                 Pipeline Stage <span className="text-danger">*</span>
-              </label>
+              </span>
               <select
                 required
                 value={stageId}
@@ -215,13 +236,13 @@ export function AddLeadModal({
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
           </div>
 
           {/* Estimated Deal Value with Quick Presets */}
           <div>
             <div className="flex items-baseline justify-between">
-              <label className="block text-xs font-medium text-fg-muted">
+              <label htmlFor="add-lead-est-value" className="block text-xs font-medium text-fg-muted">
                 Estimated Value (INR)
               </label>
               <div className="flex items-center gap-1">
@@ -242,6 +263,7 @@ export function AddLeadModal({
                 ₹
               </span>
               <input
+                id="add-lead-est-value"
                 type="text"
                 value={estValue}
                 onChange={(e) => setEstValue(e.target.value)}
@@ -252,10 +274,10 @@ export function AddLeadModal({
           </div>
 
           {/* Next Action */}
-          <div>
-            <label className="block text-xs font-medium text-fg-muted">
+          <label className="block">
+            <span className="block text-xs font-medium text-fg-muted">
               Next Best Action
-            </label>
+            </span>
             <input
               type="text"
               value={nextAction}
@@ -263,13 +285,13 @@ export function AddLeadModal({
               placeholder="e.g. Schedule counseling call for NEET batch"
               className="mt-1.5 h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
             />
-          </div>
+          </label>
 
           {/* Note */}
-          <div>
-            <label className="block text-xs font-medium text-fg-muted">
+          <label className="block">
+            <span className="block text-xs font-medium text-fg-muted">
               Initial Note / Requirement
-            </label>
+            </span>
             <textarea
               rows={2}
               value={note}
@@ -277,7 +299,7 @@ export function AddLeadModal({
               placeholder="e.g. Inquired about evening crash course batch timings and scholarship eligibility."
               className="mt-1.5 w-full resize-none rounded-md border border-border bg-surface p-2.5 text-sm text-fg placeholder:text-fg-subtle hover:border-border-strong focus:border-accent"
             />
-          </div>
+          </label>
 
           {/* Modal Actions Footer */}
           <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">

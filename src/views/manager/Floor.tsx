@@ -15,6 +15,7 @@ import { waitingLongest, unpickedEscalations } from '../../lib/landing-data'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Button } from '../../ui/Button'
+import { useRolePath } from '../../shell/RoleRouter'
 
 function Metric({ label, value, detail, tone = 'neutral' }: { label: string; value: string; detail: string; tone?: 'neutral' | 'danger' | 'success' }) {
   return (
@@ -67,6 +68,7 @@ function ExceptionRow({
 }
 
 export function Floor() {
+  const rolePath = useRolePath()
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
   const { items, loading, error, reload } = useQueue(clientId)
@@ -117,7 +119,7 @@ export function Floor() {
           <p className="mt-1 text-sm text-fg-muted">Customer wait times and unassigned handovers.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/dashboard"><Button variant="secondary" size="sm"><TrendingUp aria-hidden size={15} /> View analytics</Button></Link>
+          <Link to={rolePath('/dashboard')}><Button variant="secondary" size="sm"><TrendingUp aria-hidden size={15} /> View analytics</Button></Link>
         </div>
       </header>
 
@@ -144,7 +146,7 @@ export function Floor() {
             title={`${firstHandover.contact?.profile_name ?? 'Customer'} needs a human owner`}
             detail={combinedLiveException ? `This is also the longest-waiting customer: “${oldestSnippet}” Assign one owner and reply now.` : 'The bot handed this conversation over and stopped. Nobody has picked it up yet.'}
             meta={combinedLiveException ? 'Live · longest wait' : 'Live'}
-            to={`/inbox?c=${encodeURIComponent(firstHandover.id)}`}
+            to={rolePath(`/inbox?c=${encodeURIComponent(firstHandover.id)}`)}
             danger
           />
         )}
@@ -154,7 +156,7 @@ export function Floor() {
             title={`${oldestName} is waiting longest`}
             detail={`“${oldestSnippet}”`}
             meta="Live"
-            to={`/inbox?c=${encodeURIComponent(oldest.id)}`}
+            to={rolePath(`/inbox?c=${encodeURIComponent(oldest.id)}`)}
             danger={overdue15m.includes(oldest)}
           />
         )}

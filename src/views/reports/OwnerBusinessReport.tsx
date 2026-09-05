@@ -107,7 +107,19 @@ function RoiTable({ rows }: { rows: CampaignRoi[] }) {
 
 export type OwnerReportDesignData = { metrics?: MetricsResponse; roi?: CampaignRoi[]; targetValue?: number }
 
-export default function OwnerBusinessReport({ designData }: { designData?: OwnerReportDesignData } = {}) {
+/**
+ * `useMetrics` exposes no reload, and `setPeriod(v => v)` — what the Retry
+ * button used to call — is a no-op: React bails out of a re-render when the
+ * next state is identical, so nothing refetched. Remounting the report is the
+ * honest way to re-run its reads without reaching into metrics-data.ts, which
+ * this lane does not own.
+ */
+export default function OwnerBusinessReport(props: { designData?: OwnerReportDesignData } = {}) {
+  const [attempt, setAttempt] = useState(0)
+  return <OwnerBusinessReportView key={attempt} {...props} onRetry={() => setAttempt((n) => n + 1)} />
+}
+
+function OwnerBusinessReportView({ designData, onRetry }: { designData?: OwnerReportDesignData; onRetry?: () => void }) {
   const [period, setPeriod] = useState<OwnerReportPeriod>('month')
 
   const { activeClient } = useClient()
@@ -130,7 +142,7 @@ export default function OwnerBusinessReport({ designData }: { designData?: Owner
     return <section className="space-y-3 rounded-xl border border-border bg-surface p-5" aria-label="Loading business report"><Skeleton className="h-20" /><div className="grid gap-3 sm:grid-cols-4"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div><Skeleton className="h-72" /></section>
   }
   if (!designData && (error || !metrics)) {
-    return <section className="rounded-xl border border-border bg-surface"><ErrorState title="Couldn’t prepare the business report" body="The operating dashboard is still available. Retry before sharing this period’s summary." onRetry={() => setPeriod((value) => value)} /></section>
+    return <section className="rounded-xl border border-border bg-surface"><ErrorState title="Couldn’t prepare the business report" body="The operating dashboard is still available. Retry before sharing this period’s summary." onRetry={onRetry} /></section>
   }
   if (!metrics) return null
 

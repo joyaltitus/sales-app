@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, CircleAlert, PhoneCall, RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Sheet } from '../../ui/Sheet'
@@ -71,6 +71,11 @@ export function ObjectionCapture({
 
   const [callOpen, setCallOpen] = useState(false)
   const [callStage, setCallStage] = useState<'pick' | 'objection'>('pick')
+  // Twin of the CallExperience defect, never filed by the audit: the outcome
+  // buttons carry no busy guard, so two taps minted two ids and forked the
+  // call_sessions upsert. This sheet REOPENS within one mount, so the id is
+  // re-minted when the sheet opens rather than at mount — one id per call.
+  const callRequestId = useRef(crypto.randomUUID())
   const [callConfirm, setCallConfirm] = useState<string | null>(null)
 
   const { script: activeScript, loading: scriptLoading } = useActiveScript(clientId, logged)
@@ -185,6 +190,7 @@ export function ObjectionCapture({
   const openCallSheet = () => {
     setCallOpen(true)
     setCallStage('pick')
+    callRequestId.current = crypto.randomUUID()
   }
 
   const finishCallOutcome = async (outcome: CallOutcome, taxonomyKey?: string) => {
@@ -196,7 +202,7 @@ export function ObjectionCapture({
       conversationId,
       actorId,
       surface: 'objection-capture',
-      clientRequestId: crypto.randomUUID(),
+      clientRequestId: callRequestId.current,
     })
     if (!sessionRes.ok) {
       setError(sessionRes.message)
@@ -215,17 +221,26 @@ export function ObjectionCapture({
   }
 
   const currentLabel = taxonomy.find((t) => t.id === logged)?.label ?? null
+  const hasContent = Boolean(error) || Boolean(logged) || Boolean(detected) || taxonomy.length > 0
 
   return (
     <section className={compact ? 'border-t border-border bg-surface px-3 py-2.5 sm:px-4' : 'rounded-lg border border-dashed border-border-strong bg-surface-sunk/55 p-3'} aria-label="Objection capture">
-      <div className="flex items-center justify-between gap-3">
-        <p className="label-caps">Objection</p>
-        {source === 'chat' && (
-          <button onClick={() => void openCallSheet()} className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg">
-            <PhoneCall aria-hidden size={12} /> Log outcome
-          </button>
-        )}
-      </div>
+      {/* Compact mode sits directly above the composer, where the caps header
+          was rendering unconditionally — a section title over nothing, on the
+          screen with the least room to spare. It appears once the section has
+          something under it: a detected objection, a logged one, an error, or
+          the taxonomy chips. The "Log outcome" button is not that: it opens a
+          sheet and belongs to the row whether or not there is an objection. */}
+      {(!compact || hasContent) && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="label-caps">Objection</p>
+          {source === 'chat' && (
+            <button onClick={() => void openCallSheet()} className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-fg-muted hover:bg-surface-sunk hover:text-fg">
+              <PhoneCall aria-hidden size={12} /> Log outcome
+            </button>
+          )}
+        </div>
+      )}
 
       {error && <p className="mt-2 rounded-md bg-danger-subtle px-3 py-2 text-2xs font-semibold text-danger">{error}</p>}
 

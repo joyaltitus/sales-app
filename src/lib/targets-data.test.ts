@@ -8,7 +8,7 @@ const { from, operations } = vi.hoisted(() => ({
 
 vi.mock('./supabase', () => ({ supabase: { from } }))
 
-const { readOwnTarget, useOwnWonValue } = await import('./targets-data')
+const { parseMoney, readOwnTarget, useOwnWonValue } = await import('./targets-data')
 
 function queryResult(data: unknown) {
   const chain: Record<string, (...args: unknown[]) => unknown> = {}
@@ -84,5 +84,37 @@ describe('useOwnWonValue month window (UTC boundary)', () => {
     expect(gte?.args).toEqual(['updated_at', '2026-08-01T00:00:00.000Z'])
     expect(lt?.args).toEqual(['updated_at', '2026-09-01T00:00:00.000Z'])
     expect(result.current.value).toBe(7500)
+  })
+})
+
+// One parser, two screens: TargetsPage and the Todos SetTargetForm both upsert
+// employee_targets on (client_id, user_id, month). Anything this accepts is a
+// number that overwrites a rep's month.
+describe('parseMoney', () => {
+  it('reads blank as no value, so a caller decides what blank means', () => {
+    expect(parseMoney('')).toBeNull()
+    expect(parseMoney('   ')).toBeNull()
+  })
+
+  it('refuses junk instead of coercing it to zero', () => {
+    expect(parseMoney('abc')).toBeNull()
+    expect(parseMoney('12abc')).toBeNull()
+  })
+
+  it('refuses a negative — a number input accepts one, min="0" does not stop it', () => {
+    expect(parseMoney('-1')).toBeNull()
+    expect(parseMoney('-250000')).toBeNull()
+  })
+
+  it('refuses a value past the sanity cap and anything non-finite', () => {
+    expect(parseMoney('100000001')).toBeNull()
+    expect(parseMoney('1e999')).toBeNull()
+    expect(parseMoney('Infinity')).toBeNull()
+  })
+
+  it('accepts a real amount and rounds to whole rupees', () => {
+    expect(parseMoney('250000')).toBe(250_000)
+    expect(parseMoney('0')).toBe(0)
+    expect(parseMoney('1234.6')).toBe(1235)
   })
 })

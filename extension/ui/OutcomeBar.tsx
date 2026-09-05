@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronDown, CircleCheck, Clock3, PhoneMissed, ShieldAlert, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import type { CallOutcome, QueueItem } from '../lib/contracts'
@@ -17,6 +17,8 @@ type Props = {
   onStatusChange: (status: QueueItem['status']) => void
   onFollowUpChange: (dateIso: string | null) => void
   onSaveNote: (note: string) => void
+  /** Retired from this panel with REG-018 — the Objection OUTCOME carries the
+   *  taxonomy key now. Kept on the type so the panel's caller needs no change. */
   onObjection: (taxonomyKey: string) => void
 }
 
@@ -72,15 +74,16 @@ export function OutcomeBar({
   onStatusChange,
   onFollowUpChange,
   onSaveNote,
-  onObjection,
 }: Props) {
   const [followUp, setFollowUp] = useState('')
   const [note, setNote] = useState('')
-  const [objectionKey, setObjectionKey] = useState(taxonomy[0]?.key ?? '')
-
-  useEffect(() => {
-    if (!objectionKey && taxonomy[0]) setObjectionKey(taxonomy[0].key)
-  }, [objectionKey, taxonomy])
+  // Starts EMPTY. It used to seed from taxonomy[0] and a useEffect re-seeded it
+  // whenever it went empty — including immediately after the log path cleared
+  // it — so the "Objection type…" placeholder was unreachable and a rep who hit
+  // Objection without choosing anything silently logged "Too expensive". That
+  // is a wrong reason attached to a real call, and win-rate attribution is
+  // built on these keys.
+  const [objectionKey, setObjectionKey] = useState('')
 
   function pickFollowUp(value: string) {
     setFollowUp(value)
@@ -125,9 +128,13 @@ export function OutcomeBar({
           ))}
         </div>
         {/* Sits directly under Objection because that button reads this value —
-            a dependency two screens apart is a dependency nobody can see. */}
-        <div className="mt-2 flex items-center gap-2">
-          <label className="min-w-0 flex-1">
+            a dependency two screens apart is a dependency nobody can see.
+            REG-018: there used to be a second "Log" button here writing a
+            standalone objection with source 'crm'. Mid-call, two controls that
+            both log an objection is one control too many, and only the outcome
+            path attaches the objection to the call it came from. */}
+        <div className="mt-2">
+          <label className="block">
             <span className="sr-only">Objection type</span>
             <select
               value={objectionKey}
@@ -144,17 +151,6 @@ export function OutcomeBar({
               ))}
             </select>
           </label>
-          <Button
-            variant="secondary"
-            className="min-h-11"
-            disabled={busy || objectionKey === ''}
-            onClick={() => {
-              onObjection(objectionKey)
-              setObjectionKey('')
-            }}
-          >
-            Log
-          </Button>
         </div>
       </div>
 
