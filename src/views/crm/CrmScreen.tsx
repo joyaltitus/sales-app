@@ -48,7 +48,7 @@ export function CrmScreen() {
       <div
         role="tablist"
         aria-label="CRM sections"
-        className="no-scrollbar flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-3 pt-1.5"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-3 pt-1.5"
       >
         {TABS.map((t) => (
           <button
