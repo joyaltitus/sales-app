@@ -63,6 +63,7 @@ export function RepShell() {
       <div className="flex min-h-0 flex-1">
         <div className="relative hidden lg:block">
           <aside
+            aria-label="My workspace"
             className={[
               'flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-surface py-4 transition-[width] duration-150',
               collapsed ? 'w-0 border-r-0 px-0' : 'w-[216px] px-3',

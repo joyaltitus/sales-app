@@ -234,7 +234,7 @@ export function SettingsView({
         </div>
       </section>
 
-      <aside className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-elev-1">
+      <aside aria-label="Payment message preview" className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-elev-1">
         <p className="label-caps">What the rep sends</p>
         <h3 className="mt-1 text-sm font-semibold text-fg">Payment message · {langLabel(config.defaultLang)}</h3>
         <div className="mt-3 rounded-lg border border-border bg-surface-sunk p-4">

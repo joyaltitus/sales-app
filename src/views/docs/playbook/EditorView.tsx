@@ -140,7 +140,7 @@ export function EditorView({
   return (
     <div className="grid gap-4 xl:grid-cols-[190px_minmax(0,1fr)]">
       {onSelectTaxonomy && (
-        <aside className="rounded-xl border border-border bg-surface p-3 shadow-elev-1">
+        <aside aria-label="Script picker" className="rounded-xl border border-border bg-surface p-3 shadow-elev-1">
           <p className="label-caps px-2">Scripts</p>
           <div className="mt-2 space-y-1">
             {allScripts.map((item) => (
