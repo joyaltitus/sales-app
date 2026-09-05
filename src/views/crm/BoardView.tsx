@@ -130,9 +130,9 @@ export function BoardView({
             aria-label={`${stage.label}, ${leads.length} leads`}
           >
             <header className="flex items-baseline gap-2 px-3 pt-2.5 pb-2">
-              <h3 className="truncate text-2xs font-semibold text-fg-muted">
+              <h2 className="truncate text-2xs font-semibold text-fg-muted">
                 {stage.label}
-              </h3>
+              </h2>
               <span className="tnum text-xs text-fg-muted" style={monoStyle}>
                 {leads.length}
               </span>
