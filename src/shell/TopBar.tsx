@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, LogOut, Search, WifiOff, Home, Inbox, Kanban, LayoutDashboard, FileText, Rows3, Sparkles } from 'lucide-react'
+import { Sun, Moon, LogOut, Search, WifiOff, Home, Inbox, Kanban, LayoutDashboard, FileText, Rows3, Sparkles, Activity, Rocket, SlidersHorizontal } from 'lucide-react'
 import { useClient } from './ClientProvider'
+import { useRolePath } from './RoleRouter'
 import { useAuth } from '../auth/AuthProvider'
 import { useTheme } from './theme'
 import { useOnline } from '../pwa/useOnline'
@@ -21,22 +22,36 @@ export function TopBar() {
   const online = useOnline()
   const desktopRole = activeClient?.role === 'manager' || activeClient?.role === 'client_admin' || activeClient?.role === 'super_admin'
   const navigate = useNavigate()
+  const rolePath = useRolePath()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // REG-014: manager and client_admin used to share one list, so an admin was
+  // offered "Floor" — a screen their shell does not mount. `/` is Floor for a
+  // manager and Health for an admin; the label has to follow the shell, not the
+  // fact that both are desktop roles.
+  const adminRole = activeClient?.role === 'client_admin'
   const destinations = useMemo(() => desktopRole ? [
-    { label: 'Floor', detail: 'Live blockers and team decisions', to: '/', icon: Rows3 },
+    adminRole
+      ? { label: 'Health', detail: 'Workspace status and setup checks', to: '/', icon: Activity }
+      : { label: 'Floor', detail: 'Live blockers and team decisions', to: '/', icon: Rows3 },
     { label: 'Inbox', detail: 'Customer conversations', to: '/inbox', icon: Inbox },
     { label: 'CRM', detail: 'Pipeline, follow-ups and tasks', to: '/crm', icon: Kanban },
     { label: 'Dashboard', detail: 'Operations, revenue and coaching', to: '/dashboard', icon: LayoutDashboard },
     { label: 'Documents', detail: 'Quotes, proposals and playbook', to: '/docs', icon: FileText },
     { label: 'Sales copilot', detail: 'Prepare and review the next action', to: '/agent', icon: Sparkles },
+    ...(adminRole
+      ? [
+          { label: 'Setup', detail: 'Products, knowledge, campaigns and rules', to: '/setup', icon: SlidersHorizontal },
+          { label: 'Go live', detail: 'The launch checklist', to: '/go-live', icon: Rocket },
+        ]
+      : []),
   ] : [
     { label: 'Today', detail: 'Priorities, promises and target', to: '/', icon: Home },
     { label: 'Inbox', detail: 'Customer conversations', to: '/inbox', icon: Inbox },
     { label: 'Leads', detail: 'Pipeline, follow-ups and tasks', to: '/leads', icon: Kanban },
     { label: 'Documents', detail: 'Quotes, proposals and playbook', to: '/docs', icon: FileText },
     { label: 'Sales agent', detail: 'Prepare the next best action', to: '/agent', icon: Sparkles },
-  ], [desktopRole])
+  ], [desktopRole, adminRole])
   const visibleDestinations = destinations.filter((item) => `${item.label} ${item.detail}`.toLowerCase().includes(query.trim().toLowerCase()))
 
   useEffect(() => {
@@ -51,7 +66,10 @@ export function TopBar() {
   }, [])
 
   const go = (to: string) => {
-    navigate(to)
+    // These are shell-relative destinations. Sent to the router unprefixed they
+    // fell through to `<Route path="*">` and landed the user on their own home
+    // — the palette's whole job, silently undone.
+    navigate(rolePath(to))
     setPaletteOpen(false)
     setQuery('')
   }

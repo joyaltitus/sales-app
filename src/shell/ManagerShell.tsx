@@ -78,6 +78,12 @@ export function ManagerShell() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-accent focus:shadow-elev-2"
+      >
+        Skip to content
+      </a>
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <nav
@@ -114,7 +120,7 @@ export function ManagerShell() {
             </NavLink>
           ))}
         </nav>
-        <main className="app-grid min-w-0 flex-1 overflow-y-auto">
+        <main id="main-content" className="app-grid min-w-0 flex-1 overflow-y-auto">
           <ErrorBoundary>
             <Suspense fallback={<LazyFallback />}>
               <Routes>
@@ -141,14 +147,14 @@ export function ManagerShell() {
           </ErrorBoundary>
         </main>
       </div>
-      <nav className="grid shrink-0 grid-cols-10 border-t border-border bg-surface md:hidden" aria-label="Primary">
+      <nav className="flex shrink-0 overflow-x-auto border-t border-border bg-surface md:hidden" aria-label="Primary">
         {RAIL.map((t) => (
           <NavLink
             key={t.to}
             to={href(t.to)}
             end={t.end}
             className={({ isActive }) => [
-              'flex min-h-14 flex-col items-center justify-center gap-1 text-2xs font-medium',
+              'flex min-h-14 min-w-11 flex-1 shrink-0 flex-col items-center justify-center gap-1 text-2xs font-medium',
               isActive ? 'text-accent' : 'text-fg-subtle',
             ].join(' ')}
           >

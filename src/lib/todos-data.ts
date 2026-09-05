@@ -164,11 +164,19 @@ export async function createTodo({
  * Toggle pending <-> done. Scoped update, mirrors moveLeadStage: an empty
  * result means RLS filtered the row (denied), not an error. `completed_at`
  * is set/cleared alongside status.
+ *
+ * `expectedStatus` makes the write CONDITIONAL, the same way updateFollowUp in
+ * crm-actions.ts is: the update only lands while the row still holds the status
+ * the caller was looking at. Without it, two people (or one rep on two devices)
+ * acting on the same todo both write unconditionally and the last one silently
+ * wins — including writing 'pending' over a 'done' that a manager just saw.
+ * Both callers already know the value they read, so neither has to guess.
  */
 export async function toggleTodo(
   clientId: string,
   id: string,
   nextStatus: TodoStatus,
+  expectedStatus: TodoStatus,
 ): Promise<{ ok: true } | { ok: false; reason: 'denied' | 'error'; message?: string }> {
   const { data, error } = await supabase
     .from('employee_todos')
@@ -178,6 +186,7 @@ export async function toggleTodo(
     })
     .eq('client_id', clientId)
     .eq('id', id)
+    .eq('status', expectedStatus)
     .select('id')
 
   if (error) return { ok: false, reason: 'error', message: error.message }

@@ -19,6 +19,7 @@ const {
   deleteNote,
   moveLeadStage,
   followUpsState,
+  notesState,
 } = vi.hoisted(() => ({
   fetchInsight: vi.fn(),
   setBotPaused: vi.fn(),
@@ -28,6 +29,7 @@ const {
   deleteNote: vi.fn(),
   moveLeadStage: vi.fn(),
   followUpsState: [] as Array<{ id: string; contact_id: string; due_at: string; status: string; note: string }>,
+  notesState: [] as Array<{ id: string; body: string; author: string | null; created_at: string }>,
 }))
 
 vi.mock('../../lib/api', () => ({ fetchInsight }))
@@ -45,7 +47,7 @@ vi.mock('../../lib/leads-data', () => ({
 }))
 vi.mock('../../lib/crm-data', () => ({
   useConvLead: () => ({ lead: null, reload: vi.fn() }),
-  useNotes: () => ({ items: [], reload: vi.fn() }),
+  useNotes: () => ({ items: notesState, reload: vi.fn() }),
   useTeammates: () => ({ items: [] }),
   teammateLabel: () => 'Teammate',
 }))
@@ -104,6 +106,9 @@ beforeEach(() => {
     },
   })
   followUpsState.splice(0, followUpsState.length)
+  notesState.splice(0, notesState.length)
+  deleteNote.mockReset()
+  addNote.mockReset()
 })
 
 describe('ContextRail AI summary (#18 — hydrate persisted rolling_summary)', () => {
@@ -241,5 +246,43 @@ describe('ContextRail Customer Memory (sales-app#21 S2)', () => {
     expect(link).toHaveAttribute('href', 'https://web.whatsapp.com/send?phone=919947638424')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+})
+
+// A note is the rep's own record. Both write paths used to drop their result:
+// add had no else, delete never looked at all — the row vanished on the
+// optimistic reload and came back on the next one, explaining nothing.
+describe('ContextRail note failures', () => {
+  function withOneNote() {
+    notesState.push({
+      id: 'note-1',
+      body: 'Wants the evening batch',
+      author: 'rep@example.com',
+      created_at: '2026-09-01T10:00:00Z',
+    })
+  }
+
+  it('says so when a delete is refused instead of flickering the row', async () => {
+    const user = userEvent.setup()
+    withOneNote()
+    deleteNote.mockResolvedValue({ ok: false, reason: 'denied' })
+    renderRail(queueItem())
+
+    await user.click(screen.getByRole('button', { name: /delete note/i }))
+
+    expect(deleteNote).toHaveBeenCalledWith(PIXELLEDU_ID, 'note-1')
+    expect(await screen.findByRole('alert')).toHaveTextContent(/didn't go through/i)
+  })
+
+  it('stays quiet when the delete lands', async () => {
+    const user = userEvent.setup()
+    withOneNote()
+    deleteNote.mockResolvedValue({ ok: true })
+    renderRail(queueItem())
+
+    await user.click(screen.getByRole('button', { name: /delete note/i }))
+
+    await waitFor(() => expect(deleteNote).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

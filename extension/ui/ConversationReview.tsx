@@ -86,7 +86,7 @@ export function ConversationReview({
         Untick anything that shouldn’t go into the CRM. Saved as one note on this lead.
       </p>
 
-      <ul className="mt-1 max-h-72 overflow-y-auto" aria-label="Messages to save">
+      <ul className="mt-1" aria-label="Messages to save">
         {messages.map((item) => {
           const on = !excluded.has(item.id)
           return (

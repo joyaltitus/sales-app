@@ -81,3 +81,24 @@ describe('DashboardScreen', () => {
     expect(screen.queryByRole('heading', { name: 'What needs attention today' })).not.toBeInTheDocument()
   }, 20_000)
 })
+
+// REG-054 / REG-001. Two things this screen got wrong regardless of data: it had
+// no h1 at all, so its headings started at h2; and "Open live floor" was a
+// root-absolute /, which is not a route — it fell through to `<Route path="*">`
+// and bounced the manager to their own home.
+describe('DashboardScreen page structure', () => {
+  it('names itself with a top-level heading', () => {
+    render(<MemoryRouter><DashboardScreen /></MemoryRouter>)
+    expect(screen.getByRole('heading', { level: 1, name: /dashboard/i })).toBeInTheDocument()
+  })
+
+  it('keeps its links inside the manager shell', () => {
+    const { container } = render(<MemoryRouter><DashboardScreen /></MemoryRouter>)
+    const hrefs = [...container.querySelectorAll('a[href]')]
+      .map((a) => a.getAttribute('href')!)
+      .filter((h) => h.startsWith('/'))
+
+    expect(hrefs.length).toBeGreaterThan(0)
+    for (const href of hrefs) expect(href).toMatch(/^\/manage(\/|\?|$)/)
+  })
+})

@@ -112,7 +112,17 @@ export function Funnel({ stages }: { stages: { label: string; count: number }[] 
   return (
     <div className="space-y-2" role="img" aria-label={funnelAria(stages)}>
       {stages.map((s, i) => {
-        const pct = i === 0 ? null : Math.round((s.count / stages[i - 1].count) * 100)
+        // A stage nobody reached is a zero denominator: `0/0` renders NaN%
+        // and `3/0` renders Infinity%. A skipped stage also lets a later count
+        // exceed its predecessor, which is how a funnel printed 333%. Neither
+        // is a conversion rate, so say nothing rather than a wrong number.
+        // (ComplianceBar below already guards its own denominator with
+        // Math.max(..., 1) — that one was never broken.)
+        const previous = i === 0 ? null : stages[i - 1].count
+        const pct =
+          previous == null || previous <= 0
+            ? null
+            : Math.min(Math.round((s.count / previous) * 100), 100)
         return (
           <div key={s.label} className="flex items-center gap-3">
             <span className="w-16 shrink-0 truncate text-xs text-fg-muted">{s.label}</span>

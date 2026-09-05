@@ -19,3 +19,30 @@ export function staleAgeLabel(ageMs: number): string {
   if (hours < 24) return `${hours}h`
   return `${Math.floor(hours / 24)}d`
 }
+
+const fullINR = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+})
+
+function trimCompact(value: number, digits: number) {
+  return value.toFixed(digits).replace(/\.0+$/, '')
+}
+
+/**
+ * The ONE money format for the extension: compact Indian units.
+ * 450000 → ₹4.5L, 15000 → ₹15K, 2000 → ₹2K, 500 → ₹500.
+ * Null/undefined/NaN read as '—', never ₹0: a missing value is not zero.
+ */
+export function formatMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  const safe = value
+  const absolute = Math.abs(safe)
+  const sign = safe < 0 ? '-' : ''
+
+  if (absolute >= 1_00_00_000) return `${sign}₹${trimCompact(absolute / 1_00_00_000, 1)}Cr`
+  if (absolute >= 1_00_000) return `${sign}₹${trimCompact(absolute / 1_00_000, 1)}L`
+  if (absolute >= 1_000) return `${sign}₹${trimCompact(absolute / 1_000, 1)}K`
+  return fullINR.format(safe)
+}

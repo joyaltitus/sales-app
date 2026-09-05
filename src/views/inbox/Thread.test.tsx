@@ -139,34 +139,81 @@ describe('Thread optimistic bubble rendering (S1, issue #15)', () => {
     expect(screen.queryByLabelText('Sent')).not.toBeInTheDocument()
   })
 
-  it('offers a retry affordance for a failed optimistic bubble, wired to onRetryFailed', async () => {
+  // FLIPPED, intentionally (REG-039). The button said "Tap to retry" and no code
+  // anywhere resent the message: the handler deletes the bubble and seeds the
+  // composer. Joyal's call on 2026-09-05 was to rename rather than build a
+  // resend, so this name matcher moves with the label.
+  it('offers a copy-to-composer affordance for a failed optimistic bubble', async () => {
     const user = userEvent.setup()
-    const onRetryFailed = vi.fn()
+    const onCopyToComposer = vi.fn()
     render(
       <Thread
         messages={[optimisticMessage({ delivery_status: 'failed', failure_reason: null })]}
         traces={[]}
-        onRetryFailed={onRetryFailed}
+        onCopyToComposer={onCopyToComposer}
       />,
     )
 
-    const retry = screen.getByRole('button', { name: /Didn.t send.*Tap to retry/i })
-    await user.click(retry)
+    expect(screen.queryByRole('button', { name: /tap to retry/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Didn.t send.*Copy to composer/i }))
 
-    expect(onRetryFailed).toHaveBeenCalledWith('optimistic:temp-1', 'Hang on, checking')
+    expect(onCopyToComposer).toHaveBeenCalledWith('optimistic:temp-1', 'Hang on, checking')
   })
 
-  it('does not offer retry for a real (non-optimistic) failed row', () => {
-    const onRetryFailed = vi.fn()
+  it('does not offer copy-to-composer for a real (non-optimistic) failed row', () => {
+    const onCopyToComposer = vi.fn()
     render(
       <Thread
         messages={[optimisticMessage({ id: 'real-message-id', delivery_status: 'failed' })]}
         traces={[]}
-        onRetryFailed={onRetryFailed}
+        onCopyToComposer={onCopyToComposer}
       />,
     )
 
-    expect(screen.queryByRole('button', { name: /Tap to retry/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Copy to composer/i })).not.toBeInTheDocument()
     expect(screen.getByText(/Didn.t send/i)).toBeInTheDocument()
+  })
+})
+
+// REG-007. Every fixture above uses `failure_reason: null`, so this path had no
+// coverage at all — which is how a raw Graph API string reached a bubble the rep
+// reads next to the customer's own words.
+describe('Thread failed-message reasons', () => {
+  const RAW = '(#131047) Message failed to send because more than 24 hours have passed'
+
+  it('keeps the raw upstream reason out of the bubble on a recoverable failure', () => {
+    render(
+      <Thread
+        messages={[optimisticMessage({ delivery_status: 'failed', failure_reason: RAW })]}
+        traces={[]}
+        onCopyToComposer={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText(new RegExp(RAW.slice(0, 12).replace(/[()#]/g, '.'), 'i'))).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Didn.t send.*Copy to composer/i })).toBeInTheDocument()
+  })
+
+  it('keeps it out of a real failed row too, and still says the send failed', () => {
+    render(
+      <Thread
+        messages={[optimisticMessage({ id: 'real-1', delivery_status: 'failed', failure_reason: RAW })]}
+        traces={[]}
+      />,
+    )
+
+    expect(screen.getByText(/Didn.t send/i)).toBeInTheDocument()
+    expect(screen.queryByText(/24 hours have passed/i)).not.toBeInTheDocument()
+  })
+
+  it('still carries the reason in the DOM for support, just not as rendered text', () => {
+    const { container } = render(
+      <Thread
+        messages={[optimisticMessage({ id: 'real-1', delivery_status: 'failed', failure_reason: RAW })]}
+        traces={[]}
+      />,
+    )
+
+    expect(container.querySelector('[data-failure-reason]')).toHaveAttribute('data-failure-reason', RAW)
   })
 })

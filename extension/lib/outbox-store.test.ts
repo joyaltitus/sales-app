@@ -21,7 +21,7 @@ vi.mock('@app/lib/crm-actions', () => ({
 }))
 vi.mock('@app/lib/objections-data', () => ({ logObjection: writes.logObjection }))
 
-import { WRITE_REGISTRY } from './outbox-store'
+import { drainOutbox, OUTBOX_KEY, WRITE_REGISTRY } from './outbox-store'
 
 function entry(kind: OutboxEntry['kind'], args: Record<string, unknown>): OutboxEntry {
   return { id: 'client-uuid', kind, args, created_at: '2026-08-26T10:00:00Z', attempts: 0, last_error: null }
@@ -57,10 +57,51 @@ describe('closed write registry', () => {
     }))
   })
 
+  it('accepts a denied conditional follow-up transition as done', async () => {
+    // The entry's expected_status is frozen at enqueue; once the row moves past
+    // it every replay is denied. Throwing here deadlocks the whole queue.
+    writes.updateFollowUp.mockResolvedValue({ ok: false, reason: 'denied' })
+    await expect(WRITE_REGISTRY.update_follow_up(entry('update_follow_up', {
+      client_id: 'client-a', follow_up_id: 'fu-a', expected_status: 'pending', action: 'done',
+    }))).resolves.toBeUndefined()
+  })
+
+  it('does not swallow a real update_follow_up error', async () => {
+    writes.updateFollowUp.mockResolvedValue({ ok: false, reason: 'error', message: 'network down' })
+    await expect(WRITE_REGISTRY.update_follow_up(entry('update_follow_up', {
+      client_id: 'client-a', follow_up_id: 'fu-a', expected_status: 'pending', action: 'done',
+    }))).rejects.toThrow('network down')
+  })
+
   it('does not swallow an ordinary first failure', async () => {
     writes.saveLeadLastWriteWins.mockResolvedValue({ ok: false, reason: 'error', message: 'network down' })
     await expect(WRITE_REGISTRY.save_lead(entry('save_lead', {
       client_id: 'client-a', lead_id: 'lead-a', patch: { status: 'won' },
     }))).rejects.toThrow('network down')
+  })
+})
+
+describe('drainOutbox', () => {
+  beforeEach(() => Object.values(writes).forEach((mock) => mock.mockReset()))
+
+  it('does not strand later entries behind a permanently denied follow-up', async () => {
+    writes.updateFollowUp.mockResolvedValue({ ok: false, reason: 'denied' })
+    writes.addNote.mockResolvedValue({ ok: true })
+    await chrome.storage.local.set({
+      [OUTBOX_KEY]: [
+        entry('update_follow_up', {
+          client_id: 'client-a', follow_up_id: 'fu-a', expected_status: 'pending', action: 'done',
+        }),
+        { ...entry('add_note', { client_id: 'client-a', body: 'Called back' }), id: 'note-uuid' },
+      ],
+    })
+
+    const result = await drainOutbox()
+
+    expect(result.remaining).toEqual([])
+    expect(result.failed).toBeNull()
+    expect(result.done).toBe(2)
+    expect(writes.addNote).toHaveBeenCalledTimes(1)
+    expect((await chrome.storage.local.get(OUTBOX_KEY))[OUTBOX_KEY]).toEqual([])
   })
 })

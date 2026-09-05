@@ -69,7 +69,7 @@ function RevisionRow({
   onReverted: () => void
 }) {
   const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<string | null>(null)
+  const [failure, setFailure] = useState<{ code: string; detail?: string } | null>(null)
   const fields = changedFields(revision)
 
   const revert = async () => {
@@ -79,7 +79,7 @@ function RevisionRow({
     const res = await revertTo(clientId, revision, userId)
     setBusy(false)
     if (res.ok) onReverted()
-    else setFailure(res.code)
+    else setFailure({ code: res.code, detail: res.detail })
   }
 
   return (
@@ -108,8 +108,20 @@ function RevisionRow({
       ) : null}
       {failure ? (
         <p className="mt-1.5 text-xs text-danger" role="alert">
-          <span className="font-mono font-semibold">{failure}</span>
-          <span className="text-fg-muted"> — the restore was refused, nothing changed.</span>
+          <span className="font-mono font-semibold">
+            {failure.code.startsWith('partial:') ? failure.code.slice('partial:'.length) : failure.code}
+          </span>
+          {failure.code.startsWith('partial:') ? (
+            // A campaign revert commits the row before its code-word and spend
+            // legs run, so this branch exists to stop the screen saying nothing
+            // changed while the row is already half-restored.
+            <span className="text-fg-muted">
+              {' '}— the row was restored, but its {failure.detail ?? 'remaining settings'} could not be.
+              This campaign is now half-restored: check its code words, spend and on/off switch before relying on it.
+            </span>
+          ) : (
+            <span className="text-fg-muted"> — the restore was refused, nothing changed.</span>
+          )}
         </p>
       ) : null}
     </li>

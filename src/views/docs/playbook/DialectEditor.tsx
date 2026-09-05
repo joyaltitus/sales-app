@@ -71,17 +71,18 @@ export function DialectEditor({
     <div>
       {/* Arrow keys move between dialects — the editor is reachable without a
           mouse, which is the whole point during a live teardown. */}
-      <div
-        className="flex gap-1 overflow-x-auto border-b border-border"
-        role="tablist"
-        aria-label="Dialect"
-        onKeyDown={(event) => {
-          if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
-          event.preventDefault()
-          const i = tabs.indexOf(lang)
-          setLang(tabs[(i + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length])
-        }}
-      >
+      <div className="flex items-center gap-1 border-b border-border">
+        <div
+          className="flex min-w-0 flex-1 gap-1 overflow-x-auto"
+          role="tablist"
+          aria-label="Dialect"
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
+            event.preventDefault()
+            const i = tabs.indexOf(lang)
+            setLang(tabs[(i + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length])
+          }}
+        >
         {tabs.map((code) => {
           const isOffered = offered.includes(code) || code === BASE_LANG
           const written = (drafts[code] ?? '').trim().length > 0
@@ -108,6 +109,7 @@ export function DialectEditor({
             </button>
           )
         })}
+        </div>
         {onAddLanguage && (
           <button
             onClick={() => {

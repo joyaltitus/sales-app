@@ -117,7 +117,7 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
       <header className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2">
         <div className="flex items-center gap-2">
           {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to queue" className="-ml-2 h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to queue" className="-ml-2 h-11 w-11">
               <ArrowLeft aria-hidden size={18} strokeWidth={1.75} />
             </Button>
           )}
@@ -127,7 +127,7 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
             <ChannelIcon channel={lead.channel === 'phone' ? null : lead.channel} />
           </div>
           {lead.phone_e164 && (
-            <Button size="sm" className="h-9 shrink-0 px-3" onClick={onOpenChat}>
+            <Button size="sm" className="min-h-11 shrink-0 px-3" onClick={onOpenChat}>
               Open chat
             </Button>
           )}
@@ -147,7 +147,7 @@ export function LeadScreen({ detail, viewerId, onBack, onOpenChat, onCall, works
             <button
               type="button"
               onClick={onCall}
-              className="ml-auto flex min-h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-2xs font-medium text-fg-muted transition-colors select-none tnum hover:bg-surface-sunk hover:text-fg"
+              className="ml-auto flex min-h-11 shrink-0 items-center gap-1 rounded-md px-1.5 text-2xs font-medium text-fg-muted transition-colors select-none tnum hover:bg-surface-sunk hover:text-fg"
             >
               <Phone aria-hidden size={12} strokeWidth={2} />
               {lead.phone_e164}

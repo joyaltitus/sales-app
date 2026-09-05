@@ -10,6 +10,7 @@ import { DealProbability, estimateDealProbability } from '../revenue/DealProbabi
 import { NextAction } from '../../ui/NextAction'
 import { formatINR } from '../../ui/formatMoney'
 import { LeadQuickActions } from './LeadQuickActions'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // A lead row is the SAME departure-board aesthetic as QueueRow (amendment
 // item 1) with one inversion: Inbox leads with the message, Leads leads with
@@ -75,6 +76,7 @@ export function LeadRow({
   /** CRM pipeline rows add a compact call action on larger screens. */
   crm?: boolean
 }) {
+  const rolePath = useRolePath()
   const [quickOpen, setQuickOpen] = useState(false)
   const [captureOpen, setCaptureOpen] = useState(false)
   const holdTimer = useRef<number | null>(null)
@@ -202,7 +204,7 @@ export function LeadRow({
         <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 sm:hidden">
           {lead.conversation_id ? (
             <Link
-              to={`/inbox?c=${encodeURIComponent(lead.conversation_id)}`}
+              to={rolePath(`/inbox?c=${encodeURIComponent(lead.conversation_id)}`)}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-border text-xs font-semibold text-fg-muted hover:border-border-strong hover:text-fg"
             >

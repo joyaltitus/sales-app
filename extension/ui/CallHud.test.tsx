@@ -237,6 +237,39 @@ describe('CallHud', () => {
     expect(screen.getByText('Token logged')).toBeInTheDocument()
   })
 
+  // REG-037. The audit blamed a double-tap; the button is conditionally
+  // unmounted, so that vector does not exist. The real one is a REMOUNT:
+  // `tokenDone` is component-local, so reopening the panel for the same lead
+  // brings Confirm back, and a freshly minted uuid meant a SECOND money fact
+  // for one payment.
+  it('reuses one id across a remount, so one payment is one fact', async () => {
+    const user = userEvent.setup()
+
+    async function confirmOnce() {
+      const view = render(hud())
+      await screen.findByText('Opener — follow-up')
+      await user.selectOptions(screen.getByLabelText('Course'), 'item-0003')
+      await user.click(await screen.findByRole('button', { name: /₹5,000 seat link/ }))
+      await user.click(screen.getByRole('button', { name: /Token received/ }))
+      await waitFor(async () =>
+        expect((await readOutbox()).some((e) => e.kind === 'token_received')).toBe(true),
+      )
+      view.unmount()
+    }
+
+    await confirmOnce()
+    const first = (await readOutbox()).filter((e) => e.kind === 'token_received')
+    expect(first).toHaveLength(1)
+
+    // A fresh mount for the same lead — the panel reopening, exactly as it does
+    // when the rep switches away and back.
+    await confirmOnce()
+    const after = (await readOutbox()).filter((e) => e.kind === 'token_received')
+
+    expect(after.map((e) => e.id)).toEqual([first[0]!.id])
+    expect(after).toHaveLength(1)
+  })
+
   it('disables the seat link, with the reason, when nobody set up UPI', async () => {
     render(hud({ library: { ...playbookLibrary, config: { languages: ['en'], default_lang: 'en' } } }))
     expect(await screen.findByRole('button', { name: /Seat link/ })).toBeDisabled()

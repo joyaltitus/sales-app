@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Clock3, Phone, PhoneOff, UserRound } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Sheet } from '../../ui/Sheet'
@@ -68,6 +68,13 @@ export function CallExperience({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // ONE id per opened call sheet. startCallSession upserts on
+  // (client_id, client_request_id); minting inside the handler made that upsert
+  // a no-op guard — a double-tapped Start call, or a retry after a response we
+  // never saw, forked a second call_sessions row for one real call. This sheet
+  // mounts per open, so a mount-time ref is one id per call. Pattern lifted from
+  // extension/app/App.tsx, which has always done this correctly.
+  const callRequestId = useRef(crypto.randomUUID())
 
   const openObjection = objectionLogs.find((o) => !o.resolved) ?? null
   const lastTouchpoints = callLogs.slice(0, 3).map((c) => ({
@@ -83,7 +90,7 @@ export function CallExperience({
     }
     const res = await startCallSession({
       clientId, contactId, leadId, conversationId, actorId,
-      surface: 'call-button', requestedNumber: phone, clientRequestId: crypto.randomUUID(),
+      surface: 'call-button', requestedNumber: phone, clientRequestId: callRequestId.current,
     })
     if (!res.ok) {
       setError(res.message)

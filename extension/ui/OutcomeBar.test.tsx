@@ -33,10 +33,16 @@ describe('OutcomeBar', () => {
     expect(buttons.map((b) => b.getAttribute('data-outcome'))).toEqual(FIVE)
   })
 
+  // FLIPPED (REG-015). The objection case used to expect the key 'price' —
+  // taxonomy[0] — because the select seeded itself from the first entry. That
+  // seeding is exactly the defect: a rep who never chose a reason had one
+  // chosen for them, and it was attached to a real call. With nothing chosen
+  // the key is now undefined, and App.tsx's existing guard tells the rep to
+  // pick one instead of logging a reason they did not give.
   it.each(FIVE)('one tap on %s fires the callback immediately', async (outcome) => {
     const props = setup()
     await userEvent.click(screen.getByRole('button', { name: new RegExp(outcome.replace('_', ' '), 'i') }))
-    expect(props.onOutcome).toHaveBeenCalledWith(...(outcome === 'objection' ? [outcome, 'price'] : [outcome]))
+    expect(props.onOutcome).toHaveBeenCalledWith(...(outcome === 'objection' ? [outcome, undefined] : [outcome]))
   })
 
   it('changes stage and status through the selects', async () => {
@@ -66,12 +72,37 @@ describe('OutcomeBar', () => {
     expect(save).toBeDisabled()
   })
 
-  it('defaults to the first objection taxonomy and allows changing it', async () => {
+  // FLIPPED (REG-015 + REG-018). This used to assert the defect: that the
+  // select arrived pre-filled with taxonomy[0] and a second "Log" button was
+  // immediately enabled. Both are gone — the placeholder is reachable, and the
+  // objection reason now rides on the outcome that produced it.
+  it('chooses no objection reason until the rep picks one', async () => {
     const props = setup()
-    const log = screen.getByRole('button', { name: 'Log' })
-    expect(log).toBeEnabled()
+
+    expect(screen.getByLabelText('Objection type')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Log' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /objection/i }))
+    expect(props.onOutcome).toHaveBeenCalledWith('objection', undefined)
+    expect(props.onObjection).not.toHaveBeenCalled()
+  })
+
+  it('carries the chosen reason on the outcome, so it belongs to that call', async () => {
+    const props = setup()
+
     await userEvent.selectOptions(screen.getByLabelText('Objection type'), 'timing')
-    await userEvent.click(log)
-    expect(props.onObjection).toHaveBeenCalledWith('timing')
+    await userEvent.click(screen.getByRole('button', { name: /objection/i }))
+
+    expect(props.onOutcome).toHaveBeenCalledWith('objection', 'timing')
+  })
+
+  it('keeps the placeholder reachable after a reason is chosen and cleared', async () => {
+    setup()
+    const select = screen.getByLabelText('Objection type')
+
+    await userEvent.selectOptions(select, 'timing')
+    expect(select).toHaveValue('timing')
+    await userEvent.selectOptions(select, '')
+    expect(select).toHaveValue('')
   })
 })

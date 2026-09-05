@@ -65,6 +65,38 @@ const selectClass =
  * the numbers in every line below them. Then the roadmap, because that is the
  * call. Then objections, because those interrupt the call. Then the close.
  */
+/**
+ * A token fact id that survives a REMOUNT.
+ *
+ * `tokenDone` is component-local, so reopening the panel for the same lead
+ * restores the Confirm button; with a freshly minted uuid each time, a second
+ * confirm wrote a SECOND money fact for one payment. The outbox already dedupes
+ * on the id it is handed (and `lead_facts` collides on the primary key if the
+ * first one already landed) — it just needs an id that is the same both times.
+ *
+ * Derived from the payment's own identity rather than held in a ref, because a
+ * ref dies with the component and that is the whole defect. Two devices
+ * confirming the same token collide on the same id too, which is the behaviour
+ * you want.
+ *
+ * ponytail: SHA-256 of the seed, shaped as a uuid. A real uuid-v5 would need a
+ * dependency for no gain here; if `crypto.subtle` is ever unavailable this
+ * falls back to today's behaviour rather than throwing.
+ */
+async function tokenFactId(clientId: string, leadId: string, amount: number | null): Promise<string> {
+  const seed = `${clientId}|${leadId}|token|${amount ?? ''}`
+  if (!crypto.subtle) return crypto.randomUUID()
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)))
+  const hex = [...digest.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    `5${hex.slice(13, 16)}`,
+    `8${hex.slice(17, 20)}`,
+    hex.slice(20, 32),
+  ].join('-')
+}
+
 export function CallHud({
   identity, lead, library, calls, callSessionId, ratingOpen, onResult, onLockCallback, busy = false, layout,
 }: Props) {
@@ -284,7 +316,7 @@ export function CallHud({
       actor_id: identity.userId,
       amount,
       at: new Date().toISOString(),
-    })
+    }, new Date(), await tokenFactId(identity.clientId, lead.lead_id, amount))
     onResult('Token logged on the timeline.')
   }
 
@@ -356,7 +388,7 @@ export function CallHud({
             disabled={busy}
             onClick={() => setLang(code)}
             className={[
-              'min-h-8 rounded-pill border px-2.5 text-2xs font-semibold transition-colors',
+              'min-h-11 rounded-pill border px-2.5 text-2xs font-semibold transition-colors',
               code === lang
                 ? 'border-accent bg-accent-subtle text-accent'
                 : 'border-border bg-surface-raised text-fg-muted hover:border-border-strong hover:text-fg',
@@ -369,7 +401,7 @@ export function CallHud({
           <button
             type="button"
             onClick={() => void openCallTab().catch(() => onResult('Could not open the call tab.'))}
-            className="shrink-0 rounded-md border border-border bg-surface-raised px-2 py-1 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
+            className="min-h-11 shrink-0 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium text-fg-muted hover:border-border-strong hover:text-fg"
           >
             Open in tab
           </button>
@@ -379,7 +411,7 @@ export function CallHud({
             type="button"
             aria-pressed={!useMine}
             onClick={() => setUseMine(false)}
-            className={['min-h-8 px-2 text-2xs font-semibold', !useMine ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:text-fg'].join(' ')}
+            className={['min-h-11 px-3 text-2xs font-semibold', !useMine ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:text-fg'].join(' ')}
           >
             Std
           </button>
@@ -389,7 +421,7 @@ export function CallHud({
             disabled={mySpins.size === 0}
             title={mySpins.size === 0 ? 'Save a version of a script first — open one and write your spin.' : undefined}
             onClick={() => setUseMine(true)}
-            className={['min-h-8 border-l border-border px-2 text-2xs font-semibold disabled:opacity-40', useMine ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:text-fg'].join(' ')}
+            className={['min-h-11 border-l border-border px-3 text-2xs font-semibold disabled:opacity-40', useMine ? 'bg-accent-subtle text-accent' : 'text-fg-muted hover:text-fg'].join(' ')}
           >
             Mine
           </button>
@@ -456,7 +488,6 @@ export function CallHud({
           variant="secondary"
           className="min-h-11 min-w-0 flex-1 px-2 text-xs"
           disabled={busy || !collectable}
-          title={collectable ? undefined : 'Ask your manager to set UPI in Sales Hub → Playbook → Settings'}
           onClick={() => void insertToken()}
         >
           <CreditCard aria-hidden size={14} strokeWidth={1.9} className="shrink-0" />
@@ -473,8 +504,13 @@ export function CallHud({
           <span className="truncate">Lock callback</span>
         </Button>
       </div>
+      {/* REG-026: the reason this button is dead was an 11px subtle caption plus
+          a `title`, and a title never fires on touch — which is every device
+          this panel runs a call from. One legible line, no hover-only copy. */}
       {!collectable && (
-        <p className="text-2xs text-fg-subtle">Ask your manager to set UPI in Sales Hub → Playbook → Settings.</p>
+        <p className="text-xs text-fg-muted">
+          Seat link is off until UPI is set up. Ask your manager to set UPI in Sales Hub → Playbook → Settings.
+        </p>
       )}
 
       {tokenOpen && collectable && (
@@ -493,7 +529,7 @@ export function CallHud({
             </Button>
           )}
           {tokenDone ? (
-            <span className="inline-flex min-h-8 items-center rounded-pill border border-[color-mix(in_srgb,var(--success)_20%,transparent)] bg-success-subtle px-2.5 text-2xs font-semibold text-success">
+            <span className="inline-flex min-h-11 items-center rounded-pill border border-[color-mix(in_srgb,var(--success)_20%,transparent)] bg-success-subtle px-2.5 text-2xs font-semibold text-success">
               Token logged
             </span>
           ) : (
@@ -549,7 +585,7 @@ export function CallHud({
                 type="button"
                 aria-label={`${usage.label} worked`}
                 onClick={() => void rate(usage, 'worked')}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-success hover:text-success"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-success hover:text-success"
               >
                 <ThumbsUp aria-hidden size={13} /> Worked
               </button>
@@ -557,7 +593,7 @@ export function CallHud({
                 type="button"
                 aria-label={`${usage.label} missed`}
                 onClick={() => void rate(usage, 'didnt_work')}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-danger hover:text-danger"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-2 text-xs font-medium hover:border-danger hover:text-danger"
               >
                 <ThumbsDown aria-hidden size={13} /> Missed
               </button>
@@ -569,7 +605,7 @@ export function CallHud({
       {/* The rep's own saved snippets, which used to be their own bar. */}
       {snippets.length > 0 && (
         <details className="group min-w-0 overflow-hidden rounded-md border border-border">
-          <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 px-2 select-none hover:bg-surface-sunk [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 px-2 select-none hover:bg-surface-sunk [&::-webkit-details-marker]:hidden">
             <Quote aria-hidden size={12} strokeWidth={1.9} className="shrink-0 text-fg-subtle" />
             <span className="label-caps">My snippets</span>
             <span className="ml-auto text-2xs text-fg-subtle tnum">{snippets.length}</span>

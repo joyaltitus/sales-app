@@ -83,4 +83,11 @@ describe('SaveLeadCard', () => {
     render(<SaveLeadCard {...base} chat={null} initialQuery="+9198765 43210" />)
     expect(screen.getByLabelText(/^Phone/)).toHaveValue('+9198765 43210')
   })
+
+  it('leaves Name empty when the unsaved chat header is the number itself', () => {
+    const numericChat = { displayName: '+91 90000 11122', phoneE164: '+919000011122' }
+    render(<SaveLeadCard {...base} chat={numericChat} />)
+    expect(screen.getByLabelText(/^Name/)).toHaveValue('')
+    expect(screen.getByLabelText(/^Phone/)).toHaveValue('+919000011122')
+  })
 })

@@ -6,6 +6,7 @@ const AgentPanel = lazy(() => import('./AgentPanel').then((module) => ({ default
 export function AgentScreen() {
   return (
     <div className="h-full">
+      <h1 className="sr-only">Agent</h1>
       <Suspense fallback={<div className="p-4 text-xs text-fg-muted">Loading copilot…</div>}>
         <AgentPanel />
       </Suspense>

@@ -24,7 +24,7 @@ import { Sheet } from '../../ui/Sheet'
 import { Skeleton } from '../../ui/Skeleton'
 import { useProfiles, useTodos, createTodo, toggleTodo } from '../../lib/todos-data'
 import type { TodoItem, TodoStatus } from '../../lib/todos-data'
-import { firstOfMonth, useTeamTargets, upsertTarget } from '../../lib/targets-data'
+import { firstOfMonth, parseMoney, useTeamTargets, upsertTarget } from '../../lib/targets-data'
 import { NextAction } from '../../ui/NextAction'
 
 // WIRE session: employee_todos + employee_targets are real tables now (see
@@ -181,7 +181,7 @@ function ComposeSheet({
   )
 }
 
-function SetTargetForm({
+export function SetTargetForm({
   clientId,
   createdBy,
   roster,
@@ -210,17 +210,33 @@ function SetTargetForm({
     setBonusAtTarget(existing ? String(existing.bonus_at_target) : '')
   }, [existing?.id, userId])
 
+  // `Number(x) || 0` used to stand here. Every junk value it could not read —
+  // a negative, an out-of-range paste — became a literal 0 and was upserted over
+  // the rep's real row on `client_id,user_id,month`. One typo, one zeroed month.
+  // Same parser as TargetsPage, which writes the same row.
+  const parsed = {
+    target: parseMoney(targetValue),
+    incentive: parseMoney(incentivePerWon),
+    bonus: parseMoney(bonusAtTarget),
+  }
+  // A target is the one required number; the two payout fields default to zero
+  // when left blank, but a typed-and-unreadable one blocks the save.
+  const invalid =
+    parsed.target === null ||
+    (incentivePerWon.trim() !== '' && parsed.incentive === null) ||
+    (bonusAtTarget.trim() !== '' && parsed.bonus === null)
+
   const save = async () => {
-    if (!userId || !targetValue.trim()) return
+    if (!userId || invalid || parsed.target === null) return
     setSaving(true)
     setMessage(null)
     const res = await upsertTarget({
       clientId,
       userId,
       month,
-      targetValue: Number(targetValue) || 0,
-      incentivePerWon: Number(incentivePerWon) || 0,
-      bonusAtTarget: Number(bonusAtTarget) || 0,
+      targetValue: parsed.target,
+      incentivePerWon: parsed.incentive ?? 0,
+      bonusAtTarget: parsed.bonus ?? 0,
       createdBy,
     })
     setSaving(false)
@@ -236,12 +252,12 @@ function SetTargetForm({
         <select value={userId} onChange={(event) => setUserId(event.target.value)} aria-label="Rep" className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs font-semibold text-fg sm:col-span-1">
           {roster.map((rep) => <option key={rep.user_id} value={rep.user_id}>{rep.display_name}</option>)}
         </select>
-        <input value={targetValue} onChange={(event) => setTargetValue(event.target.value)} type="number" min="0" placeholder="Target value (₹)" aria-label="Target value" className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
-        <input value={incentivePerWon} onChange={(event) => setIncentivePerWon(event.target.value)} type="number" min="0" placeholder="Incentive per won (₹)" aria-label="Incentive per won" className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
-        <input value={bonusAtTarget} onChange={(event) => setBonusAtTarget(event.target.value)} type="number" min="0" placeholder="Bonus at target (₹)" aria-label="Bonus at target" className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
+        <input value={targetValue} onChange={(event) => setTargetValue(event.target.value)} type="number" min="0" placeholder="Target value (₹)" aria-label="Target value" aria-invalid={targetValue.trim() !== '' && parsed.target === null} className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
+        <input value={incentivePerWon} onChange={(event) => setIncentivePerWon(event.target.value)} type="number" min="0" placeholder="Incentive per won (₹)" aria-label="Incentive per won" aria-invalid={incentivePerWon.trim() !== '' && parsed.incentive === null} className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
+        <input value={bonusAtTarget} onChange={(event) => setBonusAtTarget(event.target.value)} type="number" min="0" placeholder="Bonus at target (₹)" aria-label="Bonus at target" aria-invalid={bonusAtTarget.trim() !== '' && parsed.bonus === null} className="h-10 rounded-md border border-border bg-surface-raised px-2 text-xs text-fg placeholder:text-fg-subtle" />
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <Button onClick={save} disabled={saving || !userId || !targetValue.trim()}>{saving ? 'Saving…' : existing ? 'Update target' : 'Save target'}</Button>
+        <Button onClick={save} disabled={saving || !userId || invalid}>{saving ? 'Saving…' : existing ? 'Update target' : 'Save target'}</Button>
         {message && <span className="text-2xs font-semibold text-fg-muted">{message}</span>}
       </div>
       {!loading && targets.length > 0 && (
@@ -294,8 +310,20 @@ export function TodosTab({ displayState = 'ready' }: { displayState?: 'ready' | 
     const current = todos.find((t) => t.id === id)
     if (!current) return
     const nextStatus: TodoStatus = current.status === 'done' ? 'pending' : 'done'
-    const res = await toggleTodo(clientId, id, nextStatus)
-    if (res.ok) void reload()
+    const res = await toggleTodo(clientId, id, nextStatus, current.status)
+    if (res.ok) {
+      setFormError(null)
+      void reload()
+      return
+    }
+    // A denial here is usually someone else having moved the same todo, so
+    // reload to show what it actually says now, and say why nothing changed.
+    setFormError(
+      res.reason === 'denied'
+        ? 'That todo was changed by someone else. It has been refreshed.'
+        : res.message ?? 'The todo could not be updated.',
+    )
+    void reload()
   }
 
   const openDetail = (id: string | null) => {

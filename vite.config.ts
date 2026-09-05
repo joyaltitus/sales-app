@@ -20,7 +20,15 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
-      registerType: 'autoUpdate',
+      // REG-057: this said 'autoUpdate', which with injectManifest + a
+      // hand-written sw.ts is inert. autoUpdate relies on the register module's
+      // `activated` callback, and a new worker never activates while an old one
+      // controls a tab unless something calls skipWaiting() — src/sw.ts called
+      // neither skipWaiting() nor clientsClaim(). So a deploy only reached a
+      // user once every tab of the origin closed, and `onNeedRefresh` was never
+      // called at all in autoUpdate mode. 'prompt' + a real SKIP_WAITING handler
+      // + a visible action is the combination that actually swaps the build.
+      registerType: 'prompt',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'Sales App',

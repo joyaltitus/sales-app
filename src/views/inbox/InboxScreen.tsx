@@ -215,7 +215,9 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
     if (ok) return // stays pending until an authoritative row reconciles it (mergeOutbound)
     setOptimistic((prev) => prev.map((b) => (b.tempId === tempId ? { ...b, status: 'failed' } : b)))
   }, [])
-  const onRetryFailed = useCallback((tempId: string, body: string) => {
+  // Named for what it does: drop the failed bubble and put its text back in the
+  // composer. It is not a resend, and the button no longer claims to be one.
+  const onCopyToComposer = useCallback((tempId: string, body: string) => {
     setOptimistic((prev) => prev.filter((b) => b.tempId !== tempId))
     setDraftSeed((prev) => ({ n: (prev?.n ?? 0) + 1, text: body }))
   }, [])
@@ -314,7 +316,10 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
             <h1 className="text-lg font-semibold tracking-[-0.025em] text-fg">Inbox</h1>
             {channelLive && <span className="flex items-center gap-1 text-2xs font-semibold text-success"><Radio aria-hidden size={11} /> Live</span>}
           </div>
-          <p className="mt-0.5 text-2xs text-fg-muted">{visibleItems.length} conversations in view</p>
+          {/* Today.tsx already pluralises its own counter this way. */}
+          <p className="mt-0.5 text-2xs text-fg-muted">
+            {visibleItems.length} conversation{visibleItems.length === 1 ? '' : 's'} in view
+          </p>
         </div>
         {needsHumanCount > 0 && <span className="tnum rounded-pill bg-danger-subtle px-2 py-1 text-2xs font-semibold text-danger">{needsHumanCount} need you</span>}
       </div>
@@ -411,8 +416,11 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
           className="h-10 w-full rounded-md border border-border bg-surface-raised pr-3 pl-9 text-sm text-fg shadow-[var(--inset-highlight)] transition-colors placeholder:text-fg-subtle hover:border-border-strong"
         />
       </div>
-      {/* Status chips — horizontal scroll on phone, wraps nowhere. */}
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto" role="group" aria-label="Status filter">
+      {/* Status chips. `no-scrollbar` hides the only affordance saying more
+          chips exist, so at 1440 the fifth was clipped to a single letter with
+          nothing to suggest scrolling. Wrapping shows every chip at every width
+          and needs no affordance at all. */}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Status filter">
         {STATUS_CHIPS.map((c) => (
           <button
             key={c.key}
@@ -550,7 +558,7 @@ export function InboxScreen({ canSend }: { canSend: boolean }) {
         ) : !selected && messages.length === 0 ? (
           <EmptyState icon={MessageCircle} title="Conversation unavailable" body="It may have moved outside your current access or been removed. Return to the queue and choose another chat." />
         ) : (
-          <Thread messages={displayMessages} traces={traces} media={media} onRetryFailed={onRetryFailed} />
+          <Thread messages={displayMessages} traces={traces} media={media} onCopyToComposer={onCopyToComposer} />
         )}
       </div>
 

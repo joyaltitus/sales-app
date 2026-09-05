@@ -15,6 +15,7 @@ import { Button } from '../../ui/Button'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { ObjectionHistory } from '../objections/ObjectionHistory'
 import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // SA-05 lead drawer — the Workbench lead editor rebuilt: stage, status,
 // est. value, temperature override, lost reason (required on a lost move,
@@ -49,6 +50,7 @@ export function LeadDrawer({
   onClose: () => void
   onSaved: () => void
 }) {
+  const rolePath = useRolePath()
   const { session } = useAuth()
   const name = lead.contact?.profile_name ?? lead.contact?.external_id ?? 'Unknown contact'
 
@@ -126,19 +128,26 @@ export function LeadDrawer({
   // Notes on the lead.
   const { items: notes, reload: reloadNotes } = useNotes(clientId, { leadId: lead.id })
   const [noteDraft, setNoteDraft] = useState('')
+  // The `if (res.ok)` below had no else, so a refused note left the draft
+  // sitting in the box with no indication it had not been saved. Error slot
+  // copied from ContextRail's submitNote, which already got this right.
+  const [noteErr, setNoteErr] = useState(false)
   const submitNote = async () => {
     const body = noteDraft.trim()
     if (!body) return
+    setNoteErr(false)
     const res = await addNote(clientId, {
       conversation_id: lead.conversation_id,
       lead_id: lead.id,
       author: session?.user?.email ?? null,
       body,
     })
-    if (res.ok) {
-      setNoteDraft('')
-      void reloadNotes()
+    if (!res.ok) {
+      setNoteErr(true)
+      return
     }
+    setNoteDraft('')
+    void reloadNotes()
   }
 
   return (
@@ -170,7 +179,7 @@ export function LeadDrawer({
         </div>
         {lead.conversation_id && (
           <Link
-            to={`/inbox?c=${lead.conversation_id}`}
+            to={rolePath(`/inbox?c=${lead.conversation_id}`)}
             className="shrink-0 text-xs text-fg-muted hover:text-fg"
           >
             Open conversation →
@@ -354,6 +363,7 @@ export function LeadDrawer({
               Add
             </Button>
           </div>
+          {noteErr && <p role="alert" className="mt-1 text-2xs text-danger">Couldn't save the note. Try again.</p>}
         </div>
       </div>
       )}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ConversationSnippet, QueueItem } from '../../lib/inbox-data'
 import { QueueRow } from '../inbox/QueueRow'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // Shared furniture for the three landings (SA-03). Each landing answers ONE
 // question (direction §1.11) and none of them is a stat grid, so what they
@@ -64,6 +65,7 @@ export function ThreadList({
   cap?: number
 }) {
   const navigate = useNavigate()
+  const rolePath = useRolePath()
   const shown = items.slice(0, cap)
 
   return (
@@ -75,12 +77,12 @@ export function ThreadList({
           snippet={snippets.get(item.id)?.text ?? item.contact?.profile_name ?? '—'}
           snippetKind={snippets.get(item.id)?.kind ?? 'text'}
           selected={false}
-          onSelect={() => navigate(`/inbox?c=${item.id}`)}
+          onSelect={() => navigate(rolePath(`/inbox?c=${item.id}`))}
         />
       ))}
       {items.length > cap && (
         <button
-          onClick={() => navigate('/inbox')}
+          onClick={() => navigate(rolePath('/inbox'))}
           className="w-full border-b border-border bg-surface px-4 py-2.5 text-left text-xs text-fg-muted hover:bg-surface-sunk"
         >
           {items.length - cap} more in the Inbox →
