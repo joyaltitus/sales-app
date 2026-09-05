@@ -34,12 +34,13 @@ const variants: Record<Variant, string> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = 'primary', size = 'md', loading = false, disabled, className = '', children, ...rest },
+  { variant = 'primary', size = 'md', loading = false, disabled, type = 'button', className = '', children, ...rest },
   ref,
 ) {
   return (
     <button
       ref={ref}
+      type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={[base, sizes[size], variants[variant], className].join(' ')}
