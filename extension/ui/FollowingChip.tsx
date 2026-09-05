@@ -3,6 +3,12 @@ import { Eye, EyeOff } from 'lucide-react'
 type Props = {
   enabled: boolean
   chatName: string | null
+  /**
+   * True when WhatsApp has a group/broadcast/channel open. Groups are
+   * deliberately never followed, so they read differently from "no chat".
+   * Optional until the panel caller threads the chat kind through.
+   */
+  isGroup?: boolean
   onToggle: (on: boolean) => void
 }
 
@@ -13,13 +19,15 @@ type Props = {
  * should be able to see, and stop, the reading in one tap — and the label says
  * which chat, so "following" is never an abstract claim.
  */
-export function FollowingChip({ enabled, chatName, onToggle }: Props) {
+export function FollowingChip({ enabled, chatName, isGroup = false, onToggle }: Props) {
   const Icon = enabled ? Eye : EyeOff
   const label = !enabled
     ? 'Not following chats'
     : chatName
       ? `Following ${chatName}`
-      : 'Following — open a chat'
+      : isGroup
+        ? 'Following — group not followed'
+        : 'Following — no chat open'
 
   return (
     <button
