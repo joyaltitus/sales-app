@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useClient } from '../../shell/ClientProvider'
 import { useQueue } from '../../lib/inbox-data'
@@ -11,6 +11,7 @@ import { Panel, StatTile, HeroStat, Funnel, TrendLine, DayBars, ComplianceBar } 
 import { Skeleton } from '../../ui/Skeleton'
 import { Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, BriefcaseBusiness, Clock3, Download, FileText, MessageSquareText, Target } from 'lucide-react'
 import { ForecastWidget } from '../revenue/ForecastWidget'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // S2-E2: the owner readout is real again — campaign_roi_v + /api/metrics +
 // employee_targets. Lazy so its second metrics window is only ever fetched by
@@ -76,7 +77,15 @@ function AnalyticsKpi({
   )
 }
 
+/** Same story as OwnerBusinessReport: `useMetrics` has no reload, and this lane
+ *  does not own metrics-data.ts, so a retry remounts the screen's reads. */
 export function DashboardScreen() {
+  const [attempt, setAttempt] = useState(0)
+  return <DashboardScreenView key={attempt} onRetry={() => setAttempt((n) => n + 1)} />
+}
+
+function DashboardScreenView({ onRetry }: { onRetry: () => void }) {
+  const rolePath = useRolePath()
   const { activeClient } = useClient()
   const clientId = activeClient?.id ?? null
 
@@ -173,6 +182,10 @@ export function DashboardScreen() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="page-frame max-w-6xl space-y-6">
+        {/* REG-054: the page had no h1 at all, so its headings started at h2 and
+            a screen-reader landing here was told nothing about which page it
+            was. Every sibling screen names itself the same way. */}
+        <h1 className="text-2xl font-semibold tracking-[-0.045em] text-fg">Dashboard</h1>
         <nav className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunk p-1" aria-label="Dashboard views">
           {DASHBOARD_VIEWS.map((item) => <button key={item.key} onClick={() => setView(item.key)} aria-current={view === item.key ? 'page' : undefined} className={['flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold sm:flex-1', view === item.key ? 'bg-surface-raised text-fg shadow-elev-1' : 'text-fg-muted hover:text-fg'].join(' ')}><item.icon aria-hidden size={15} />{item.label}</button>)}
         </nav>
@@ -181,7 +194,7 @@ export function DashboardScreen() {
           <article className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-2">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-4 sm:px-5">
               <div><p className="label-caps text-accent">Live priorities</p><h2 id="manager-today" className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">What needs attention today</h2></div>
-              <Link to="/" className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Open live floor <ArrowRight aria-hidden size={14} /></Link>
+              <Link to={rolePath('/')} className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-xs font-semibold text-accent hover:bg-accent-subtle">Open live floor <ArrowRight aria-hidden size={14} /></Link>
             </header>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4">
               {[
@@ -189,7 +202,7 @@ export function DashboardScreen() {
                 { label: 'Needs a human', value: real.needsHuman, detail: 'Bot handovers unclaimed', to: '/inbox', icon: MessageSquareText, danger: real.needsHuman > 0 },
                 { label: 'Due later today', value: real.dueToday, detail: 'Planned customer follow-ups', to: '/crm?tab=followups', icon: Target, danger: false },
                 { label: 'Bookings this week', value: real.bookingsWeek, detail: 'Visits and meetings created', to: '/crm?tab=bookings', icon: BriefcaseBusiness, danger: false },
-              ].map((item) => <Link key={item.label} to={item.to} className="group flex min-h-36 flex-col border-b border-border p-4 last:border-b-0 hover:bg-surface-sunk sm:border-r sm:[&:nth-child(2)]:border-r-0 lg:border-b-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0"><span className={['flex h-9 w-9 items-center justify-center rounded-md', item.danger ? 'bg-danger-subtle text-danger' : 'bg-surface-sunk text-fg-muted'].join(' ')}><item.icon aria-hidden size={16} /></span><strong className={['tnum mt-4 text-2xl tracking-[-0.04em]', item.danger ? 'text-danger' : 'text-fg'].join(' ')}>{item.value}</strong><span className="mt-1 text-xs font-semibold text-fg">{item.label}</span><span className="mt-1 text-2xs text-fg-muted">{item.detail}</span></Link>)}
+              ].map((item) => <Link key={item.label} to={rolePath(item.to)} className="group flex min-h-36 flex-col border-b border-border p-4 last:border-b-0 hover:bg-surface-sunk sm:border-r sm:[&:nth-child(2)]:border-r-0 lg:border-b-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0"><span className={['flex h-9 w-9 items-center justify-center rounded-md', item.danger ? 'bg-danger-subtle text-danger' : 'bg-surface-sunk text-fg-muted'].join(' ')}><item.icon aria-hidden size={16} /></span><strong className={['tnum mt-4 text-2xl tracking-[-0.04em]', item.danger ? 'text-danger' : 'text-fg'].join(' ')}>{item.value}</strong><span className="mt-1 text-xs font-semibold text-fg">{item.label}</span><span className="mt-1 text-2xs text-fg-muted">{item.detail}</span></Link>)}
             </div>
           </article>
 
@@ -215,7 +228,7 @@ export function DashboardScreen() {
           <HeroStat label="Open pipeline" value={formatINRCompact(real.pipelineValue)} sub={real.winRate == null ? 'Estimated value across open leads' : `Win rate ${real.winRate}% — ${real.won} won, ${real.lost} lost`} />
           <div className="grid grid-cols-3 gap-3"><StatTile label="Won" value={String(real.won)} /><StatTile label="Lost" value={String(real.lost)} /><StatTile label="Win rate" value={real.winRate == null ? '—' : `${real.winRate}%`} /></div>
           <Panel title="Pipeline by stage" caption="Live count of leads sitting in each stage."><Funnel stages={real.funnel} /></Panel>
-          <ForecastWidget metrics={metrics} loading={metricsLoading} />
+          <ForecastWidget metrics={metrics} loading={metricsLoading} onRetry={onRetry} />
           {isManagerOrAdmin && metrics?.objection_counts && metrics.objection_counts.length > 0 && (
             <Panel title="Objections by type" caption="Logged objections in the last 14 days, most common first.">
               <Funnel stages={metrics.objection_counts.map((o) => ({ label: o.label, count: o.count }))} />

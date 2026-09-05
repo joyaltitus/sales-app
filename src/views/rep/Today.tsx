@@ -26,6 +26,7 @@ import { isSubscribed, pushSupported, subscribe } from '../../lib/push'
 import { EmptyState } from '../../ui/EmptyState'
 import { Skeleton } from '../../ui/Skeleton'
 import { Avatar } from '../../ui/Avatar'
+import { useRolePath } from '../../shell/RoleRouter'
 
 type LocalState = 'active' | 'done' | 'snoozed'
 
@@ -238,6 +239,7 @@ function PriorityCard({
 }
 
 export function Today() {
+  const rolePath = useRolePath()
   const { session } = useAuth()
   const userId = session?.user.id ?? null
   const { activeClient } = useClient()
@@ -283,7 +285,11 @@ export function Today() {
     )
   }
 
-  const progressPct = stats.followUpsPlanned > 0 ? Math.round((stats.followUpsDone / stats.followUpsPlanned) * 100) : 0
+  // The ring measures FOLLOW-UPS, not the monthly target it sits beside. With
+  // nothing planned it rendered a confident "0%" next to "No target set for you
+  // this month", which reads as a score of zero rather than as no data.
+  const hasProgress = stats.followUpsPlanned > 0
+  const progressPct = hasProgress ? Math.round((stats.followUpsDone / stats.followUpsPlanned) * 100) : 0
   const oldestName = oldest?.contact?.profile_name ?? oldest?.contact?.external_id ?? 'Customer'
   const oldestSnippet = oldest ? snippets.get(oldest.id)?.text ?? 'A customer is waiting for your reply.' : null
   const visibleOverdue = showAll ? overdue : overdue.slice(0, 1)
@@ -306,7 +312,7 @@ export function Today() {
       <section className="overflow-hidden rounded-xl border border-border bg-surface p-4 shadow-elev-2 sm:p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 items-center gap-4 xl:w-[340px] xl:shrink-0">
-            <ProgressRing value={progressPct} />
+            {hasProgress && <ProgressRing value={progressPct} />}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2"><p className="label-caps text-accent">Today overview</p><span className="text-2xs text-fg-subtle">{target ? `Target ₹${target.target_value.toLocaleString('en-IN')} this month` : 'No target set for you this month'}</span></div>
               <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.025em] text-fg">{stats.followUpsDone} of {stats.followUpsPlanned} follow-ups done</h2>
@@ -330,7 +336,7 @@ export function Today() {
             <p className="label-caps">Pending today</p>
             <h2 className="mt-1 text-lg font-semibold tracking-[-0.025em] text-fg">Follow-ups and assigned work</h2>
           </div>
-          <Link to="/leads?tab=followups" className="text-xs font-semibold text-accent hover:underline">View all</Link>
+          <Link to={rolePath('/leads?tab=followups')} className="text-xs font-semibold text-accent hover:underline">View all</Link>
         </div>
 
         <div className="space-y-3">
@@ -343,7 +349,7 @@ export function Today() {
               detail="A promise is waiting. Open the lead, call, and capture the outcome."
               tone="danger"
               action={
-                <Link to={`/leads?tab=followups&f=${encodeURIComponent(followUp.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open follow-up details">
+                <Link to={rolePath(`/leads?tab=followups&f=${encodeURIComponent(followUp.id)}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open follow-up details">
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
@@ -375,7 +381,7 @@ export function Today() {
                 </span>
               }
               action={
-                <Link to={`/crm?tab=todos&t=${encodeURIComponent(pendingTodo.id)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo details">
+                <Link to={rolePath(`/crm?tab=todos&t=${encodeURIComponent(pendingTodo.id)}`)} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg" aria-label="Open assigned todo details">
                   <ChevronRight aria-hidden size={17} />
                 </Link>
               }
@@ -406,7 +412,8 @@ export function Today() {
         )}
         </section>
 
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-5">
+        {/* REG-051: the second unlabeled complementary on /rep. */}
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-5" aria-label="Waiting replies and shortcuts">
           {oldest ? (
             <section className="relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
               <span aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-signal opacity-20 blur-3xl" />
@@ -414,7 +421,7 @@ export function Today() {
                 <div className="flex items-center justify-between gap-3"><p className="label-caps text-accent">Customer waiting</p><span className="tnum inline-flex items-center gap-1 text-2xs font-semibold text-danger"><Clock3 aria-hidden size={12} /> Longest</span></div>
                 <h2 className="mt-3 text-xl font-semibold tracking-[-0.035em] text-fg">Reply to {oldestName}</h2>
                 <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">“{oldestSnippet}”</p>
-                <div className="mt-5"><Link to={`/inbox?c=${encodeURIComponent(oldest.id)}`} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link></div>
+                <div className="mt-5"><Link to={rolePath(`/inbox?c=${encodeURIComponent(oldest.id)}`)} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-accent bg-accent px-4 text-sm font-semibold text-accent-fg hover:bg-accent-hover"><MessageCircle aria-hidden size={17} /> Open chat <ArrowRight aria-hidden size={15} /></Link></div>
               </div>
             </section>
           ) : (

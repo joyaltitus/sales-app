@@ -15,6 +15,7 @@ import { Button } from '../../ui/Button'
 import { ObjectionCapture } from '../objections/ObjectionCapture'
 import { ObjectionHistory } from '../objections/ObjectionHistory'
 import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // SA-05 lead drawer — the Workbench lead editor rebuilt: stage, status,
 // est. value, temperature override, lost reason (required on a lost move,
@@ -49,6 +50,7 @@ export function LeadDrawer({
   onClose: () => void
   onSaved: () => void
 }) {
+  const rolePath = useRolePath()
   const { session } = useAuth()
   const name = lead.contact?.profile_name ?? lead.contact?.external_id ?? 'Unknown contact'
 
@@ -177,7 +179,7 @@ export function LeadDrawer({
         </div>
         {lead.conversation_id && (
           <Link
-            to={`/inbox?c=${lead.conversation_id}`}
+            to={rolePath(`/inbox?c=${lead.conversation_id}`)}
             className="shrink-0 text-xs text-fg-muted hover:text-fg"
           >
             Open conversation →

@@ -4,6 +4,7 @@ import { Bell, Bot, Check, Clock3, MessageCircleMore, UserPlus, X } from 'lucide
 import { useAuth } from '../auth/AuthProvider'
 import { useClient } from '../shell/ClientProvider'
 import { markNotificationsRead, type NotificationRow, shortAge, useNotifications } from '../lib/notifications-data'
+import { useRolePath } from '../shell/RoleRouter'
 
 type NotificationKind = 'lead' | 'follow_up' | 'approval'
 type NotificationFilter = 'unread' | 'all'
@@ -43,6 +44,7 @@ function toItem(row: NotificationRow, now: number): NotificationItem {
 }
 
 export function NotificationCenter() {
+  const rolePath = useRolePath()
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState<NotificationFilter>('unread')
   const [readLocally, setReadLocally] = useState<Set<string>>(() => new Set())
@@ -95,7 +97,7 @@ export function NotificationCenter() {
     }
     if (!item.conversationId) return
     setOpen(false)
-    navigate(`/inbox?c=${encodeURIComponent(item.conversationId)}`, {
+    navigate(rolePath(`/inbox?c=${encodeURIComponent(item.conversationId)}`), {
       state: item.draft ? { draft: item.draft } : undefined,
     })
   }

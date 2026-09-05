@@ -3,6 +3,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { Button } from '../../ui/Button'
 import { InboxScreen } from '../inbox/InboxScreen'
 import { BookOpenText, Bot, ChevronRight, FileText, ReceiptText, Sparkles } from 'lucide-react'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // Rep view stubs (SA-00 scaffold). Real screens land in the ONB/FLW/inbox epics.
 function Screen({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -29,9 +30,10 @@ export function RepInbox() {
 // "More" holds the labeled doors (Joyal's doors model). A door whose flag is
 // off is not rendered — proven here by the flag-gated Product-AI door.
 export function More({ productAi }: { productAi: boolean }) {
+  const rolePath = useRolePath()
   return (
     <Screen title="More">
-      <Link to="/agent" className="relative mb-4 block overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
+      <Link to={rolePath('/agent')} className="relative mb-4 block overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,var(--border))] bg-[linear-gradient(145deg,var(--surface-raised),var(--accent-subtle))] p-5 shadow-elev-2">
         <span aria-hidden className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-signal opacity-20 blur-2xl" />
         <span className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-fg"><Sparkles aria-hidden size={19} /></span>
         <h2 className="relative mt-4 text-lg font-semibold tracking-[-0.025em] text-fg">Ask the sales agent</h2>
@@ -41,11 +43,11 @@ export function More({ productAi }: { productAi: boolean }) {
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-elev-1">
         {/* UI-BUILD-02 (Joyal ruling): reps get the Documents studio too. */}
-        <Door label="Documents" detail="Quotes and proposals" to="/docs" icon={FileText} />
-        <Door label="Objections" detail="Approved talk tracks" to="/docs?workspace=playbook" icon={BookOpenText} />
-        <Door label="Fees" detail="Current plans and discounts" to="/docs" icon={ReceiptText} />
+        <Door label="Documents" detail="Quotes and proposals" to={rolePath('/docs')} icon={FileText} />
+        <Door label="Objections" detail="Approved talk tracks" to={rolePath('/docs?workspace=playbook')} icon={BookOpenText} />
+        <Door label="Fees" detail="Current plans and discounts" to={rolePath('/docs')} icon={ReceiptText} />
         {productAi ? (
-          <Door label="Product AI" detail="Ask the knowledge base" to="/more/product-ai" icon={Bot} />
+          <Door label="Product AI" detail="Ask the knowledge base" to={rolePath('/more/product-ai')} icon={Bot} />
         ) : (
           <div className="px-4 py-3 text-xs text-fg-subtle">
             Product AI — off for this workspace

@@ -16,6 +16,7 @@ import { Chip } from '../../ui/Chip'
 import { Button } from '../../ui/Button'
 import { formatINR } from '../../ui/formatMoney'
 import { getWhatsAppUrl, formatPhone } from '../../lib/phone'
+import { useRolePath } from '../../shell/RoleRouter'
 
 // SA-05 context rail — the Workbench Inbox right rail rebuilt in the Board
 // language, for manager AND rep alike (capability differences are RLS's job,
@@ -53,6 +54,7 @@ export function ContextRail({
   /** Push the AI draft reply into the composer. */
   onUseDraft: (text: string) => void
 }) {
+  const rolePath = useRolePath()
   const { session } = useAuth()
   const userId = session?.user?.id ?? null
   const name = item.contact?.profile_name ?? item.contact?.external_id ?? 'Unknown contact'
@@ -355,7 +357,7 @@ export function ContextRail({
       <div className="space-y-2 border-b border-border px-4 py-4">
         <div className="flex items-baseline justify-between">
           <SectionTitle>Lead</SectionTitle>
-          <Link to="/crm" className="text-2xs text-fg-muted hover:text-fg">
+          <Link to={rolePath('/crm')} className="text-2xs text-fg-muted hover:text-fg">
             CRM →
           </Link>
         </div>

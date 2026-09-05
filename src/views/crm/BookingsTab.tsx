@@ -10,12 +10,24 @@ import { EmptyState } from '../../ui/EmptyState'
 
 const monoStyle = { fontFamily: 'var(--font-mono)' } as const
 
+/** These columns arrive as raw ISO strings and were rendered verbatim, so a row
+ *  read `2026-09-14T00:00:00.000Z → 2026-09-16T00:00:00.000Z`. Formatted the
+ *  way FollowUpsTab formats its own dates. A value that is not a date is left
+ *  exactly as it came rather than being guessed at. */
+function day(value: string | null | undefined): string | null {
+  if (!value) return null
+  const at = new Date(value)
+  return Number.isNaN(at.getTime())
+    ? value
+    : at.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 function when(b: BookingRow): string {
-  const start = b.checkin_date ?? b.start_date
-  const end = b.checkout_date ?? b.end_date
+  const start = day(b.checkin_date ?? b.start_date)
+  const end = day(b.checkout_date ?? b.end_date)
   if (b.slot_time) return `${start ?? '—'} · ${b.slot_time}`
   if (start && end) return `${start} → ${end}`
-  return start ?? 'dateless'
+  return start ?? 'No date set'
 }
 
 function statusTone(status: string | null): 'success' | 'warn' | 'danger' {
@@ -70,10 +82,14 @@ export function BookingsTab() {
                 ₹{b.total_price.toLocaleString('en-IN')}
               </span>
             )}
+            {/* Two independent columns rendered as two bare words put
+                "confirmed" and "pending" side by side on one row, which reads as
+                a contradiction rather than as booking-state plus payment-state.
+                Each chip now says which question it answers. */}
             <span className="flex shrink-0 items-center gap-1.5">
-              <Chip tone={statusTone(b.status)}>{b.status ?? 'pending'}</Chip>
+              <Chip tone={statusTone(b.status)}>Booking {b.status ?? 'pending'}</Chip>
               <Chip tone={b.payment_status === 'paid' ? 'success' : 'warn'}>
-                {b.payment_status ?? 'pending'}
+                Payment {b.payment_status ?? 'pending'}
               </Chip>
             </span>
           </div>

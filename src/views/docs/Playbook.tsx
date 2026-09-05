@@ -77,7 +77,7 @@ export function Playbook({ canManage, displayState = 'ready' }: { canManage: boo
       <ErrorState
         title="Couldn't load the Playbook"
         body="Your scripts are still safe. Check the connection and retry."
-        onRetry={() => undefined}
+        onRetry={library.reload}
       />
     )
   }
@@ -103,7 +103,11 @@ export function Playbook({ canManage, displayState = 'ready' }: { canManage: boo
 
   return (
     <div>
-      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border" role="tablist" aria-label="Playbook sections">
+      {/* At 390 the fifth tab was cut mid-word to "Settin…" with no scrollbar
+          and no fade, so nothing said the row continued. Five short labels wrap
+          onto two lines comfortably; a scroll affordance would only be needed
+          if they could not. */}
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-border" role="tablist" aria-label="Playbook sections">
         {tabs.map((tab) => (
           <button
             key={tab.key}
