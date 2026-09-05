@@ -216,7 +216,6 @@ export function PasswordRecoveryScreen() {
 function ProductPromise() {
   return (
     <section className="relative overflow-hidden rounded-xl border border-border bg-surface/90 p-6 shadow-elev-2 sm:p-8 lg:min-h-[570px] lg:p-10" aria-label="Product introduction">
-      <div className="absolute inset-x-0 top-[34%] h-px bg-border" aria-hidden />
       <div className="relative flex h-full flex-col">
         <div className="flex items-center gap-3"><Wordmark size={48} /><p className="text-sm font-semibold text-fg">Sales workspace</p></div>
         <div className="my-auto py-10">
